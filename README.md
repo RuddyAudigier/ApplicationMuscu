@@ -1,2 +1,1 @@
-# ApplicationMuscu
-Une application de musculation que j'ai développé moi-même en utilisant claude code et mistral ia
+Application de muscu que j'ai codé moi-même avec Claude code et Mistral IA

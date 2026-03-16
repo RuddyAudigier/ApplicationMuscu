@@ -1,0 +1,130 @@
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  border-bottom: 1px solid #e5e7eb;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+}
+
+.navbar-container {
+  max-width: 1240px;
+  margin: 0 auto;
+  min-height: 74px;
+  padding: 0 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.navbar-logo {
+  border: 0;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  cursor: pointer;
+  color: #0f172a;
+  padding: 0.35rem;
+}
+
+.logo-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #1e3a8a;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.logo-text {
+  font-size: 1.03rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.nav-menu {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.nav-link {
+  border: 1px solid transparent;
+  background: transparent;
+  color: #475569;
+  border-radius: 10px;
+  font-size: 0.93rem;
+  font-weight: 600;
+  padding: 0.55rem 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nav-link:hover {
+  background: #eef2ff;
+  color: #1e3a8a;
+}
+
+.nav-link.active {
+  border-color: #c7d2fe;
+  background: #e0e7ff;
+  color: #1e3a8a;
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    top: 0;
+    margin-bottom: 8px;
+    padding-top: max(env(safe-area-inset-top), 0.4rem);
+  }
+
+  .navbar-container {
+    min-height: 64px;
+    padding: 0 0.8rem;
+  }
+
+  .logo-text {
+    display: none;
+  }
+
+  .nav-menu {
+    gap: 0.35rem;
+  }
+
+  .nav-link {
+    padding: 0.48rem 0.6rem;
+    font-size: 0.84rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .navbar-container {
+    gap: 0.45rem;
+  }
+
+  .nav-menu {
+    gap: 0.25rem;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .nav-menu::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-link {
+    padding: 0.42rem 0.52rem;
+    font-size: 0.78rem;
+  }
+}

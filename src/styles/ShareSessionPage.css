@@ -1,0 +1,153 @@
+.share-page {
+  min-height: 100dvh;
+  padding: 1.2rem;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.share-card {
+  width: 100%;
+  max-width: 980px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 1.1rem;
+}
+
+.share-kicker {
+  margin: 0;
+  font-size: 0.76rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+}
+
+.share-card h1 {
+  margin: 0.35rem 0;
+  color: #111827;
+  font-size: clamp(1.3rem, 2.8vw, 1.9rem);
+}
+
+.share-date {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.share-exercises {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.share-exercise-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.8rem;
+}
+
+.share-exercise-card h2 {
+  margin: 0;
+  font-size: 1rem;
+  color: #1f2937;
+}
+
+.share-tags {
+  margin-top: 0.35rem;
+}
+
+.share-notes {
+  margin-top: 0.55rem;
+  padding: 0.55rem;
+  border: 1px solid #dbeafe;
+  background: #eff6ff;
+  border-radius: 10px;
+}
+
+.share-notes strong {
+  display: block;
+  color: #1e3a8a;
+  margin-bottom: 0.2rem;
+  font-size: 0.82rem;
+}
+
+.share-notes p {
+  margin: 0;
+  color: #1e293b;
+  font-size: 0.87rem;
+  line-height: 1.4;
+}
+
+.share-notes-content {
+  white-space: pre-line;
+}
+
+.share-series-table-wrap {
+  margin-top: 0.55rem;
+  overflow-x: auto;
+}
+
+.share-series-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.share-series-table th,
+.share-series-table td {
+  text-align: left;
+  padding: 0.45rem;
+  border-bottom: 1px solid #dbe3ef;
+}
+
+.share-series-table th {
+  color: #475569;
+  font-weight: 700;
+  background: #f1f5f9;
+}
+
+.share-back-btn {
+  margin-top: 1rem;
+}
+
+.rpe-chip {
+  display: inline-block;
+  padding: 0.18rem 0.42rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.rpe-6 {
+  background: #fde68a;
+  color: #1f2937;
+}
+
+.rpe-7 {
+  background: #fcd34d;
+  color: #1f2937;
+}
+
+.rpe-8 {
+  background: #f59e0b;
+  color: #111827;
+}
+
+.rpe-9 {
+  background: #f97316;
+  color: #111827;
+}
+
+.rpe-10 {
+  background: #ef4444;
+  color: #fff;
+}
+
+@media (max-width: 768px) {
+  .share-page {
+    padding: 0.8rem;
+  }
+}

@@ -1,0 +1,67 @@
+.exercise-list-wrapper {
+  width: 100%;
+}
+
+.exercises-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.9rem;
+}
+
+.exercises-header h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: #111827;
+  font-weight: 700;
+}
+
+.exercise-count {
+  background: #e0e7ff;
+  color: #1e3a8a;
+  border: 1px solid #c7d2fe;
+  padding: 0.34rem 0.62rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.exercise-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 0.9rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2.1rem 1rem;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px dashed #cbd5e1;
+}
+
+.empty-state h3 {
+  color: #334155;
+  margin: 0 0 0.4rem 0;
+  font-size: 1rem;
+}
+
+.empty-state p {
+  color: #64748b;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+  .exercise-list {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .exercises-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}

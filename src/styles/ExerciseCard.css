@@ -1,0 +1,283 @@
+.exercise-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 0.95rem;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.card-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #111827;
+  font-weight: 700;
+}
+
+.exercise-name-toggle {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.exercise-name-hint {
+  font-size: 0.74rem;
+  color: #64748b;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.exercise-details-panel {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.exercise-description {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #475569;
+  line-height: 1.45;
+}
+
+.exercise-variants-section {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  padding: 0.55rem 0.65rem;
+}
+
+.exercise-variants-section h5 {
+  margin: 0 0 0.45rem 0;
+  font-size: 0.78rem;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.exercise-variants-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.exercise-variant-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.exercise-variant-name {
+  font-size: 0.82rem;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.exercise-variant-default {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.12rem 0.45rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  border: 1px solid #93c5fd;
+  background: #dbeafe;
+}
+
+.exercise-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.performance-section,
+.coach-notes,
+.edit-exercise-form {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.75rem;
+  background: #f8fafc;
+}
+
+.performance-section h4,
+.coach-notes h4,
+.edit-exercise-form h4 {
+  margin: 0 0 0.65rem 0;
+  font-size: 0.9rem;
+  color: #1f2937;
+}
+
+.performance-inputs {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: end;
+  gap: 0.55rem;
+}
+
+.performance-inputs input,
+.coach-notes-textarea {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.86rem;
+  font-family: inherit;
+}
+
+.performance-inputs input {
+  width: 86px;
+}
+
+.coach-notes-textarea {
+  width: 100%;
+  min-height: 88px;
+  resize: vertical;
+}
+
+.coach-notes-display {
+  font-size: 0.84rem;
+  color: #334155;
+  margin-bottom: 0.6rem;
+}
+
+.coach-notes-content {
+  margin: 0.3rem 0 0;
+  white-space: pre-line;
+  line-height: 1.45;
+}
+
+.edit-exercise-form .form-group {
+  margin-bottom: 0.65rem;
+}
+
+.edit-exercise-form input,
+.edit-exercise-form textarea,
+.edit-exercise-form select {
+  width: 100%;
+  padding: 0.48rem 0.58rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.86rem;
+  background: #fff;
+}
+
+.edit-exercise-form textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.edit-muscle-controls {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+}
+
+.edit-muscle-list {
+  margin-top: 0.55rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.edit-muscle-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid #c7d2fe;
+  color: #1e3a8a;
+  background: #eef2ff;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.edit-muscle-remove {
+  border: none;
+  background: transparent;
+  color: #1e3a8a;
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.variants-editor-list {
+  margin-top: 0.55rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.variants-helper {
+  margin: 0 0 0.45rem 0;
+  font-size: 0.78rem;
+  color: #64748b;
+  line-height: 1.3;
+}
+
+.variant-editor-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.variant-default-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  color: #334155;
+  font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  .performance-inputs {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .performance-inputs input {
+    width: 100%;
+  }
+
+  .edit-muscle-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .variant-editor-row {
+    grid-template-columns: 1fr;
+  }
+
+  .exercise-name-toggle {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

@@ -1,0 +1,102 @@
+.musculation-page {
+  max-width: 1240px;
+  margin: 0 auto;
+  min-height: calc(100dvh - 74px);
+  padding: 1.6rem 1.25rem 2.5rem;
+}
+
+.page-header {
+  margin-bottom: 1.25rem;
+}
+
+.page-header h1 {
+  font-size: clamp(1.4rem, 2.4vw, 1.9rem);
+  color: #111827;
+  margin-bottom: 0.35rem;
+}
+
+.page-header p {
+  font-size: 0.95rem;
+  color: #4b5563;
+}
+
+.tabs-container {
+  margin-bottom: 1.25rem;
+}
+
+.tabs {
+  display: inline-flex;
+  gap: 0.5rem;
+  background: #fff;
+  padding: 0.38rem;
+  border-radius: 11px;
+  border: 1px solid #e5e7eb;
+}
+
+.tab-button {
+  padding: 0.52rem 0.95rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #475569;
+  transition: all 0.2s ease;
+}
+
+.tab-button:hover {
+  color: #1e3a8a;
+  background: #eef2ff;
+}
+
+.tab-button.active {
+  background: #1e3a8a;
+  color: #fff;
+}
+
+.tab-content {
+  animation: fadeIn 0.2s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.exercises-section,
+.sessions-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.sessions-toolbar {
+  display: flex;
+  justify-content: flex-start;
+}
+
+@media (max-width: 768px) {
+  .musculation-page {
+    min-height: calc(100dvh - 64px);
+    padding: 1rem 0.85rem 1.4rem;
+  }
+
+  .tabs {
+    width: 100%;
+  }
+
+  .tab-button {
+    flex: 1;
+  }
+
+  .sessions-toolbar .btn {
+    width: 100%;
+  }
+}

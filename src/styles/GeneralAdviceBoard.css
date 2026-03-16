@@ -1,0 +1,64 @@
+.general-advice-board {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 1rem;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+}
+
+.general-advice-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #0f172a;
+}
+
+.general-advice-header p {
+  margin: 0.3rem 0 0 0;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.general-advice-grid {
+  margin-top: 0.85rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.general-advice-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.7rem;
+}
+
+.general-advice-card h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  color: #1e293b;
+}
+
+.general-advice-card textarea {
+  width: 100%;
+  min-height: 130px;
+  resize: vertical;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0.6rem 0.68rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: #0f172a;
+  background: #fff;
+}
+
+.general-advice-card textarea:focus {
+  outline: none;
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.16);
+}
+
+@media (max-width: 1024px) {
+  .general-advice-grid {
+    grid-template-columns: 1fr;
+  }
+}
