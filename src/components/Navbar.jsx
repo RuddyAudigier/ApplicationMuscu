@@ -3,7 +3,8 @@ import '../styles/Navbar.css'
 function Navbar({ currentPage, onNavigate }) {
   const navItems = [
     { key: 'home', label: 'Accueil' },
-    { key: 'musculation', label: 'Entraînement' },
+    { key: 'exercises', label: 'Exercices' },
+    { key: 'sessions', label: 'Séances' },
     { key: 'performances', label: 'Performances' }
   ]
 

@@ -197,8 +197,11 @@ function PerformancesPage({
       return
     }
 
-    if (!Number.isFinite(reps) || reps <= 0 || !Number.isFinite(weight) || weight < 0) {
-      alert('Reps doit être supérieur à 0 et le poids doit être supérieur ou égal à 0.')
+    // Permettre 0 reps (tentative ratée): soit (reps = 0), soit (reps > 0 ET weight !== null)
+    const hasValidRepsAndWeight = (Number.isFinite(reps) && reps >= 0 && ((reps === 0) || (reps > 0 && Number.isFinite(weight) && weight >= 0)))
+
+    if (!hasValidRepsAndWeight) {
+      alert('Saisie invalide: soit reps=0 (tentative ratée), soit reps>0 avec un poids ≥0.')
       return
     }
 
@@ -301,7 +304,8 @@ function PerformancesPage({
         errors.push(`Ligne ${lineNumber}: exercice introuvable (${exerciseNameValue || exerciseIdValue || 'vide'}).`)
         continue
       }
-      if (!Number.isFinite(reps) || reps <= 0) {
+      // Permettre 0 reps ou reps > 0
+      if (!Number.isFinite(reps) || reps < 0) {
         errors.push(`Ligne ${lineNumber}: reps invalide.`)
         continue
       }
@@ -433,7 +437,7 @@ function PerformancesPage({
             <input
               id="manual-reps"
               type="number"
-              min="1"
+              min="0"
               value={manualPerf.reps}
               onChange={(e) => handleManualPerfChange('reps', e.target.value)}
               required

@@ -2,8 +2,8 @@
   font-family: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #1f2937;
-  background-color: #f3f4f6;
+  color: var(--text-primary);
+  background-color: var(--bg-page);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -29,8 +29,8 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100dvh;
-  background: radial-gradient(circle at top left, #eef2ff 0%, #f9fafb 35%, #f3f4f6 100%);
-  color: #1f2937;
+  background: var(--bg-page);
+  color: var(--text-primary);
 }
 
 a {

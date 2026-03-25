@@ -1,0 +1,187 @@
+/* Exercise Workout Card - Current Exercise Display */
+
+.exercise-workout-card {
+  background: rgba(28, 28, 30, 0.7);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 16px;
+  margin: 12px 0;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease-in-out;
+}
+
+.exercise-workout-card:hover {
+  background: rgba(28, 28, 30, 0.8);
+  box-shadow: 
+    0 12px 48px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+@keyframes slideUpWC {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.exercise-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.exercise-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--neon-lime);
+  margin: 0;
+  letter-spacing: -0.3px;
+  text-transform: uppercase;
+  flex: 1;
+}
+
+.exercise-variant {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(0, 255, 255, 0.1);
+  padding: 4px 10px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border: 1px solid rgba(0, 255, 255, 0.2);
+}
+
+/* Exercise Meta Information */
+.exercise-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meta-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 40px;
+}
+
+.meta-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.meta-notes {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* PR Badge */
+.exercise-pr-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, rgba(255, 59, 48, 0.15) 0%, rgba(255, 107, 91, 0.15) 100%);
+  border: 1px solid rgba(255, 59, 48, 0.3);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  animation: pulseGlowPR 2s ease-in-out infinite;
+}
+
+@keyframes pulseGlowPR {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(255, 59, 48, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(255, 59, 48, 0.5);
+  }
+}
+
+.pr-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.pr-text {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--neon-red);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .exercise-workout-card {
+    padding: 12px;
+    margin: 8px 0;
+    border-radius: 14px;
+  }
+
+  .exercise-name {
+    font-size: 18px;
+  }
+
+  .exercise-variant {
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+
+  .meta-label {
+    font-size: 10px;
+  }
+
+  .meta-value {
+    font-size: 13px;
+  }
+
+  .pr-icon {
+    font-size: 16px;
+  }
+
+  .pr-text {
+    font-size: 11px;
+  }
+}
+
+/* Landscape */
+@media (orientation: landscape) and (max-height: 500px) {
+  .exercise-workout-card {
+    padding: 10px;
+    margin: 6px 0;
+  }
+
+  .exercise-name {
+    font-size: 16px;
+  }
+
+  .meta-value {
+    font-size: 12px;
+  }
+}

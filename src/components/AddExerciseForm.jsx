@@ -75,19 +75,10 @@ export default function AddExerciseForm({ onAddExercise }) {
         <label>Groupes Musculaires Ciblés *</label>
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
           <div style={{ flex: 1, minWidth: '200px' }}>
-            <label style={{ fontSize: '0.9rem', color: '#666', display: 'block', marginBottom: '0.5rem' }}>
+            <label style={{ fontSize: '0.9rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.5rem' }}>
               Sélectionner un muscle:
             </label>
-            <select 
-              style={{ 
-                width: '100%',
-                padding: '0.75rem',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '1rem'
-              }}
-              id="muscleSelect"
-            >
+            <select id="muscleSelect">
               <option value="">-- Choisir un muscle --</option>
               {muscleGroups.map(group => (
                 <option key={group} value={group}>{group}</option>
@@ -111,18 +102,18 @@ export default function AddExerciseForm({ onAddExercise }) {
           </div>
 
           <div style={{ flex: 1, minWidth: '200px' }}>
-            <label style={{ fontSize: '0.9rem', color: '#666', display: 'block', marginBottom: '0.5rem' }}>
+            <label style={{ fontSize: '0.9rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.5rem' }}>
               Muscles sélectionnés:
             </label>
             <div style={{
-              border: '1px solid #ddd',
-              borderRadius: '4px',
+              border: '1px solid rgba(248, 250, 252, 0.14)',
+              borderRadius: '10px',
               padding: '0.75rem',
               minHeight: '120px',
-              backgroundColor: '#f9f9f9'
+              backgroundColor: 'rgba(15, 23, 42, 0.35)'
             }}>
               {formData.muscleGroups.length === 0 ? (
-                <p style={{ color: '#999', margin: 0, fontSize: '0.9rem' }}>Aucun muscle sélectionné</p>
+                <p style={{ color: 'var(--text-dim)', margin: 0, fontSize: '0.9rem' }}>Aucun muscle sélectionné</p>
               ) : (
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                   {formData.muscleGroups.map(group => (
@@ -133,13 +124,13 @@ export default function AddExerciseForm({ onAddExercise }) {
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         padding: '0.5rem',
-                        backgroundColor: '#fff',
+                        backgroundColor: 'rgba(17, 26, 51, 0.55)',
                         marginBottom: '0.5rem',
-                        borderRadius: '4px',
-                        border: '1px solid #e0e0e0'
+                        borderRadius: '10px',
+                        border: '1px solid rgba(248, 250, 252, 0.10)'
                       }}
                     >
-                      <span>{group}</span>
+                      <span style={{ color: 'var(--text-primary)' }}>{group}</span>
                       <button
                         type="button"
                         className="btn btn-danger btn-small"

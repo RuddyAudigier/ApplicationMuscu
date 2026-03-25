@@ -10,7 +10,7 @@ const DEFAULT_ADVICE = {
   sleep: ''
 }
 
-export default function GeneralAdviceBoard({ title = 'Conseils généraux' }) {
+export default function GeneralAdviceBoard({ title = 'Conseils généraux', variant }) {
   const [advice, setAdvice] = useState(DEFAULT_ADVICE)
   const [isHydrated, setIsHydrated] = useState(false)
 
@@ -64,7 +64,7 @@ export default function GeneralAdviceBoard({ title = 'Conseils généraux' }) {
     const saveTimer = window.setTimeout(async () => {
       try {
         await generalAdviceService.saveGeneralAdvice(advice)
-      } catch (error) {
+      } catch {
         // Fallback local déjà fait plus haut.
       }
     }, 450)
@@ -83,7 +83,7 @@ export default function GeneralAdviceBoard({ title = 'Conseils généraux' }) {
   }
 
   return (
-    <section className="general-advice-board">
+    <section className={`general-advice-board${variant ? ` ${variant}` : ''}`}>
       <div className="general-advice-header">
         <h2>{title}</h2>
         <p>Notes perso visibles partout dans l&apos;app.</p>

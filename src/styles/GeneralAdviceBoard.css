@@ -1,20 +1,49 @@
 .general-advice-board {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: rgba(17, 26, 51, 0.9);
+  border: 1px solid var(--border-color);
   border-radius: 16px;
   padding: 1rem;
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.general-advice-board.postit {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.general-advice-board.postit .general-advice-header {
+  padding: 0.9rem 1rem;
+  border-radius: 16px;
+  border: 1px solid var(--paper-border);
+  background:
+    radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.12) 0%, transparent 55%),
+    radial-gradient(circle at 85% 40%, rgba(20, 184, 166, 0.10) 0%, transparent 60%),
+    linear-gradient(135deg, var(--paper-bg) 0%, var(--paper-bg-soft) 100%);
+  color: var(--paper-ink);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: rotate(-0.35deg);
+}
+
+.general-advice-board.postit .general-advice-grid {
+  margin-top: 0;
+  gap: 1rem;
+  padding: 0.25rem 0.1rem;
 }
 
 .general-advice-header h2 {
   margin: 0;
   font-size: 1.05rem;
-  color: #0f172a;
+  color: var(--text-primary);
 }
 
 .general-advice-header p {
   margin: 0.3rem 0 0 0;
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 0.88rem;
 }
 
@@ -26,35 +55,139 @@
 }
 
 .general-advice-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: rgba(15, 23, 42, 0.35);
+  border: 1px solid rgba(248, 250, 252, 0.10);
   border-radius: 12px;
   padding: 0.7rem;
+}
+
+.general-advice-board.postit .general-advice-card {
+  position: relative;
+  border-radius: 16px;
+  padding: 1.1rem 1rem 0.9rem;
+  border: 1px solid var(--paper-border);
+  background:
+    /* paper texture */
+    repeating-linear-gradient(
+      90deg,
+      rgba(17, 24, 39, 0.015) 0px,
+      rgba(17, 24, 39, 0.015) 2px,
+      transparent 2px,
+      transparent 10px
+    ),
+    radial-gradient(circle at 18% 12%, rgba(59, 130, 246, 0.12) 0%, transparent 55%),
+    radial-gradient(circle at 82% 28%, rgba(20, 184, 166, 0.10) 0%, transparent 55%),
+    linear-gradient(135deg, var(--paper-bg) 0%, var(--paper-bg-soft) 100%);
+  box-shadow:
+    0 26px 55px rgba(0, 0, 0, 0.42),
+    0 2px 0 rgba(255, 255, 255, 0.25) inset,
+    0 0 0 1px rgba(17, 24, 39, 0.08) inset,
+    0 10px 0 -6px rgba(0, 0, 0, 0.12);
+  transform: rotate(-0.75deg);
+}
+
+.general-advice-board.postit .general-advice-card:nth-child(2) {
+  transform: rotate(0.95deg);
+}
+
+.general-advice-board.postit .general-advice-card:nth-child(3) {
+  transform: rotate(-0.45deg);
+}
+
+.general-advice-board.postit .general-advice-card::before {
+  /* “tape” strip to sell the post-it effect (shape, not color) */
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 18%;
+  width: 64%;
+  height: 22px;
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(59, 130, 246, 0.16) 0%, rgba(20, 184, 166, 0.12) 100%);
+  border: 1px solid rgba(17, 24, 39, 0.10);
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.30),
+    0 1px 0 rgba(255, 255, 255, 0.25) inset;
+  transform: rotate(-2.2deg);
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+.general-advice-board.postit .general-advice-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 22px;
+  height: 22px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.45) 0%, rgba(17, 24, 39, 0.05) 100%);
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+  border-left: 1px solid rgba(17, 24, 39, 0.14);
+  border-bottom: 1px solid rgba(17, 24, 39, 0.14);
+  border-top-right-radius: 14px;
+  box-shadow: -10px 10px 22px rgba(0, 0, 0, 0.22);
+}
+
+.general-advice-board.postit .general-advice-header h2,
+.general-advice-board.postit .general-advice-header p {
+  color: var(--paper-ink);
+}
+
+.general-advice-board.postit .general-advice-header p {
+  opacity: 0.75;
+}
+
+.general-advice-board.postit .general-advice-header p {
+  margin-top: 0.45rem;
 }
 
 .general-advice-card h3 {
   margin: 0 0 0.5rem 0;
   font-size: 0.9rem;
-  color: #1e293b;
+  color: var(--text-primary);
+}
+
+.general-advice-board.postit .general-advice-card h3 {
+  color: var(--paper-ink);
 }
 
 .general-advice-card textarea {
   width: 100%;
   min-height: 130px;
   resize: vertical;
-  border: 1px solid #cbd5e1;
+  border: 1px solid rgba(248, 250, 252, 0.14);
   border-radius: 10px;
   padding: 0.6rem 0.68rem;
   font-size: 0.9rem;
   line-height: 1.45;
-  color: #0f172a;
-  background: #fff;
+  color: var(--text-primary);
+  background: rgba(17, 26, 51, 0.55);
+}
+
+.general-advice-board.postit .general-advice-card textarea {
+  color: var(--paper-ink);
+  background:
+    /* ruled lines */
+    repeating-linear-gradient(
+      to bottom,
+      rgba(17, 24, 39, 0.10) 0px,
+      rgba(17, 24, 39, 0.10) 1px,
+      transparent 1px,
+      transparent 28px
+    );
+  border-color: rgba(59, 130, 246, 0.22);
+}
+
+.general-advice-board.postit .general-advice-card textarea::placeholder {
+  color: var(--paper-muted);
 }
 
 .general-advice-card textarea:focus {
   outline: none;
-  border-color: #93c5fd;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.16);
+  border-color: var(--primary);
+  box-shadow: var(--focus-shadow);
 }
 
 @media (max-width: 1024px) {

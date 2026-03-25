@@ -2,7 +2,10 @@
   max-width: 1240px;
   margin: 0 auto;
   min-height: calc(100dvh - 74px);
-  padding: 1.6rem 1.25rem 2.5rem;
+  padding: 2.5rem 1.25rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .page-header {
@@ -11,75 +14,112 @@
 
 .page-header h1 {
   font-size: clamp(1.4rem, 2.4vw, 1.9rem);
-  color: #111827;
+  color: var(--text-primary);
   margin-bottom: 0.35rem;
 }
 
 .page-header p {
   font-size: 0.95rem;
-  color: #4b5563;
+  color: var(--text-muted);
 }
 
-.tabs-container {
-  margin-bottom: 1.25rem;
+.section-switch {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.8rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  background: rgba(17, 26, 51, 0.55);
+  backdrop-filter: blur(16px);
 }
 
-.tabs {
+.section-pill {
   display: inline-flex;
+  align-items: center;
   gap: 0.5rem;
-  background: #fff;
-  padding: 0.38rem;
-  border-radius: 11px;
-  border: 1px solid #e5e7eb;
+  padding: 0.6rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(248, 250, 252, 0.14);
+  background: rgba(15, 23, 42, 0.35);
+  color: var(--text-secondary);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.78rem;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
 }
 
-.tab-button {
-  padding: 0.52rem 0.95rem;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  cursor: pointer;
+.section-pill:hover {
+  transform: translateY(-1px);
+  color: var(--text-primary);
+  border-color: rgba(59, 130, 246, 0.24);
+  background: rgba(59, 130, 246, 0.10);
+}
+
+.section-pill.active {
+  background: var(--gradient-primary);
+  color: var(--text-on-primary);
+  border-color: rgba(59, 130, 246, 0.40);
+  box-shadow: 0 10px 30px rgba(59, 130, 246, 0.14);
+}
+
+.section-pill.secondary {
+  background: var(--gradient-secondary);
+  color: var(--text-on-secondary);
+  border-color: rgba(45, 212, 191, 0.36);
+}
+
+.section-pill-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  background: rgba(248, 250, 252, 0.14);
+  color: inherit;
+}
+
+.musculation-section {
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-color);
+  background: rgba(17, 26, 51, 0.55);
+  backdrop-filter: blur(16px);
+  padding: 1rem;
+}
+
+.musculation-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(248, 250, 252, 0.10);
+  margin-bottom: 1rem;
+}
+
+.musculation-section-header h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: -0.2px;
+}
+
+.musculation-section-header p {
+  margin: 0.35rem 0 0 0;
+  color: var(--text-muted);
   font-size: 0.9rem;
-  font-weight: 600;
-  color: #475569;
-  transition: all 0.2s ease;
 }
 
-.tab-button:hover {
-  color: #1e3a8a;
-  background: #eef2ff;
-}
-
-.tab-button.active {
-  background: #1e3a8a;
-  color: #fff;
-}
-
-.tab-content {
-  animation: fadeIn 0.2s ease-in;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.exercises-section,
-.sessions-section {
+.musculation-section-body {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-}
-
-.sessions-toolbar {
-  display: flex;
-  justify-content: flex-start;
+  gap: 1.1rem;
 }
 
 @media (max-width: 768px) {
@@ -88,15 +128,15 @@
     padding: 1rem 0.85rem 1.4rem;
   }
 
-  .tabs {
-    width: 100%;
+  .section-switch {
+    padding: 0.7rem;
   }
 
-  .tab-button {
-    flex: 1;
+  .musculation-section {
+    padding: 0.85rem;
   }
 
-  .sessions-toolbar .btn {
+  .musculation-section-header .btn {
     width: 100%;
   }
 }

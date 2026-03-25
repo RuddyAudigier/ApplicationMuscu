@@ -423,11 +423,17 @@ export const performancesService = {
       return reps === 0 && weight === null
     }
 
+    const isFalledAttempt = (perf) => {
+      const reps = Number(perf?.reps)
+      return reps === 0  // 0 reps = tentative ratée (ne pas enregistrer en BDD)
+    }
+
     const hasInvalidEntry = performanceDataArray.some((perf) => {
       const reps = Number(perf?.reps)
       const weight = normalizeWeight(perf?.weight)
       const isIncomplete = isIncompleteSerie(perf)
-      if (isIncomplete) return false
+      const isFailed = isFalledAttempt(perf)
+      if (isIncomplete || isFailed) return false
       return !Number.isFinite(reps) || reps <= 0 || weight === null
     })
 
@@ -435,7 +441,13 @@ export const performancesService = {
       throw new Error('Entrée performance invalide: mets reps > 0 avec un poids >= 0, ou reps=0 et poids vide pour une série non complétée.')
     }
 
-    const inserted = performanceDataArray.map((perf) => {
+    // Filtrer: ne pas enregistrer les 0 reps en BDD
+    const performancesToSave = performanceDataArray.filter((perf) => {
+      const reps = Number(perf?.reps)
+      return reps > 0  // Garder seulement reps > 0
+    })
+
+    const inserted = performancesToSave.map((perf) => {
       const isIncomplete = isIncompleteSerie(perf)
       return {
         id: generateId('perf'),
@@ -454,7 +466,7 @@ export const performancesService = {
     })
 
     db.performances = [...inserted, ...(db.performances || [])]
-    cleanupObsoletePerformancesInDb(db, performanceDataArray)
+    cleanupObsoletePerformancesInDb(db, performancesToSave)
     saveDb(db)
   },
 

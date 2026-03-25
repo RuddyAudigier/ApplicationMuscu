@@ -1,0 +1,115 @@
+/* Session Header - Sticky Top */
+
+.session-header {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(180deg, rgba(11, 11, 12, 0.98) 0%, rgba(11, 11, 12, 0.95) 100%);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 12px 16px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.session-header-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.session-exercise-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  flex: 1;
+  letter-spacing: -0.3px;
+}
+
+.session-exercise-counter {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--neon-cyan);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(0, 255, 255, 0.1);
+  padding: 4px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+/* Progress Bar */
+.session-progress-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.session-progress-bar {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.session-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--neon-lime) 0%, var(--neon-cyan) 100%);
+  border-radius: 2px;
+  transition: width 0.3s ease-out;
+  box-shadow: 0 0 8px rgba(204, 255, 0, 0.4);
+}
+
+.session-progress-text {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--neon-lime);
+  min-width: 30px;
+  text-align: right;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .session-header {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .session-exercise-name {
+    font-size: 16px;
+  }
+
+  .session-exercise-counter {
+    font-size: 11px;
+    padding: 3px 6px;
+  }
+
+  .session-progress-text {
+    font-size: 10px;
+  }
+}
+
+/* Landscape orientation */
+@media (orientation: landscape) and (max-height: 500px) {
+  .session-header {
+    padding: 6px 12px;
+    gap: 6px;
+  }
+
+  .session-exercise-name {
+    font-size: 14px;
+  }
+
+  .session-progress-bar {
+    height: 3px;
+  }
+}

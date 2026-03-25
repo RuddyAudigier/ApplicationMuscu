@@ -126,7 +126,7 @@ export async function getBaselinePerformancesForSession(sessionName, exercises) 
   let csvText = ''
   try {
     csvText = await fetchTextCached(path)
-  } catch (error) {
+  } catch {
     return []
   }
 
@@ -224,4 +224,3 @@ export async function getBaselinePerformancesForSession(sessionName, exercises) 
 
   return rows
 }
-

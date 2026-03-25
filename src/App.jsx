@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import './App.css'
-import Navbar from './components/Navbar'
+import BottomNavigation from './components/BottomNavigation'
 import HomePage from './pages/HomePage'
-import MusculationPage from './pages/MusculationPage'
+import ExercisesPage from './pages/ExercisesPage'
+import SessionsPage from './pages/SessionsPage'
 import SessionRunner from './pages/SessionRunner'
 import PerformancesPage from './pages/PerformancesPage'
 import ShareSessionPage from './pages/ShareSessionPage'
+import SettingsPage from './pages/SettingsPage'
 import ExerciseDetailsModal from './components/ExerciseDetailsModal'
 import { normalizeMuscleGroups } from './utils/muscleGroups'
 import { normalizeVariants } from './utils/variants'
@@ -280,38 +282,6 @@ function pickHeaviest(candidates) {
 
     return best
   }, null)
-}
-
-function pickClosestBelowOrEqual(candidates, currentWeight) {
-  const filtered = candidates.filter((candidate) => candidate.weight <= (currentWeight + 0.01))
-  return pickHeaviest(filtered)
-}
-
-function findCandidatesForReps(index, exerciseId, performance, targetReps) {
-  if (!exerciseId || !targetReps || targetReps <= 0) {
-    const hasName = Boolean(normalizeExerciseName(performance?.exerciseName))
-    if (!hasName || !targetReps || targetReps <= 0) {
-      return []
-    }
-  }
-
-  const exerciseKeys = getExerciseIdentityKeys(exerciseId, performance)
-  const keys = getVariantIdentityKeys(performance)
-  const merged = []
-
-  exerciseKeys.forEach((exerciseKey) => {
-    keys.forEach((variantKey) => {
-      const repsMap = index.get(`${exerciseKey}::${variantKey}`)
-      if (!repsMap) {
-        return
-      }
-
-      const candidates = repsMap.get(targetReps) || []
-      merged.push(...candidates)
-    })
-  })
-
-  return merged
 }
 
 function dedupeCandidates(candidates) {
@@ -1005,7 +975,7 @@ async function tryCopyImageToClipboard(imageBlob) {
 
     // Sans API de lecture, on évite de promettre un succès sur mobile.
     return !isMobileDevice()
-  } catch (error) {
+  } catch {
     return false
   }
 }
@@ -1165,7 +1135,7 @@ function App() {
           if (Array.isArray(entry?.payload) && entry.payload.length > 0) {
             await performancesService.addPerformances(entry.payload)
           }
-        } catch (error) {
+        } catch {
           stillPending.push(entry)
         }
       }
@@ -1345,7 +1315,7 @@ function App() {
       let imageBlob = null
       try {
         imageBlob = await buildWorkoutShareImageBlob(payload, 'image/jpeg')
-      } catch (error) {
+      } catch {
         imageBlob = await buildWorkoutShareImageBlob(payload, 'image/png')
       }
 
@@ -1429,7 +1399,7 @@ function App() {
 
   const handleAbandonSession = () => {
     setOngoingSession(null)
-    setCurrentPage('musculation')
+    setCurrentPage('sessions')
   }
 
   const handleEndSession = async (performanceData) => {
@@ -1467,7 +1437,7 @@ function App() {
             let imageBlob = null
             try {
               imageBlob = await buildWorkoutShareImageBlob(payload, 'image/jpeg')
-            } catch (error) {
+            } catch {
               imageBlob = await buildWorkoutShareImageBlob(payload, 'image/png')
             }
 
@@ -1495,7 +1465,7 @@ function App() {
       setPerformances(updatedPerformances)
 
       setOngoingSession(null)
-      setCurrentPage('musculation')
+      setCurrentPage('sessions')
 
       if (sharePreparation?.imageBlob && sharePreparation?.imageFile) {
         const imageUrl = URL.createObjectURL(sharePreparation.imageBlob)
@@ -1509,11 +1479,11 @@ function App() {
       }
 
       alert('Séance enregistrée.')
-    } catch (error) {
+  } catch (error) {
       console.error('Erreur enregistrement séance:', error)
       enqueuePendingPerformances(formattedData)
       setOngoingSession(null)
-      setCurrentPage('musculation')
+      setCurrentPage('sessions')
       const detail = error?.message ? `\nDétail: ${error.message}` : ''
       alert(`Connexion instable: la séance est sauvegardée localement et sera envoyée automatiquement à la prochaine ouverture.${detail}`)
     }
@@ -1608,7 +1578,6 @@ function App() {
 
   return (
     <div className="app">
-      <Navbar currentPage={currentPage} onNavigate={setCurrentPage} />
       {isMockBackend && (
         <div
           style={{
@@ -1620,7 +1589,8 @@ function App() {
             display: 'flex',
             gap: '0.75rem',
             justifyContent: 'space-between',
-            alignItems: 'center'
+            alignItems: 'center',
+            zIndex: 999
           }}
         >
           <div>
@@ -1646,24 +1616,33 @@ function App() {
 
       <main className="app-content">
         {currentPage === 'home' && (
-          <HomePage onNavigateToMusculation={() => setCurrentPage('musculation')} />
+          <HomePage onNavigateToExercises={() => setCurrentPage('exercises')} />
         )}
 
-        {currentPage === 'musculation' && (
-          <MusculationPage
+        {currentPage === 'exercises' && (
+          <ExercisesPage
             exercises={exercises}
-            sessions={sessions}
             onAddExercise={handleAddExercise}
             onDeleteExercise={handleDeleteExercise}
             onUpdateExercise={handleUpdateExercise}
+            onUpdateCoachNotes={handleUpdateCoachNotes}
+            onOpenExerciseDetails={handleOpenExerciseDetails}
+            onNavigate={setCurrentPage}
+          />
+        )}
+
+        {currentPage === 'sessions' && (
+          <SessionsPage
+            exercises={exercises}
+            sessions={sessions}
             onAddSession={handleAddSession}
             onDeleteSession={handleDeleteSession}
             onLaunchSession={handleLaunchSession}
-            onUpdateCoachNotes={handleUpdateCoachNotes}
             onResumeSession={handleResumeSession}
             onShareSession={handleShareSession}
             activeSessionId={ongoingSession?.session.id || null}
             onOpenExerciseDetails={handleOpenExerciseDetails}
+            onNavigate={setCurrentPage}
           />
         )}
 
@@ -1688,6 +1667,10 @@ function App() {
             onOpenExerciseDetails={handleOpenExerciseDetails}
           />
         )}
+
+        {currentPage === 'settings' && (
+          <SettingsPage />
+        )}
       </main>
 
       <ExerciseDetailsModal
@@ -1701,7 +1684,7 @@ function App() {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(15, 23, 42, 0.78)',
+            background: 'var(--bg-overlay-strong)',
             zIndex: 9999,
             display: 'flex',
             alignItems: 'center',
@@ -1716,13 +1699,15 @@ function App() {
               maxHeight: '92dvh',
               overflow: 'auto',
               borderRadius: '14px',
-              background: '#ffffff',
+              background: 'rgba(17, 26, 51, 0.88)',
               padding: '0.95rem',
-              border: '1px solid #e2e8f0'
+              border: '1px solid var(--border-color)',
+              backdropFilter: 'blur(18px)',
+              boxShadow: 'var(--shadow-lg)'
             }}
           >
-            <h3 style={{ margin: '0 0 0.35rem 0', color: '#0f172a' }}>Partage de la séance</h3>
-            <p style={{ margin: 0, color: '#475569', fontSize: '0.9rem' }}>
+            <h3 style={{ margin: '0 0 0.35rem 0', color: 'var(--text-primary)' }}>Partage de la séance</h3>
+            <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
               Si le partage auto ne marche pas, appui long sur l&apos;image puis partage.
             </p>
             <div style={{ display: 'flex', gap: '0.55rem', flexWrap: 'wrap', margin: '0.75rem 0' }}>
@@ -1742,13 +1727,15 @@ function App() {
               style={{
                 width: '100%',
                 borderRadius: '12px',
-                border: '1px solid #cbd5e1',
+                border: '1px solid rgba(248, 250, 252, 0.14)',
                 display: 'block'
               }}
             />
           </div>
         </div>
       )}
+
+      <BottomNavigation currentPage={currentPage} onNavigate={setCurrentPage} />
     </div>
   )
 }

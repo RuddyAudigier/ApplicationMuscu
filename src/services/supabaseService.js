@@ -475,12 +475,18 @@ export const performancesService = {
         return reps === 0 && weight === null
       }
 
+      const isFalledAttempt = (perf) => {
+        const reps = Number(perf?.reps)
+        return reps === 0  // 0 reps = tentative ratée (ne pas enregistrer en BDD)
+      }
+
       const hasInvalidEntry = performanceDataArray.some((perf) => {
         const reps = Number(perf?.reps)
         const weight = normalizeWeight(perf?.weight)
         const isIncomplete = isIncompleteSerie(perf)
-        if (isIncomplete) {
-          return false
+        const isFailed = isFalledAttempt(perf)
+        if (isIncomplete || isFailed) {
+          return false  // Accepter les séries non complétées ET les tentatives ratées (0 reps)
         }
 
         return !Number.isFinite(reps) || reps <= 0 || weight === null
@@ -490,7 +496,18 @@ export const performancesService = {
         throw new Error('Entrée performance invalide: mets reps > 0 avec un poids >= 0, ou reps=0 et poids vide pour une série non complétée.')
       }
 
-      const performancesFormatted = performanceDataArray.map((perf) => {
+      // Filtrer: ne pas enregistrer les 0 reps en BDD
+      const performancesToSave = performanceDataArray.filter((perf) => {
+        const reps = Number(perf?.reps)
+        return reps > 0  // Garder seulement reps > 0
+      })
+
+      if (performancesToSave.length === 0) {
+        // Aucune perf à enregistrer (toutes des tentatives ratées)
+        return
+      }
+
+      const performancesFormatted = performancesToSave.map((perf) => {
         const isIncomplete = isIncompleteSerie(perf)
         return {
         exercise_id: perf.exerciseId,
@@ -511,7 +528,7 @@ export const performancesService = {
         .insert(performancesFormatted)
 
       if (!error) {
-        await this.cleanupObsoletePerformances(performanceDataArray)
+        await this.cleanupObsoletePerformances(performancesToSave)
         return
       }
 
@@ -525,7 +542,7 @@ export const performancesService = {
         throw error
       }
 
-      const legacyPerformancesFormatted = performanceDataArray.map((perf) => {
+      const legacyPerformancesFormatted = performancesToSave.map((perf) => {
         const isIncomplete = isIncompleteSerie(perf)
         return {
         exercise_id: perf.exerciseId,
@@ -544,7 +561,7 @@ export const performancesService = {
 
       if (legacyError) throw legacyError
 
-      await this.cleanupObsoletePerformances(performanceDataArray)
+      await this.cleanupObsoletePerformances(performancesToSave)
       return
     } catch (error) {
       console.error('Erreur ajout performances:', error)

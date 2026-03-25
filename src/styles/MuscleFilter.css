@@ -1,0 +1,182 @@
+.muscle-filter {
+  position: relative;
+  width: 100%;
+}
+
+.muscle-filter-button {
+  width: 100%;
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(248, 250, 252, 0.16);
+  background:
+    linear-gradient(135deg, rgba(59, 130, 246, 0.10) 0%, rgba(20, 184, 166, 0.06) 100%),
+    rgba(15, 23, 42, 0.35);
+  color: var(--text-primary);
+  padding: 0.7rem 0.8rem;
+  display: grid;
+  grid-template-columns: 92px 1fr auto;
+  align-items: center;
+  gap: 0.9rem;
+  cursor: pointer;
+}
+
+.muscle-filter-button:hover {
+  border-color: rgba(59, 130, 246, 0.28);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.muscle-filter-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  border: 1px solid rgba(248, 250, 252, 0.10);
+  background: rgba(11, 16, 32, 0.55);
+  padding: 0.25rem;
+  height: 72px;
+  overflow: hidden;
+}
+
+.muscle-filter-text {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.muscle-filter-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 900;
+}
+
+.muscle-filter-value {
+  font-weight: 900;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.muscle-filter-caret {
+  color: var(--text-muted);
+  font-weight: 900;
+}
+
+.muscle-filter-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  left: auto;
+  z-index: 1200;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-color);
+  background: rgba(17, 26, 51, 0.98);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  padding: 0.65rem;
+  width: min(820px, calc(100vw - 2.2rem));
+  max-height: min(70dvh, 560px);
+  overflow: auto;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.muscle-filter-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid rgba(248, 250, 252, 0.10);
+}
+
+.muscle-filter-popover-title {
+  color: var(--text-primary);
+  font-weight: 950;
+  letter-spacing: -0.2px;
+}
+
+.muscle-filter-items {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.muscle-filter-item {
+  width: 100%;
+  min-width: 0;
+  border-radius: 14px;
+  border: 1px solid rgba(248, 250, 252, 0.10);
+  background: rgba(15, 23, 42, 0.35);
+  padding: 0.7rem;
+  display: grid;
+  grid-template-columns: 112px 1fr;
+  align-items: center;
+  gap: 0.85rem;
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+}
+
+.muscle-filter-item:hover {
+  border-color: rgba(59, 130, 246, 0.22);
+  background: rgba(59, 130, 246, 0.10);
+}
+
+.muscle-filter-item.active {
+  border-color: rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.14);
+}
+
+.muscle-filter-item-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  border: 1px solid rgba(248, 250, 252, 0.10);
+  background: rgba(11, 16, 32, 0.55);
+  padding: 0.25rem;
+  height: 94px;
+  overflow: hidden;
+}
+
+.muscle-filter-item-text {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.muscle-filter-item-text strong {
+  color: var(--text-primary);
+  font-weight: 950;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
+  line-height: 1.1;
+}
+
+.muscle-filter-item-text span {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .muscle-filter-popover {
+    width: 100%;
+    left: 0;
+    right: 0;
+  }
+
+  .muscle-filter-button {
+    grid-template-columns: 82px 1fr auto;
+  }
+
+  .muscle-filter-items {
+    grid-template-columns: 1fr;
+  }
+}

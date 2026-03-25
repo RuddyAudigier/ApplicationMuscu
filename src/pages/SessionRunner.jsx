@@ -96,7 +96,11 @@ export default function SessionRunner({
     const weight = parseWeightValue(serie.weight)
     const rpe = parseInt(serie.rpe, 10)
 
-    return Number.isFinite(reps) && reps > 0 && weight !== null && Number.isFinite(rpe) && rpe >= 6 && rpe <= 10
+    // Permettre 0 reps (tentative ratée) ET weight peut être null pour 0 reps
+    // Sinon: reps > 0 ET weight !== null
+    const hasValidRepsAndWeight = (Number.isFinite(reps) && reps >= 0 && ((reps === 0) || (reps > 0 && weight !== null)))
+
+    return hasValidRepsAndWeight && Number.isFinite(rpe) && rpe >= 6 && rpe <= 10
   }
 
   const isSerieValid = (serie) => Boolean(serie.validated && canValidateSerie(serie))

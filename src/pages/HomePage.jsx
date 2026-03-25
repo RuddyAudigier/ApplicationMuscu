@@ -1,7 +1,7 @@
 import '../styles/HomePage.css'
 import GeneralAdviceBoard from '../components/GeneralAdviceBoard'
 
-export default function HomePage({ onNavigateToMusculation }) {
+export default function HomePage({ onNavigateToExercises }) {
   return (
     <div className="home-page">
       <section className="hero">
@@ -12,7 +12,7 @@ export default function HomePage({ onNavigateToMusculation }) {
             Centralisez vos exercices, construisez vos séances et suivez votre progression
             dans une interface claire, pensée pour un usage quotidien.
           </p>
-          <button className="cta-button" onClick={onNavigateToMusculation}>
+          <button className="cta-button" onClick={onNavigateToExercises}>
             Accéder à l'espace entraînement
           </button>
         </div>
@@ -44,7 +44,7 @@ export default function HomePage({ onNavigateToMusculation }) {
         </article>
       </section>
 
-      <GeneralAdviceBoard title="Conseils généraux (coach/perso)" />
+      <GeneralAdviceBoard title="Conseils généraux (entrainement, nutrition, sommeil)" variant="postit" />
     </div>
   )
 }

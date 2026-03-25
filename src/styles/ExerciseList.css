@@ -12,14 +12,14 @@
 .exercises-header h2 {
   margin: 0;
   font-size: 1.15rem;
-  color: #111827;
+  color: var(--text-primary);
   font-weight: 700;
 }
 
 .exercise-count {
-  background: #e0e7ff;
-  color: #1e3a8a;
-  border: 1px solid #c7d2fe;
+  background: rgba(59, 130, 246, 0.14);
+  color: var(--primary-light);
+  border: 1px solid rgba(59, 130, 246, 0.22);
   padding: 0.34rem 0.62rem;
   border-radius: 999px;
   font-size: 0.78rem;
@@ -36,19 +36,20 @@
 .empty-state {
   text-align: center;
   padding: 2.1rem 1rem;
-  background: #fff;
+  background: rgba(17, 26, 51, 0.55);
   border-radius: 12px;
-  border: 1px dashed #cbd5e1;
+  border: 1px dashed rgba(248, 250, 252, 0.22);
+  backdrop-filter: blur(16px);
 }
 
 .empty-state h3 {
-  color: #334155;
+  color: var(--text-primary);
   margin: 0 0 0.4rem 0;
   font-size: 1rem;
 }
 
 .empty-state p {
-  color: #64748b;
+  color: var(--text-muted);
   margin: 0;
   font-size: 0.9rem;
 }

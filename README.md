@@ -81,4 +81,4 @@ npx cap open android
 (💡 Voir le fichier NATIVE_BUILD_GUIDE.md et GUIDE_ANDROID_HONOR_PARTAGE_IMAGE.md pour des astuces de build avancées).
 🤝 Remerciements & Création
 
-Projet pensé, structuré et codé parRuddyAudigier, avec l'assistance des intelligences artificielles Claude Code (Anthropic) et Mistral IA
+Projet pensé, structuré et codé par RuddyAudigier, avec l'assistance des intelligences artificielles Claude Code (Anthropic) et Mistral IA

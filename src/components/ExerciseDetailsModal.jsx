@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import PerformanceTable from './PerformanceTable'
 import { normalizeMuscleGroups } from '../utils/muscleGroups'
 import { normalizeVariants } from '../utils/variants'
+import MuscleMap from './MuscleMap'
 import '../styles/ExerciseDetailsModal.css'
 
 export default function ExerciseDetailsModal({ exercise, performances = [], onClose }) {
@@ -47,6 +48,7 @@ export default function ExerciseDetailsModal({ exercise, performances = [], onCl
 
         <section className="exercise-modal-section">
           <h3>Groupes musculaires</h3>
+          <MuscleMap muscleGroups={muscleGroups} label={`Muscles travaillés: ${exercise.name}`} />
           <div>
             {muscleGroups.length > 0 ? (
               muscleGroups.map((group) => (

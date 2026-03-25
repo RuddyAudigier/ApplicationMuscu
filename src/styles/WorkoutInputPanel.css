@@ -1,0 +1,318 @@
+/* Workout Input Panel - Large Touch-Friendly Inputs */
+
+.workout-input-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(20, 24, 41, 0.7) 0%, rgba(37, 45, 61, 0.5) 100%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(212, 216, 232, 0.12);
+  border-radius: 18px;
+  margin: 12px 0;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: all 0.3s ease-in-out;
+}
+
+.workout-input-panel:focus-within {
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 20px rgba(99, 102, 241, 0.15);
+}
+
+/* Weight + Reps Row */
+.input-field-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.large-input {
+  width: 100%;
+  height: 56px;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--primary-light);
+  background: rgba(10, 12, 20, 0.9);
+  border: 2px solid rgba(99, 102, 241, 0.25);
+  border-radius: 14px;
+  padding: 12px 16px;
+  text-align: center;
+  transition: all 0.2s ease-in-out;
+  font-family: 'SF Pro Display', 'Inter', monospace;
+  
+  /* Remove number spinner buttons */
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.large-input::-webkit-outer-spin-button,
+.large-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.large-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: rgba(10, 12, 20, 0.95);
+  color: var(--primary-light);
+  box-shadow: 
+    0 0 0 4px rgba(99, 102, 241, 0.15),
+    0 0 20px rgba(99, 102, 241, 0.3);
+}
+
+.large-input::placeholder {
+  color: var(--text-dim);
+}
+
+.large-input:disabled {
+  color: var(--text-muted);
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: rgba(10, 12, 20, 0.5);
+}
+
+/* Weight + Reps Container */
+.weight-field,
+.reps-field {
+  flex: 1;
+}
+
+.input-divider {
+  display: none;
+}
+
+/* RPE Section */
+.rpe-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rpe-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.rpe-buttons {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.rpe-button {
+  aspect-ratio: 1;
+  min-height: 48px;
+  font-size: 16px;
+  font-weight: 700;
+  border: 2px solid rgba(212, 216, 232, 0.15);
+  border-radius: 12px;
+  background: rgba(20, 24, 41, 0.6);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.25s ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  font-family: 'SF Pro Display', 'Inter', sans-serif;
+}
+
+.rpe-button:active {
+  transform: scale(0.92);
+}
+
+.rpe-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ====== RPE COLOR SYSTEM - Dynamic & Semantic ====== */
+
+/* RPE 6-7: Cool Blue - Light Effort */
+.rpe-button.rpe-6,
+.rpe-button.rpe-7 {
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+.rpe-button.rpe-6:hover:not(.active):not(:disabled),
+.rpe-button.rpe-7:hover:not(.active):not(:disabled) {
+  border-color: rgba(129, 140, 248, 0.5);
+  color: rgba(129, 140, 248, 0.8);
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.rpe-button.rpe-6.active,
+.rpe-button.rpe-7.active {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(129, 140, 248, 0.15) 100%);
+  border-color: var(--primary-light);
+  color: var(--primary-light);
+  box-shadow: var(--glow-primary);
+}
+
+/* RPE 8-9: Vibrant Cyan - Moderate Effort */
+.rpe-button.rpe-8,
+.rpe-button.rpe-9 {
+  border-color: rgba(6, 182, 212, 0.2);
+}
+
+.rpe-button.rpe-8:hover:not(.active):not(:disabled),
+.rpe-button.rpe-9:hover:not(.active):not(:disabled) {
+  border-color: rgba(34, 211, 238, 0.5);
+  color: rgba(34, 211, 238, 0.8);
+  background: rgba(6, 182, 212, 0.08);
+}
+
+.rpe-button.rpe-8.active,
+.rpe-button.rpe-9.active {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(34, 211, 238, 0.15) 100%);
+  border-color: var(--secondary-light);
+  color: var(--secondary-light);
+  box-shadow: var(--glow-secondary);
+}
+
+/* RPE 10: Intense Red-Orange - Maximum Effort */
+.rpe-button.rpe-10 {
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.rpe-button.rpe-10:hover:not(.active):not(:disabled) {
+  border-color: rgba(248, 113, 113, 0.5);
+  color: rgba(248, 113, 113, 0.8);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.rpe-button.rpe-10.active {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(248, 113, 113, 0.2) 100%);
+  border-color: var(--danger-light);
+  color: var(--danger-light);
+  box-shadow: var(--glow-danger);
+  animation: rpePulse 0.6s ease-in-out infinite;
+}
+
+@keyframes rpePulse {
+  0%, 100% {
+    box-shadow: var(--glow-danger);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 32px rgba(239, 68, 68, 0.6);
+    transform: scale(1.02);
+  }
+}
+
+/* Notes Field */
+.notes-field {
+  margin-top: 4px;
+}
+
+.notes-textarea {
+  width: 100%;
+  min-height: 72px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-primary);
+  background: rgba(11, 11, 12, 0.8);
+  border: 2px solid rgba(204, 255, 0, 0.15);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-family: 'SF Pro Display', 'Inter', sans-serif;
+  line-height: 1.5;
+  resize: vertical;
+  transition: all 0.2s ease-in-out;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.notes-textarea:focus {
+  outline: none;
+  border-color: var(--neon-lime);
+  background: rgba(11, 11, 12, 0.95);
+  box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.15);
+}
+
+.notes-textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.notes-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .workout-input-panel {
+    padding: 12px;
+    gap: 12px;
+    margin: 8px 0;
+    border-radius: 14px;
+  }
+
+  .input-label {
+    font-size: 11px;
+  }
+
+  .large-input {
+    height: 52px;
+    font-size: 22px;
+    padding: 10px 14px;
+    border-radius: 10px;
+  }
+
+  .rpe-buttons {
+    gap: 4px;
+  }
+
+  .rpe-button {
+    min-height: 44px;
+    font-size: 14px;
+    border-radius: 8px;
+  }
+
+  .notes-textarea {
+    min-height: 64px;
+    font-size: 13px;
+    padding: 10px 12px;
+  }
+}
+
+/* Landscape */
+@media (orientation: landscape) and (max-height: 500px) {
+  .workout-input-panel {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .large-input {
+    height: 44px;
+    font-size: 18px;
+  }
+
+  .rpe-button {
+    min-height: 40px;
+    font-size: 12px;
+  }
+
+  .notes-textarea {
+    min-height: 48px;
+    font-size: 12px;
+  }
+}

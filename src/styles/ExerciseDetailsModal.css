@@ -1,7 +1,7 @@
 .exercise-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.7);
+  background: var(--bg-overlay);
   z-index: 10000;
   display: flex;
   justify-content: center;
@@ -12,12 +12,12 @@
 
 .exercise-modal-card {
   width: min(1100px, 100%);
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: rgba(17, 26, 51, 0.95);
+  border: 1px solid var(--border-color);
   border-radius: 14px;
   margin: 1rem 0;
   padding: 1rem;
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.28);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
 }
 
 .exercise-modal-header {
@@ -25,21 +25,24 @@
   justify-content: space-between;
   gap: 0.8rem;
   align-items: flex-start;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid rgba(248, 250, 252, 0.10);
   padding-bottom: 0.7rem;
 }
 
 .exercise-modal-header h2 {
   margin: 0;
+  color: var(--text-primary);
 }
 
 .exercise-modal-header p {
   margin: 0.2rem 0 0 0;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .exercise-modal-section {
   margin-top: 1rem;
+  display: grid;
+  gap: 0.65rem;
 }
 
 .exercise-modal-section h3 {
@@ -48,13 +51,13 @@
 
 .exercise-modal-section p {
   margin: 0;
-  color: #334155;
+  color: var(--text-secondary);
 }
 
 .exercise-modal-variants {
   margin: 0;
   padding-left: 1rem;
-  color: #334155;
+  color: var(--text-secondary);
 }
 
 @media (max-width: 768px) {

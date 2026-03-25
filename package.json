@@ -11,6 +11,11 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview --host",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "test:mutation": "stryker run",
     "android:add": "npx cap add android",
     "android:sync": "npx cap sync android",
     "android:open": "npx cap open android",
@@ -22,6 +27,7 @@
     "@capacitor/core": "^8.1.0",
     "@capacitor/filesystem": "^8.1.2",
     "@capacitor/share": "^8.0.1",
+    "@mjcdev/react-body-highlighter": "^0.0.4",
     "@supabase/supabase-js": "^2.98.0",
     "firebase": "^12.10.0",
     "react": "^19.2.0",
@@ -31,17 +37,23 @@
     "@capacitor/cli": "^8.1.0",
     "@eslint/js": "^9.39.1",
     "@tauri-apps/cli": "^2.10.0",
+    "@testing-library/jest-dom": "^6.1.5",
+    "@testing-library/react": "^14.2.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "@vitest/coverage-v8": "^1.1.1",
+    "@vitest/ui": "^1.1.1",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "jsdom": "^23.0.1",
     "typescript": "^5.9.3",
-    "vite": "^8.0.0-beta.13"
+    "vite": "^5.4.0",
+    "vitest": "^1.1.1"
   },
   "overrides": {
-    "vite": "^8.0.0-beta.13"
+    "vite": "^5.4.0"
   }
 }

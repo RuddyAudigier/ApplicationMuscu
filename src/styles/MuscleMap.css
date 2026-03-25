@@ -1,0 +1,74 @@
+.muscle-map {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.muscle-map-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.muscle-map-single {
+  display: block;
+}
+
+.muscle-map-panel {
+  border-radius: 14px;
+  border: 1px solid rgba(248, 250, 252, 0.10);
+  background: rgba(11, 16, 32, 0.55);
+  padding: 0.55rem;
+}
+
+.muscle-map-title {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+}
+
+.muscle-map-panel svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.muscle-map.compact .muscle-map-grid {
+  grid-template-columns: 1fr;
+}
+
+.muscle-map.compact {
+  height: 100%;
+}
+
+.muscle-map.compact .muscle-map-grid,
+.muscle-map.compact .muscle-map-single {
+  height: 100%;
+}
+
+.muscle-map.compact .muscle-map-panel {
+  height: 100%;
+  padding: 0.15rem;
+  border: 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.muscle-map.compact .muscle-map-panel svg {
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+@media (max-width: 768px) {
+  .muscle-map-grid {
+    grid-template-columns: 1fr;
+  }
+}
