@@ -3,7 +3,7 @@ import '../styles/PerformanceTable.css'
 import { calculateE1RM, roundE1RM } from '../utils/e1rm'
 import { DEFAULT_VARIANT_NAME, normalizeVariants } from '../utils/variants'
 
-export default function PerformanceTable({ performances, exercises = [], onOpenExerciseDetails }) {
+export default function PerformanceTable({ performances, exercises = [], onOpenExerciseDetails, onViewProgress }) {
   const [variantFilterByExercise, setVariantFilterByExercise] = useState({})
 
   const formatWeightForExport = (weight) => {
@@ -155,14 +155,26 @@ export default function PerformanceTable({ performances, exercises = [], onOpenE
           <section key={exerciseId} className="performance-block">
             <div className="performance-block-header">
               <h3>
-                <button
-                  type="button"
-                  className="exercise-link-button"
-                  onClick={() => onOpenExerciseDetails?.(exerciseId)}
-                  title={`Voir la fiche de ${exerciseGroup.exerciseName}`}
-                >
-                  {exerciseGroup.exerciseName}
-                </button>
+                <span className="exercise-header-actions">
+                  <button
+                    type="button"
+                    className="exercise-link-button"
+                    onClick={() => onOpenExerciseDetails?.(exerciseId)}
+                    title={`Voir la fiche de ${exerciseGroup.exerciseName}`}
+                  >
+                    {exerciseGroup.exerciseName}
+                  </button>
+                  {onViewProgress && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-small exercise-progress-btn"
+                      onClick={() => onViewProgress(exerciseId)}
+                      title={`Voir la progression de ${exerciseGroup.exerciseName}`}
+                    >
+                      Graphique
+                    </button>
+                  )}
+                </span>
               </h3>
               <div className="variant-filter-control">
                 <label htmlFor={`variant-filter-${exerciseId}`}>Variante</label>

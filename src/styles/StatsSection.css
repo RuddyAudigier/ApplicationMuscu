@@ -121,7 +121,7 @@
 
 .stat-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--neon-lime) 0%, var(--neon-cyan) 100%);
+  background: linear-gradient(90deg, var(--neon-cyan) 0%, var(--neon-cyan) 100%);
   border-radius: 2px;
   transition: width 0.4s ease-out;
 }
@@ -132,7 +132,7 @@
 }
 
 .exercises-stat .stat-value {
-  color: var(--neon-lime);
+  color: var(--neon-cyan);
 }
 
 .volume-stat .stat-value {
@@ -140,7 +140,7 @@
 }
 
 .volume-stat .stat-bar-fill {
-  background: linear-gradient(90deg, var(--neon-purple) 0%, var(--neon-lime) 100%);
+  background: linear-gradient(90deg, var(--neon-purple) 0%, var(--neon-cyan) 100%);
 }
 
 /* Responsive */

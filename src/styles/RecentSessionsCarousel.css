@@ -22,7 +22,7 @@
   
   /* Custom scrollbar */
   scrollbar-width: thin;
-  scrollbar-color: rgba(204, 255, 0, 0.3) rgba(255, 255, 255, 0.05);
+  scrollbar-color: rgba(34, 211, 238, 0.3) rgba(255, 255, 255, 0.05);
 }
 
 .sessions-carousel::-webkit-scrollbar {
@@ -35,12 +35,12 @@
 }
 
 .sessions-carousel::-webkit-scrollbar-thumb {
-  background: rgba(204, 255, 0, 0.3);
+  background: rgba(34, 211, 238, 0.3);
   border-radius: 2px;
 }
 
 .sessions-carousel::-webkit-scrollbar-thumb:hover {
-  background: rgba(204, 255, 0, 0.5);
+  background: rgba(34, 211, 238, 0.5);
 }
 
 .session-carousel-card {
@@ -88,7 +88,7 @@
 .session-card-name {
   font-size: 16px;
   font-weight: 700;
-  color: var(--neon-lime);
+  color: var(--neon-cyan);
   margin: 0;
   letter-spacing: -0.2px;
   flex: 1;
@@ -138,7 +138,7 @@
 .session-card-btn {
   flex: 1;
   height: 40px;
-  background: linear-gradient(135deg, var(--neon-lime) 0%, var(--neon-lime-dark) 100%);
+  background: linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-cyan-dark) 100%);
   color: #0B0B0C;
   border: none;
   border-radius: 8px;
@@ -148,12 +148,12 @@
   letter-spacing: 0.4px;
   cursor: pointer;
   transition: all 0.2s ease-in-out;
-  box-shadow: 0 4px 12px rgba(204, 255, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(34, 211, 238, 0.2);
 }
 
 .session-card-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(204, 255, 0, 0.3);
+  box-shadow: 0 6px 20px rgba(34, 211, 238, 0.3);
 }
 
 .session-card-btn:active {

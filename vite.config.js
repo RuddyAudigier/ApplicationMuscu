@@ -7,6 +7,7 @@ export default defineConfig({
   plugins: process.env.VITEST ? [] : [react()],
   server: {
     host: process.env.VITEST ? '127.0.0.1' : true,
+    hmr: process.env.VITEST ? false : undefined,
     port: 5173,
     strictPort: true
   },

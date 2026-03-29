@@ -8,6 +8,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export default mergeConfig(
   viteConfig,
   defineConfig({
+    // Vitest démarre un serveur Vite interne: forcer l'écoute en local uniquement
+    // pour éviter les erreurs EPERM (bind sur 0.0.0.0) en environnement sandbox.
+    server: {
+      host: '127.0.0.1',
+      hmr: false
+    },
     test: {
       globals: true,
       environment: 'jsdom',

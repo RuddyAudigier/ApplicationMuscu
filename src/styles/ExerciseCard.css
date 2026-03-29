@@ -3,7 +3,7 @@
   backdrop-filter: blur(15px);
   border-radius: var(--radius-lg);
   padding: 1.2rem;
-  border: 1px solid rgba(204, 255, 0, 0.12);
+  border: 1px solid rgba(34, 211, 238, 0.12);
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
@@ -15,11 +15,11 @@
 
 .exercise-card:hover {
   background: rgba(15, 22, 41, 0.7);
-  border-color: rgba(204, 255, 0, 0.2);
+  border-color: rgba(34, 211, 238, 0.2);
   box-shadow: 
     0 12px 40px rgba(0, 0, 0, 0.3),
     inset 0 1px 1px rgba(255, 255, 255, 0.08),
-    0 0 20px rgba(204, 255, 0, 0.1);
+    0 0 20px rgba(34, 211, 238, 0.1);
 }
 
 .card-header {
@@ -62,7 +62,7 @@
 }
 
 .exercise-details-panel {
-  border: 1px solid rgba(204, 255, 0, 0.12);
+  border: 1px solid rgba(34, 211, 238, 0.12);
   border-radius: var(--radius-md);
   background: rgba(26, 31, 58, 0.5);
   backdrop-filter: blur(10px);
@@ -81,7 +81,7 @@
 }
 
 .exercise-variants-section {
-  border: 1px solid rgba(204, 255, 0, 0.12);
+  border: 1px solid rgba(34, 211, 238, 0.12);
   border-radius: var(--radius-md);
   background: rgba(26, 31, 58, 0.4);
   padding: 0.8rem;
@@ -120,7 +120,7 @@
 
 .exercise-variant-item:hover {
   background: rgba(10, 14, 39, 0.6);
-  border-color: rgba(204, 255, 0, 0.15);
+  border-color: rgba(34, 211, 238, 0.15);
 }
 
 .exercise-variant-name {
@@ -137,9 +137,9 @@
   font-size: 0.7rem;
   font-weight: 700;
   color: #0A0E27;
-  border: 1px solid var(--neon-lime);
-  background: linear-gradient(135deg, var(--neon-lime) 0%, #CCFF00 100%);
-  box-shadow: 0 0 8px rgba(204, 255, 0, 0.2);
+  border: 1px solid var(--neon-cyan);
+  background: linear-gradient(135deg, var(--neon-cyan) 0%, #22d3ee 100%);
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.2);
 }
 
 .exercise-buttons {
@@ -151,7 +151,7 @@
 .performance-section,
 .coach-notes,
 .edit-exercise-form {
-  border: 1px solid rgba(204, 255, 0, 0.12);
+  border: 1px solid rgba(34, 211, 238, 0.12);
   border-radius: var(--radius-md);
   padding: 1rem;
   background: rgba(26, 31, 58, 0.5);
@@ -164,7 +164,7 @@
 .edit-exercise-form h4 {
   margin: 0 0 0.8rem 0;
   font-size: 0.95rem;
-  color: var(--neon-lime);
+  color: var(--neon-cyan);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -191,9 +191,9 @@
 
 .performance-inputs input:focus,
 .coach-notes-textarea:focus {
-  border-color: var(--neon-lime);
+  border-color: var(--neon-cyan);
   background: rgba(10, 14, 39, 0.8);
-  box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.12);
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.12);
 }
 
 .performance-inputs input {
@@ -241,9 +241,9 @@
 .edit-exercise-form input:focus,
 .edit-exercise-form textarea:focus,
 .edit-exercise-form select:focus {
-  border-color: var(--neon-lime);
+  border-color: var(--neon-cyan);
   background: rgba(10, 14, 39, 0.8);
-  box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.12);
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.12);
 }
 
 .edit-exercise-form textarea {
@@ -269,9 +269,9 @@
   align-items: center;
   gap: 0.4rem;
   border-radius: 999px;
-  border: 1px solid rgba(204, 255, 0, 0.25);
+  border: 1px solid rgba(34, 211, 238, 0.25);
   color: #0A0E27;
-  background: linear-gradient(135deg, rgba(204, 255, 0, 0.15) 0%, rgba(0, 255, 255, 0.15) 100%);
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.15) 0%, rgba(0, 255, 255, 0.15) 100%);
   padding: 0.3rem 0.7rem;
   font-size: 0.8rem;
   font-weight: 700;

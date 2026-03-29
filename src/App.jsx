@@ -6,6 +6,7 @@ import ExercisesPage from './pages/ExercisesPage'
 import SessionsPage from './pages/SessionsPage'
 import SessionRunner from './pages/SessionRunner'
 import PerformancesPage from './pages/PerformancesPage'
+import ExerciseProgressPage from './pages/ExerciseProgressPage'
 import ShareSessionPage from './pages/ShareSessionPage'
 import SettingsPage from './pages/SettingsPage'
 import ExerciseDetailsModal from './components/ExerciseDetailsModal'
@@ -985,6 +986,7 @@ function App() {
   const [exercises, setExercises] = useState([])
   const [sessions, setSessions] = useState([])
   const [performances, setPerformances] = useState([])
+  const [progressExerciseId, setProgressExerciseId] = useState(null)
   const [ongoingSession, setOngoingSession] = useState(null)
   const [sharedSession, setSharedSession] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -1010,6 +1012,11 @@ function App() {
 
   const handleCloseExerciseDetails = useCallback(() => {
     setExerciseDetailsExerciseId(null)
+  }, [])
+
+  const handleOpenProgress = useCallback((exerciseId = null) => {
+    setProgressExerciseId(exerciseId || null)
+    setCurrentPage('progress')
   }, [])
 
   const handleShareAssistNow = useCallback(async () => {
@@ -1653,6 +1660,18 @@ function App() {
             onAddPerformance={handleAddManualPerformance}
             onImportPerformances={handleImportPerformances}
             onOpenExerciseDetails={handleOpenExerciseDetails}
+            onOpenProgress={() => handleOpenProgress(null)}
+            onOpenExerciseProgress={(exerciseId) => handleOpenProgress(exerciseId)}
+            onNavigate={setCurrentPage}
+          />
+        )}
+
+        {currentPage === 'progress' && (
+          <ExerciseProgressPage
+            exercises={exercises}
+            performances={performances}
+            initialExerciseId={progressExerciseId}
+            onBack={() => setCurrentPage('performances')}
           />
         )}
 

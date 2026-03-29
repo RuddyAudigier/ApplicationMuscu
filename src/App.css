@@ -99,9 +99,9 @@
   --paper-muted: rgba(7, 18, 37, 0.72);
 
   /* Legacy variables (kept for existing CSS) */
-  --neon-lime: var(--secondary);
-  --neon-lime-light: var(--secondary-light);
-  --neon-lime-dark: var(--secondary-dark);
+  --neon-lime: var(--neon-cyan);
+  --neon-lime-light: #3dd5f3;
+  --neon-lime-dark: var(--neon-cyan-dark);
   --neon-cyan: #22d3ee;
   --neon-cyan-dark: #0891b2;
   --neon-purple: var(--accent-purple);
@@ -217,10 +217,10 @@ body::before {
 
 @keyframes pulseGlow {
   0%, 100% {
-    box-shadow: 0 0 12px rgba(204, 255, 0, 0.2);
+    box-shadow: 0 0 12px rgba(34, 211, 238, 0.2);
   }
   50% {
-    box-shadow: 0 0 24px rgba(204, 255, 0, 0.4);
+    box-shadow: 0 0 24px rgba(34, 211, 238, 0.4);
   }
 }
 
@@ -257,11 +257,11 @@ body::before {
 
 .card:hover {
   background: rgba(15, 22, 41, 0.8);
-  border-color: rgba(204, 255, 0, 0.15);
+  border-color: rgba(34, 211, 238, 0.15);
   box-shadow: 
     0 12px 48px rgba(0, 0, 0, 0.4),
     inset 0 1px 1px rgba(255, 255, 255, 0.08),
-    0 0 20px rgba(204, 255, 0, 0.08);
+    0 0 20px rgba(34, 211, 238, 0.08);
 }
 
 .form {
@@ -315,11 +315,11 @@ body::before {
 .form-group textarea:focus,
 .form-group select:focus {
   outline: none;
-  border-color: var(--neon-lime);
+  border-color: var(--neon-cyan);
   background: rgba(26, 31, 58, 0.8);
   box-shadow: 
-    0 0 0 3px rgba(204, 255, 0, 0.12),
-    inset 0 0 8px rgba(204, 255, 0, 0.08);
+    0 0 0 3px rgba(34, 211, 238, 0.12),
+    inset 0 0 8px rgba(34, 211, 238, 0.08);
 }
 
 .form-buttons {
@@ -448,12 +448,12 @@ canvas {
   margin: 0.35rem 0.35rem 0 0;
   font-size: 0.8rem;
   font-weight: 700;
-  background: linear-gradient(135deg, rgba(204, 255, 0, 0.15) 0%, rgba(0, 255, 255, 0.15) 100%);
-  border: 1px solid rgba(204, 255, 0, 0.25);
-  color: var(--neon-lime);
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.15) 0%, rgba(0, 255, 255, 0.15) 100%);
+  border: 1px solid rgba(34, 211, 238, 0.25);
+  color: var(--neon-cyan);
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  box-shadow: 0 0 8px rgba(204, 255, 0, 0.1);
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.1);
 }
 
 .exercise-description {
@@ -496,12 +496,12 @@ canvas {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(204, 255, 0, 0.2);
+  background: rgba(34, 211, 238, 0.2);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(204, 255, 0, 0.4);
+  background: rgba(34, 211, 238, 0.4);
 }
 
 /* RESPONSIVE BREAKPOINTS */

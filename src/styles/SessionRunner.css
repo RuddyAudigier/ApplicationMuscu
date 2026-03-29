@@ -11,7 +11,7 @@
 .runner-card {
   background: rgba(15, 22, 41, 0.5);
   backdrop-filter: blur(15px);
-  border: 1px solid rgba(204, 255, 0, 0.12);
+  border: 1px solid rgba(34, 211, 238, 0.12);
   border-radius: var(--radius-lg);
   padding: 1.25rem;
   box-shadow: 
@@ -24,7 +24,7 @@
 .runner-card h3,
 .runner-card h4 {
   margin: 0 0 0.8rem 0;
-  color: var(--neon-lime);
+  color: var(--neon-cyan);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -42,7 +42,7 @@
   padding: 1rem;
   background: rgba(26, 31, 58, 0.5);
   border-radius: var(--radius-md);
-  border: 1px solid rgba(204, 255, 0, 0.12);
+  border: 1px solid rgba(34, 211, 238, 0.12);
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05);
 }
 
@@ -70,9 +70,9 @@
 
 .session-date-selector input[type="date"]:focus {
   outline: none;
-  border-color: var(--neon-lime);
+  border-color: var(--neon-cyan);
   background: rgba(10, 14, 39, 0.8);
-  box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.12);
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.12);
 }
 
 .session-date-selector small {
@@ -100,9 +100,9 @@
 
 .runner-progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, var(--neon-lime) 0%, var(--neon-cyan) 100%);
+  background: linear-gradient(90deg, var(--neon-cyan) 0%, var(--neon-cyan) 100%);
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 0 12px rgba(204, 255, 0, 0.3);
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.3);
 }
 
 .runner-progress-label {
@@ -121,8 +121,8 @@
 }
 
 .runner-coach-notes {
-  border: 1px solid rgba(204, 255, 0, 0.15);
-  background: rgba(204, 255, 0, 0.08);
+  border: 1px solid rgba(34, 211, 238, 0.15);
+  background: rgba(34, 211, 238, 0.08);
   border-radius: var(--radius-md);
   padding: 0.9rem;
   margin-bottom: 0.9rem;
@@ -131,7 +131,7 @@
 
 .runner-coach-title {
   font-size: 0.8rem;
-  color: var(--neon-lime);
+  color: var(--neon-cyan);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   font-weight: 700;
@@ -183,12 +183,12 @@
 
 .runner-serie-item:hover {
   background: rgba(26, 31, 58, 0.6);
-  border-color: rgba(204, 255, 0, 0.2);
+  border-color: rgba(34, 211, 238, 0.2);
 }
 
 .runner-serie-item.done {
-  border-color: rgba(204, 255, 0, 0.25);
-  background: rgba(204, 255, 0, 0.08);
+  border-color: rgba(34, 211, 238, 0.25);
+  background: rgba(34, 211, 238, 0.08);
 }
 
 .runner-serie-fields {
@@ -297,7 +297,7 @@
 }
 
 .runner-complete {
-  color: var(--neon-lime);
+  color: var(--neon-cyan);
   font-size: 0.8rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -326,9 +326,9 @@
   padding: 0.4rem 0.9rem;
   font-size: 0.8rem;
   font-weight: 800;
-  background: linear-gradient(135deg, rgba(204, 255, 0, 0.25) 0%, rgba(0, 255, 255, 0.25) 100%);
-  color: var(--neon-lime);
-  border: 1px solid rgba(204, 255, 0, 0.4);
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.25) 0%, rgba(0, 255, 255, 0.25) 100%);
+  color: var(--neon-cyan);
+  border: 1px solid rgba(34, 211, 238, 0.4);
   text-transform: uppercase;
   letter-spacing: 0.2px;
   animation: pulseGlow 2s ease-in-out infinite;
@@ -369,9 +369,9 @@
   padding: 0.35rem 0.7rem;
   font-size: 0.75rem;
   font-weight: 700;
-  background: linear-gradient(135deg, rgba(204, 255, 0, 0.15) 0%, rgba(0, 255, 255, 0.15) 100%);
-  color: var(--neon-lime);
-  border: 1px solid rgba(204, 255, 0, 0.3);
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.15) 0%, rgba(0, 255, 255, 0.15) 100%);
+  color: var(--neon-cyan);
+  border: 1px solid rgba(34, 211, 238, 0.3);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
@@ -390,15 +390,15 @@
 @keyframes runner-pr-pulse {
   0% {
     transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(204, 255, 0, 0.4);
+    box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.4);
   }
   60% {
     transform: scale(1.08);
-    box-shadow: 0 0 0 12px rgba(204, 255, 0, 0);
+    box-shadow: 0 0 0 12px rgba(34, 211, 238, 0);
   }
   100% {
     transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(204, 255, 0, 0);
+    box-shadow: 0 0 0 0 rgba(34, 211, 238, 0);
   }
 }
 

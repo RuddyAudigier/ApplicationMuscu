@@ -87,7 +87,10 @@ function PerformancesPage({
   exercises,
   onAddPerformance,
   onImportPerformances,
-  onOpenExerciseDetails
+  onOpenExerciseDetails,
+  onOpenProgress,
+  onOpenExerciseProgress,
+  onNavigate
 }) {
   const parseWeightValue = (value) => {
     if (value === null || value === undefined) {
@@ -381,13 +384,24 @@ function PerformancesPage({
           <h1>Performances</h1>
           <p>Analyse de vos séries, charges et régularité d'entraînement.</p>
         </div>
-        <button
-          className="btn btn-primary"
-          type="button"
-          onClick={() => setShowManualSection((prev) => !prev)}
-        >
-          {showManualSection ? 'Fermer ajout manuel' : 'Ajout manuel'}
-        </button>
+        <div className="page-header-actions">
+          <button
+            className="btn btn-secondary"
+            type="button"
+            onClick={() => onOpenProgress?.()}
+            disabled={exercises.length === 0}
+            title="Voir des graphiques de progression par exercice"
+          >
+            Progression
+          </button>
+          <button
+            className="btn btn-primary"
+            type="button"
+            onClick={() => setShowManualSection((prev) => !prev)}
+          >
+            {showManualSection ? 'Fermer ajout manuel' : 'Ajout manuel'}
+          </button>
+        </div>
       </div>
 
       {showManualSection && (
@@ -603,6 +617,7 @@ function PerformancesPage({
             performances={selectedExercise ? performancesByExercise[selectedExercise] : performances}
             exercises={exercises}
             onOpenExerciseDetails={onOpenExerciseDetails}
+            onViewProgress={(exerciseId) => onOpenExerciseProgress?.(exerciseId)}
           />
         ) : (
           <div className="empty-state">
