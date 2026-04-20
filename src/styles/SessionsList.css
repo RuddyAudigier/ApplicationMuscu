@@ -278,8 +278,20 @@
   }
 
   .session-card-actions {
-    justify-content: flex-start;
-    max-width: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .session-card-actions > .btn {
+    width: 100%;
+    margin: 0;
+    justify-content: center;
+  }
+
+  .session-card-actions .btn-danger {
+    grid-column: span 2;
   }
 
   .exercise-item-session {

@@ -58,6 +58,7 @@ function buildSeriesState(session, initialSeriesData) {
 
 export default function SessionRunner({
   session,
+  exercises = [],
   performances = [],
   initialState,
   onProgressChange,
@@ -65,13 +66,17 @@ export default function SessionRunner({
   onAbandonSession,
   onOpenExerciseDetails
 }) {
+  const [activeExercises, setActiveExercises] = useState(session.exercises)
   const [seriesData, setSeriesData] = useState(() => buildSeriesState(session, initialState?.seriesData))
-  const [sessionDate, setSessionDate] = useState(new Date().toISOString().split('T')[0]) // Date de la séance, modifiable pendant la séance
+  const [sessionDate, setSessionDate] = useState(new Date().toISOString().split('T')[0])
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
 
   const getExerciseVariants = (exercise) => normalizeVariants(exercise?.variants, exercise?.id)
   const getVariantSelectValue = (variant) => variant.id || `name:${variant.name}`
 
   useEffect(() => {
+    setActiveExercises(session.exercises)
     setSeriesData(buildSeriesState(session, initialState?.seriesData))
   }, [session?.id])
 
@@ -158,8 +163,72 @@ export default function SessionRunner({
   }
 
   const getRpeBadgeClass = (rpe) => {
-    if (!rpe) return 'runner-rpe-badge runner-rpe-empty'
     return `runner-rpe-badge runner-rpe-${rpe}`
+  }
+
+  const handleAddExerciseToActiveSession = (exercise) => {
+    if (activeExercises.some(ex => ex.id === exercise.id)) {
+      alert('Cet exercice est déjà dans la séance.')
+      return
+    }
+
+    const variants = getExerciseVariants(exercise)
+    const defaultVariant = getDefaultVariant(variants, exercise.id)
+
+    setActiveExercises(prev => [...prev, { ...exercise, series: 3 }])
+    setSeriesData(prev => ({
+      ...prev,
+      [exercise.id]: Array.from({ length: 3 }).map(() => ({
+        reps: '',
+        weight: '',
+        rpe: '10',
+        validated: false,
+        variantId: getVariantSelectValue(defaultVariant),
+        variantName: defaultVariant.name || DEFAULT_VARIANT_NAME
+      }))
+    }))
+    setIsAddModalOpen(false)
+    setSearchTerm('')
+  }
+
+  const handleRemoveExerciseFromActiveSession = (exerciseId) => {
+    if (!window.confirm('Retirer cet exercice de la séance en cours ?')) return
+
+    setActiveExercises(prev => prev.filter(ex => ex.id !== exerciseId))
+    setSeriesData(prev => {
+      const next = { ...prev }
+      delete next[exerciseId]
+      return next
+    })
+  }
+
+  const handleAddSerie = (exercise) => {
+    const variants = getExerciseVariants(exercise)
+    const defaultVariant = getDefaultVariant(variants, exercise.id)
+
+    setSeriesData((prev) => ({
+      ...prev,
+      [exercise.id]: [
+        ...(prev[exercise.id] || []),
+        {
+          reps: '',
+          weight: '',
+          rpe: '10',
+          validated: false,
+          variantId: getVariantSelectValue(defaultVariant),
+          variantName: defaultVariant.name || DEFAULT_VARIANT_NAME
+        }
+      ]
+    }))
+  }
+
+  const handleRemoveSerie = (exerciseId, index) => {
+    if (!window.confirm('Supprimer cette série ?')) return
+
+    setSeriesData((prev) => ({
+      ...prev,
+      [exerciseId]: (prev[exerciseId] || []).filter((_, idx) => idx !== index)
+    }))
   }
 
   const getBestWeightForSameRepsBeforeSerie = (exerciseId, serie, serieIndex) => {
@@ -215,7 +284,7 @@ export default function SessionRunner({
   const recordPulseBySerie = useMemo(() => {
     const nextPulse = {}
 
-    session?.exercises?.forEach((exercise) => {
+    activeExercises.forEach((exercise) => {
       ; (seriesData[exercise.id] || []).forEach((serie, index) => {
         const key = `${exercise.id}-${index}`
         if (isSerieRepPR(exercise.id, serie, index)) {
@@ -228,17 +297,15 @@ export default function SessionRunner({
   }, [seriesData, session, performances])
 
   const progress = useMemo(() => {
-    if (!session?.exercises?.length) return 0
-
-    const totalSeries = session.exercises.reduce((sum, exercise) => sum + exercise.series, 0)
-    const completedSeries = session.exercises.reduce((sum, exercise) => {
-      const done = (seriesData[exercise.id] || []).filter(isSerieValid).length
+    const totalSeries = Object.values(seriesData).reduce((sum, series) => sum + series.length, 0)
+    const completedSeries = Object.values(seriesData).reduce((sum, series) => {
+      const done = series.filter(isSerieValid).length
       return sum + done
     }, 0)
 
     if (totalSeries === 0) return 0
     return Math.round((completedSeries / totalSeries) * 100)
-  }, [seriesData, session])
+  }, [seriesData])
 
   const handleFinishSession = () => {
     const sessionDateISO = sessionDate // Utiliser la date choisie pendant la séance
@@ -266,7 +333,7 @@ export default function SessionRunner({
     }
 
     const performanceData = []
-    session.exercises.forEach((exercise) => {
+    activeExercises.forEach((exercise) => {
       ; (seriesData[exercise.id] || []).forEach((serie, index) => {
         if (isSerieValid(serie)) {
           performanceData.push({
@@ -327,7 +394,7 @@ export default function SessionRunner({
           />
           <small>Cette date sera utilisée pour détecter tes records personnels</small>
         </div>
-        <p>{session.exercises.length} exercice(s) sur cette page</p>
+        <p>{activeExercises.length} exercice(s) sur cette page</p>
         <div className="runner-progress-track">
           <div className="runner-progress-bar" style={{ width: `${progress}%` }} />
         </div>
@@ -335,21 +402,31 @@ export default function SessionRunner({
       </div>
 
       <div className="runner-exercises-list">
-        {session.exercises.map((exercise) => {
+        {activeExercises.map((exercise) => {
           const exerciseVariants = getExerciseVariants(exercise)
 
           return (
             <div key={exercise.id} className="runner-card">
-              <h3>
+              <div className="runner-card-header-actions">
+                <h3>
+                  <button
+                    type="button"
+                    className="exercise-link-button"
+                    onClick={() => onOpenExerciseDetails?.(exercise.id)}
+                    title={`Voir la fiche de ${exercise.name}`}
+                  >
+                    {exercise.name}
+                  </button>
+                </h3>
                 <button
                   type="button"
-                  className="exercise-link-button"
-                  onClick={() => onOpenExerciseDetails?.(exercise.id)}
-                  title={`Voir la fiche de ${exercise.name}`}
+                  className="btn btn-danger btn-small"
+                  onClick={() => handleRemoveExerciseFromActiveSession(exercise.id)}
+                  title="Retirer cet exercice"
                 >
-                  {exercise.name}
+                  ✕
                 </button>
-              </h3>
+              </div>
               {exercise.coachNotes && (
                 <div className="runner-coach-notes">
                   <p className="runner-coach-title">Remarques coach</p>
@@ -357,13 +434,16 @@ export default function SessionRunner({
                 </div>
               )}
 
-              <div className="runner-muscles">
-                {exercise.muscleGroups?.map((group) => (
-                  <span key={group} className="muscle-group">{group}</span>
-                ))}
+              <div className="runner-exercise-header-meta">
+                <div className="runner-muscles">
+                  {exercise.muscleGroups?.map((group) => (
+                    <span key={group} className="muscle-group">{group}</span>
+                  ))}
+                </div>
+                <div className="runner-series-count-badge">
+                  {seriesData[exercise.id]?.length || 0} séries
+                </div>
               </div>
-
-              <h4>Séries: {exercise.series}</h4>
 
               <div className="runner-series-list">
                 {(seriesData[exercise.id] || []).map((serie, index) => (
@@ -438,6 +518,16 @@ export default function SessionRunner({
                           ✓
                         </button>
                       )}
+                      {!serie.validated && (
+                        <button
+                          type="button"
+                          className="btn btn-danger btn-small"
+                          onClick={() => handleRemoveSerie(exercise.id, index)}
+                          title="Supprimer la série"
+                        >
+                          ✕
+                        </button>
+                      )}
                     </div>
 
                     {hasWeightAndReps(serie) && isSerieRepPR(exercise.id, serie, index) && (
@@ -451,6 +541,14 @@ export default function SessionRunner({
                     {isSerieValid(serie) && <span className="runner-complete">Complété</span>}
                   </div>
                 ))}
+
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-full runner-add-serie-btn"
+                  onClick={() => handleAddSerie(exercise)}
+                >
+                  + Ajouter une série
+                </button>
               </div>
             </div>
           )
@@ -458,6 +556,13 @@ export default function SessionRunner({
       </div>
 
       <div className="runner-actions">
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => setIsAddModalOpen(true)}
+        >
+          + Ajouter un exercice
+        </button>
         <button className="btn btn-primary" onClick={handleFinishSession}>
           Terminer la séance
         </button>
@@ -466,6 +571,61 @@ export default function SessionRunner({
       <button className="btn btn-danger" onClick={onAbandonSession}>
         Abandonner la séance
       </button>
+
+      {isAddModalOpen && (
+        <div
+          className="modal-overlay"
+          role="presentation"
+          onMouseDown={(e) => e.target === e.currentTarget && setIsAddModalOpen(false)}
+        >
+          <div className="modal-card" role="dialog" aria-modal="true" aria-label="Ajouter un exercice">
+            <div className="modal-header">
+              <div className="modal-title">
+                <h2>Ajouter un exercice</h2>
+                <p>Ajoutez un exercice bonus à votre séance en cours.</p>
+              </div>
+              <button type="button" className="btn btn-secondary btn-small" onClick={() => setIsAddModalOpen(false)}>
+                Fermer
+              </button>
+            </div>
+            <div className="modal-body">
+              <input
+                type="text"
+                placeholder="Rechercher un exercice..."
+                className="minimal-search"
+                style={{ marginBottom: '1rem', width: '100%' }}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <div className="runner-add-exercises-list" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                {exercises
+                  .filter(ex => 
+                    (ex.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                     ex.muscleGroups?.some(mg => mg.toLowerCase().includes(searchTerm.toLowerCase()))) &&
+                    !activeExercises.some(ae => ae.id === ex.id)
+                  )
+                  .map(exercise => (
+                    <div key={exercise.id} className="builder-exercise-card" style={{ marginBottom: '0.5rem' }}>
+                      <div className="card-info">
+                        <h4>{exercise.name}</h4>
+                        <div className="builder-tags">
+                          {exercise.muscleGroups?.map(mg => <span key={mg} className="builder-tag">{mg}</span>)}
+                        </div>
+                      </div>
+                      <button
+                        className="builder-add-btn"
+                        onClick={() => handleAddExerciseToActiveSession(exercise)}
+                      >
+                        +
+                      </button>
+                    </div>
+                  ))
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

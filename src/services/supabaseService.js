@@ -369,6 +369,47 @@ export const sessionsService = {
       console.error('Erreur suppression séance:', error)
       throw error
     }
+  },
+
+  // Mettre à jour une séance
+  async updateSession(id, sessionData) {
+    try {
+      // Mettre à jour le nom
+      const { error: sessionError } = await supabase
+        .from('sessions')
+        .update({ name: sessionData.name })
+        .eq('id', id)
+
+      if (sessionError) throw sessionError
+
+      // Supprimer les anciens exercices
+      const { error: deleteError } = await supabase
+        .from('session_exercises')
+        .delete()
+        .eq('session_id', id)
+
+      if (deleteError) throw deleteError
+
+      // Insérer les nouveaux exercices
+      if (sessionData.exercises && sessionData.exercises.length > 0) {
+        const sessionExercisesData = sessionData.exercises.map(ex => ({
+          session_id: id,
+          exercise_id: ex.id,
+          series_count: ex.series
+        }))
+
+        const { error: exercisesError } = await supabase
+          .from('session_exercises')
+          .insert(sessionExercisesData)
+
+        if (exercisesError) throw exercisesError
+      }
+
+      return { id, ...sessionData }
+    } catch (error) {
+      console.error('Erreur mise à jour séance:', error)
+      throw error
+    }
   }
 }
 

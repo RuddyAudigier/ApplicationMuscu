@@ -1258,6 +1258,23 @@ function App() {
     } catch (error) {
       console.error('Erreur ajout séance:', error)
       alert('Erreur lors de la création de la séance')
+      }
+  }
+
+  const handleUpdateSession = async (sessionId, sessionData) => {
+    try {
+      const updatedSession = await sessionsService.updateSession(sessionId, sessionData)
+      setSessions(sessions.map((s) => (s.id === sessionId ? updatedSession : s)))
+
+      if (ongoingSession?.session.id === sessionId) {
+        setOngoingSession({
+          ...ongoingSession,
+          session: buildSessionWithDetails(updatedSession, exercises)
+        })
+      }
+    } catch (error) {
+      console.error('Erreur mise à jour séance:', error)
+      alert('Erreur lors de la mise à jour de la séance')
     }
   }
 
@@ -1643,6 +1660,7 @@ function App() {
             exercises={exercises}
             sessions={sessions}
             onAddSession={handleAddSession}
+            onUpdateSession={handleUpdateSession}
             onDeleteSession={handleDeleteSession}
             onLaunchSession={handleLaunchSession}
             onResumeSession={handleResumeSession}
@@ -1678,6 +1696,7 @@ function App() {
         {currentPage === 'session-runner' && ongoingSession?.session && (
           <SessionRunner
             session={ongoingSession.session}
+            exercises={exercises}
             performances={performances}
             initialState={ongoingSession.progress}
             onProgressChange={handleProgressChange}

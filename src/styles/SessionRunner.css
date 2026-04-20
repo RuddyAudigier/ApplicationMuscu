@@ -412,19 +412,101 @@
 @media (max-width: 768px) {
   .session-runner {
     min-height: calc(100dvh - 64px);
-    padding: 1rem 0.85rem 1.35rem;
+    padding: 0.75rem 0.6rem 1rem;
+    gap: 0.8rem;
+  }
+
+  .runner-card {
+    padding: 1rem;
+    border-radius: var(--radius-md);
   }
 
   .runner-serie-item {
     flex-direction: column;
     align-items: stretch;
+    padding: 1rem;
+    gap: 0.75rem;
   }
 
   .runner-serie-fields {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  /* Faire en sorte que le label et le select de variante prennent toute la largeur */
+  .runner-serie-fields label,
+  .runner-serie-fields select:first-of-type {
+    grid-column: span 2;
+  }
+
+  .runner-serie-actions {
+    justify-content: flex-start;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
   }
 
   .runner-actions {
     flex-direction: column;
+    gap: 0.75rem;
   }
+
+  .runner-actions button {
+    width: 100%;
+  }
+
+  .runner-series-count-badge {
+    font-size: 0.7rem;
+  }
+}
+.minimal-search {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  margin-bottom: 1rem;
+}
+
+.minimal-search:focus {
+  outline: none;
+  background: rgba(15, 23, 42, 0.8);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15);
+}
+
+.runner-add-serie-btn {
+  margin-top: 1rem;
+  font-weight: 700;
+  border: 1px dashed rgba(34, 211, 238, 0.3);
+  background: rgba(34, 211, 238, 0.05);
+}
+
+.runner-card-header-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.8rem;
+}
+
+.runner-card-header-actions h3 {
+  margin: 0;
+}
+
+.runner-exercise-header-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.runner-series-count-badge {
+  background: rgba(34, 211, 238, 0.1);
+  color: var(--neon-cyan);
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
 }

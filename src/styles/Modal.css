@@ -48,15 +48,30 @@
 
 @media (max-width: 768px) {
   .modal-overlay {
-    padding: 0.75rem;
+    padding: 0;
+  }
+
+  .modal-card {
+    margin: 0;
+    border-radius: 0;
+    width: 100%;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
   }
 
   .modal-header {
-    padding: 0.85rem;
+    padding: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: rgba(17, 26, 51, 0.95);
+    backdrop-filter: blur(10px);
   }
 
   .modal-body {
-    padding: 0.85rem;
+    padding: 1rem;
+    flex: 1;
   }
 }
 

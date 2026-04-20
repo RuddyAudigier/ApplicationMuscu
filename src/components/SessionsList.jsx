@@ -26,6 +26,7 @@ export default function SessionsList({
   onLaunchSession,
   onResumeSession,
   onShareSession,
+  onEditSession,
   activeSessionId,
   onOpenExerciseDetails
 }) {
@@ -107,6 +108,14 @@ export default function SessionsList({
                     title="Partager la dernière séance effectuée"
                   >
                     <span aria-hidden="true">⤴</span> Partager
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-small"
+                    onClick={() => onEditSession(session)}
+                    title="Modifier cette séance"
+                  >
+                    <span aria-hidden="true">✏️</span> Modifier
                   </button>
                   <button
                     type="button"

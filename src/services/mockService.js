@@ -402,6 +402,36 @@ export const sessionsService = {
     db.sessions = (db.sessions || []).filter((s) => s.id !== id)
     db.sessionExercises = (db.sessionExercises || []).filter((se) => se.sessionId !== id)
     saveDb(db)
+  },
+
+  async updateSession(id, sessionData) {
+    const db = loadDb()
+    const name = String(sessionData?.name || '').trim()
+    if (!name) {
+      throw new Error('Nom de séance manquant.')
+    }
+
+    const idx = (db.sessions || []).findIndex((s) => s.id === id)
+    if (idx === -1) {
+      throw new Error('Séance introuvable.')
+    }
+
+    db.sessions[idx] = { ...db.sessions[idx], name, updatedAt: nowIso() }
+
+    // Supprimer les exercices existants
+    db.sessionExercises = (db.sessionExercises || []).filter((se) => se.sessionId !== id)
+
+    // Ajouter les nouveaux
+    const exercises = Array.isArray(sessionData?.exercises) ? sessionData.exercises : []
+    const nextSessionExercises = exercises.map((ex) => ({
+      sessionId: id,
+      exerciseId: ex.id,
+      seriesCount: Number(ex.series) || 1
+    }))
+    db.sessionExercises = [...(db.sessionExercises || []), ...nextSessionExercises]
+
+    saveDb(db)
+    return { id, ...sessionData }
   }
 }
 

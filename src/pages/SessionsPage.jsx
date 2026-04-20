@@ -7,6 +7,7 @@ export default function SessionsPage({
   exercises,
   sessions,
   onAddSession,
+  onUpdateSession,
   onDeleteSession,
   onLaunchSession,
   onResumeSession,
@@ -16,10 +17,29 @@ export default function SessionsPage({
   onNavigate
 }) {
   const [showSessionBuilder, setShowSessionBuilder] = useState(false)
+  const [editingSession, setEditingSession] = useState(null)
 
   const handleCreateSession = (sessionData) => {
     onAddSession(sessionData)
     setShowSessionBuilder(false)
+  }
+
+  const handleUpdate = (id, sessionData) => {
+    onUpdateSession(id, sessionData)
+    setEditingSession(null)
+    setShowSessionBuilder(false)
+  }
+
+  const handleEditSession = (session) => {
+    setEditingSession(session)
+    setShowSessionBuilder(true)
+  }
+
+  const handleToggleBuilder = () => {
+    if (showSessionBuilder) {
+      setEditingSession(null)
+    }
+    setShowSessionBuilder(!showSessionBuilder)
   }
 
   return (
@@ -49,9 +69,9 @@ export default function SessionsPage({
           <button
             type="button"
             className="btn btn-primary"
-            onClick={() => setShowSessionBuilder((prev) => !prev)}
+            onClick={handleToggleBuilder}
           >
-            {showSessionBuilder ? 'Fermer la création' : 'Créer une séance'}
+            {showSessionBuilder ? (editingSession ? 'Annuler la modification' : 'Fermer la création') : 'Créer une séance'}
           </button>
         </header>
 
@@ -62,19 +82,45 @@ export default function SessionsPage({
             onLaunchSession={onLaunchSession}
             onResumeSession={onResumeSession}
             onShareSession={onShareSession}
+            onEditSession={handleEditSession}
             activeSessionId={activeSessionId}
             onOpenExerciseDetails={onOpenExerciseDetails}
           />
-
-          {showSessionBuilder && (
-            <SessionBuilder
-              exercises={exercises}
-              onAddSession={handleCreateSession}
-              onOpenExerciseDetails={onOpenExerciseDetails}
-            />
-          )}
         </div>
       </section>
+
+      {showSessionBuilder && (
+        <div
+          className="modal-overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              handleToggleBuilder()
+            }
+          }}
+        >
+          <div className="modal-card modal-card-large" role="dialog" aria-modal="true" aria-label={editingSession ? 'Modifier la séance' : 'Créer une séance'}>
+            <div className="modal-header">
+              <div className="modal-title">
+                <h2>{editingSession ? 'Modifier la séance' : 'Nouvelle séance'}</h2>
+                <p>{editingSession ? 'Ajustez votre programme et vos répétitions.' : 'Créez un nouveau modèle de séance pour vos futurs entraînements.'}</p>
+              </div>
+              <button type="button" className="btn btn-secondary btn-small" onClick={handleToggleBuilder}>
+                Fermer
+              </button>
+            </div>
+            <div className="modal-body">
+              <SessionBuilder
+                exercises={exercises}
+                onAddSession={handleCreateSession}
+                onUpdateSession={handleUpdate}
+                initialSession={editingSession}
+                onOpenExerciseDetails={onOpenExerciseDetails}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
