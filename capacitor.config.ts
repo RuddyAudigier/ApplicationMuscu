@@ -1,13 +1,12 @@
-import type { CapacitorConfig } from '@capacitor/cli'
+import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.mymuscle.app',
   appName: 'MyMuscle',
   webDir: 'dist',
-  bundledWebRuntime: false,
   server: {
-    androidScheme: 'https'
-  }
-}
+    androidScheme: 'https',
+  },
+};
 
-export default config
+export default config;
