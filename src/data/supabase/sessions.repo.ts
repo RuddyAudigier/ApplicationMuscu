@@ -1,35 +1,70 @@
 import type { Id, Session, SessionDraft } from '../../domain/model';
 import type { SessionsRepo } from '../ports';
-import { type Db, must } from './client';
+import { type Db, fail, isSchemaGap, must, type PgResult, run } from './client';
+import type { CycleFallback } from './cycleFallback';
 import { parseRows, prepareSession } from '../shared/rules';
 import { mapSessionRow } from './mappers';
 
-const SESSION_SELECT = 'id, name, created_at, session_exercises(series_count, exercise_id, exercises(name))';
+const EXERCISES_SELECT = 'session_exercises(series_count, exercise_id, exercises(name))';
+const SESSION_SELECT = `id, name, created_at, cycle, ${EXERCISES_SELECT}`;
+/** Sans la colonne `cycle` (migration 2026-11-23 non jouée). */
+const LEGACY_SESSION_SELECT = `id, name, created_at, ${EXERCISES_SELECT}`;
 
 const links = (sessionId: Id, d: SessionDraft) =>
   d.exercises.map((e) => ({ session_id: sessionId, exercise_id: e.exerciseId, series_count: e.series }));
 
-export function createSessionsRepo(db: Db): SessionsRepo {
+/**
+ * Colonne `sessions.cycle` : lue et écrite si elle existe. Absente (`42703`/`PGRST204`…) → la requête
+ * est rejouée sans elle et le cycle est stocké en local (`CycleFallback`). L'absence est mémorisée
+ * pour la durée du backend (rechargement de l'app après la migration).
+ */
+export function createSessionsRepo(db: Db, fallback: CycleFallback): SessionsRepo {
+  let hasCycleColumn = true;
+
+  /** Tente avec la colonne ; sur schéma incomplet, bascule en repli puis tente sans. */
+  async function withCycle(withCol: () => PromiseLike<PgResult>, without: () => PromiseLike<PgResult>, ctx: string): Promise<unknown> {
+    if (hasCycleColumn) {
+      const { data, error } = await run(withCol(), ctx);
+      if (!error) return data;
+      if (!isSchemaGap(error)) fail(error, ctx);
+      hasCycleColumn = false;
+      fallback.warn();
+    }
+    return must(without(), ctx);
+  }
+
+  /** La base fait foi ; le local ne complète qu'une séance sans cycle en base. */
+  const withLocalCycle = (s: Session): Session => (s.cycle ? s : { ...s, cycle: fallback.sessionCycle(s.id) });
+
+  /** Après écriture : en base → entrée locale obsolète retirée ; en repli → entrée locale à jour. */
+  const rememberCycle = (id: Id, cycle: SessionDraft['cycle']): void => {
+    fallback.setSessionCycle(id, hasCycleColumn ? null : cycle);
+  };
+
   async function readOne(id: Id): Promise<Session> {
     const ctx = 'Lecture de la séance';
-    const s = mapSessionRow(await must(db.from('sessions').select(SESSION_SELECT).eq('id', id).single(), ctx));
+    const one = (cols: string) => db.from('sessions').select(cols).eq('id', id).single();
+    const s = mapSessionRow(await withCycle(() => one(SESSION_SELECT), () => one(LEGACY_SESSION_SELECT), ctx));
     if (!s) throw new Error(`${ctx} : réponse invalide.`);
-    return s;
+    return withLocalCycle(s);
   }
 
   return {
     /** Une seule requête avec jointure (D12). */
     async list() {
-      const data = await must(db.from('sessions').select(SESSION_SELECT).order('created_at', { ascending: false }), 'Lecture des séances');
-      return parseRows(data, mapSessionRow, 'sessions');
+      const all = (cols: string) => db.from('sessions').select(cols).order('created_at', { ascending: false });
+      const data = await withCycle(() => all(SESSION_SELECT), () => all(LEGACY_SESSION_SELECT), 'Lecture des séances');
+      return parseRows(data, mapSessionRow, 'sessions').map(withLocalCycle);
     },
 
     async create(draft) {
       const ctx = 'Création de la séance';
       const d = prepareSession(draft);
-      const row = await must(db.from('sessions').insert([{ name: d.name }]).select('id').single(), ctx);
+      const insert = (row: object) => db.from('sessions').insert([row]).select('id').single();
+      const row = await withCycle(() => insert({ name: d.name, cycle: d.cycle }), () => insert({ name: d.name }), ctx);
       const id = (row as { id?: unknown } | null)?.id;
       if (typeof id !== 'string') throw new Error(`${ctx} : id manquant.`);
+      rememberCycle(id, d.cycle);
       await must(db.from('session_exercises').insert(links(id, d)), ctx);
       return readOne(id);
     },
@@ -37,7 +72,7 @@ export function createSessionsRepo(db: Db): SessionsRepo {
     /**
      * Non transactionnel (comme l'existant). Renommage (D5) : les performances liées par nom
      * sont renommées AVANT la séance, pour qu'un nouvel essai après échec voie encore l'ancien nom
-     * (opération idempotente). Puis nom, puis delete + insert des exercices.
+     * (opération idempotente). Puis nom + cycle, puis delete + insert des exercices.
      */
     async update(id, draft) {
       const ctx = 'Mise à jour de la séance';
@@ -46,7 +81,9 @@ export function createSessionsRepo(db: Db): SessionsRepo {
       if (before.name !== d.name) {
         await must(db.from('performances').update({ session_name: d.name }).eq('session_name', before.name), ctx);
       }
-      await must(db.from('sessions').update({ name: d.name }).eq('id', id), ctx);
+      const update = (values: object) => db.from('sessions').update(values).eq('id', id);
+      await withCycle(() => update({ name: d.name, cycle: d.cycle }), () => update({ name: d.name }), ctx);
+      rememberCycle(id, d.cycle);
       await must(db.from('session_exercises').delete().eq('session_id', id), ctx);
       await must(db.from('session_exercises').insert(links(id, d)), ctx);
       return readOne(id);
@@ -54,6 +91,7 @@ export function createSessionsRepo(db: Db): SessionsRepo {
 
     async remove(id) {
       await must(db.from('sessions').delete().eq('id', id), 'Suppression de la séance');
+      fallback.setSessionCycle(id, null);
     },
   };
 }

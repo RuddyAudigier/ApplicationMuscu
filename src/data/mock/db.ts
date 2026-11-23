@@ -20,8 +20,9 @@ const mockDbSchema = z.object({
   /** Lignes snake_case comme la table `performances` (validées à la lecture par le mapper partagé). */
   performances: z.array(z.record(z.string(), z.unknown())),
   coachNotesByExerciseId: z.record(z.string(), z.object({ notes: z.string(), updatedAt: z.string() })),
-  sharedSessions: z.array(z.object({ id: z.string(), payload: z.unknown(), createdAt: z.string() })),
   generalAdvice: z.object({ training: z.string(), nutrition: z.string(), sleep: z.string(), updatedAt: z.string() }).nullable(),
+  /** Absent des bases créées avant les cycles (Task 21) : lu comme `null`, sans réinitialiser. */
+  cycleState: z.object({ current: z.enum(['A', 'B']), startedOn: z.string(), weeks: z.union([z.literal(2), z.literal(3)]) }).nullish(),
 });
 
 export type MockDb = z.infer<typeof mockDbSchema>;

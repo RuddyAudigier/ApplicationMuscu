@@ -41,7 +41,7 @@ export function buildSeed(genId: (prefix: string) => Id, createdAt: IsoDateTime)
       { id: benchId, name: 'Développé couché', description: DESCRIPTION, muscleGroups: ['Pectoraux', 'Triceps'], variants: benchVariants, isCustom: true, createdAt },
       { id: squatId, name: 'Squat', description: DESCRIPTION, muscleGroups: ['Quadriceps', 'Fessiers'], variants: squatVariants, isCustom: true, createdAt },
     ],
-    sessions: [{ id: sessionId, name: SESSION, createdAt }],
+    sessions: [{ id: sessionId, name: SESSION, createdAt, cycle: 'A' }],
     sessionExercises: [
       { sessionId, exerciseId: benchId, seriesCount: 3 },
       { sessionId, exerciseId: squatId, seriesCount: 3 },
@@ -54,7 +54,7 @@ export function buildSeed(genId: (prefix: string) => Id, createdAt: IsoDateTime)
       perf(squatId, 'Squat', squatVariants[0], 5, 122.5, 9, 1, '2026-03-10'),
     ],
     coachNotesByExerciseId: {},
-    sharedSessions: [],
     generalAdvice: null,
+    cycleState: null,
   };
 }

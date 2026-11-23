@@ -167,8 +167,22 @@ function contract(name: string, make: () => DataBackend): void {
       expect(await b.advice.get()).toEqual({ training: 't2', nutrition: 'n', sleep: 's' });
     });
 
-    it('shared: unknown id returns null', async () => {
-      expect(await b.shared.get('nope')).toBeNull();
+    it('cycles: null until saved, then the saved state', async () => {
+      expect(await b.cycles.get()).toBeNull();
+      await b.cycles.save({ current: 'B', startedOn: '2026-11-16', weeks: 3 });
+      expect(await b.cycles.get()).toEqual({ current: 'B', startedOn: '2026-11-16', weeks: 3 });
+    });
+
+    it('sessions: cycle is stored on create and changed on update', async () => {
+      const [e1] = await b.exercises.list();
+      if (!e1) throw new Error('seed expected');
+      const s = await b.sessions.create({ cycle: 'B', name: 'B1', exercises: [{ exerciseId: e1.id, series: 2 }] });
+      expect(s.cycle).toBe('B');
+      expect((await b.sessions.list()).find((x) => x.id === s.id)?.cycle).toBe('B');
+      const u = await b.sessions.update(s.id, { cycle: 'A', name: 'B1', exercises: [{ exerciseId: e1.id, series: 2 }] });
+      expect(u.cycle).toBe('A');
+      const n = await b.sessions.update(s.id, { cycle: null, name: 'B1', exercises: [{ exerciseId: e1.id, series: 2 }] });
+      expect(n.cycle).toBeNull();
     });
   });
 }
@@ -189,6 +203,7 @@ describe('mock backend specifics', () => {
     const sessions = await b.sessions.list();
     expect(sessions).toHaveLength(1);
     expect(sessions[0]?.name).toBe('Séance test (mock)');
+    expect(sessions[0]?.cycle).toBe('A');
     expect(sessions[0]?.exercises.map((e) => e.series)).toEqual([3, 3]);
     const perfs = await b.performances.list();
     expect(perfs.map((p) => [p.exerciseName, p.reps, p.weight, p.rpe, p.serieNumber, p.performanceDate]).sort()).toEqual([
@@ -237,15 +252,24 @@ describe('mock backend specifics', () => {
     expect(warn).toHaveBeenCalledTimes(1);
   });
 
-  it('shared.get returns a stored payload; coach note requires an exercise id', async () => {
-    const storage = new MemoryStorage();
-    const b = createMockBackend(storage);
-    await b.exercises.list();
-    const db = JSON.parse(storage.getItem('local_test_db_v2') ?? '{}') as { sharedSessions: unknown[] };
-    db.sharedSessions.push({ id: 'sh1', payload: { name: 'P', exercises: [] }, createdAt: '2026-01-01T00:00:00.000Z' });
-    storage.setItem('local_test_db_v2', JSON.stringify(db));
-    expect(await b.shared.get('sh1')).toEqual({ name: 'P', exercises: [] });
+  it('coach note requires an exercise id; backend exposes no shared repo', async () => {
+    const b = createMockBackend(new MemoryStorage());
+    expect(b).not.toHaveProperty('shared');
     await expect(b.coachNotes.save('', 'x')).rejects.toThrow('exerciseId manquant.');
+  });
+
+  it('keeps a stored db that predates cycles (no cycleState, sessions without cycle)', async () => {
+    const storage = new MemoryStorage();
+    await createMockBackend(storage).exercises.list();
+    const db = JSON.parse(storage.getItem('local_test_db_v2') ?? '{}') as Record<string, unknown>;
+    delete db['cycleState'];
+    for (const s of db['sessions'] as Record<string, unknown>[]) delete s['cycle'];
+    storage.setItem('local_test_db_v2', JSON.stringify(db));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const b = createMockBackend(storage);
+    expect((await b.sessions.list())[0]?.cycle).toBeNull();
+    expect(await b.cycles.get()).toBeNull();
+    expect(warn).not.toHaveBeenCalled();
   });
 
   it('defaults performanceDate to the local today', async () => {

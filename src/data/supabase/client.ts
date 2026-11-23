@@ -35,8 +35,11 @@ export function createSupabaseClient(url: string, anonKey: string): SupabaseClie
   return client as SupabaseClient;
 }
 
-/** Codes « schéma incomplet » tolérés (INV §2.4). */
-const SCHEMA_GAP_CODES: readonly string[] = ['42P01', '42703', 'PGRST204'];
+/**
+ * Codes « schéma incomplet » tolérés (INV §2.4) : table absente (`42P01`, `PGRST205` du cache
+ * PostgREST) ou colonne absente (`42703`, `PGRST204`).
+ */
+const SCHEMA_GAP_CODES: readonly string[] = ['42P01', '42703', 'PGRST204', 'PGRST205'];
 export const NO_ROWS = 'PGRST116';
 
 export function isSchemaGap(error: PgError, keyword?: string): boolean {

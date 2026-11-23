@@ -32,7 +32,7 @@ export function createMockSessionsRepo(ctx: MockContext): SessionsRepo {
     create: (draft) => task(() => {
       const d = prepareSession(draft);
       return ctx.write((db) => {
-        const s = { id: ctx.genId('session'), name: d.name, createdAt: ctx.now().toISOString() };
+        const s: MockSession = { id: ctx.genId('session'), name: d.name, createdAt: ctx.now().toISOString(), cycle: d.cycle };
         db.sessions.unshift(s);
         db.sessionExercises.push(...d.exercises.map((e) => ({ sessionId: s.id, exerciseId: e.exerciseId, seriesCount: e.series })));
         return toSession(db, s);
@@ -46,6 +46,7 @@ export function createMockSessionsRepo(ctx: MockContext): SessionsRepo {
         const s = find(db, id);
         const oldName = s.name;
         s.name = d.name;
+        s.cycle = d.cycle;
         db.sessionExercises = [
           ...db.sessionExercises.filter((se) => se.sessionId !== id),
           ...d.exercises.map((e) => ({ sessionId: id, exerciseId: e.exerciseId, seriesCount: e.series })),

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { normalizeMuscleGroups } from '../../domain/muscles';
 import { toNumber } from '../../domain/numbers';
 import { normalizeVariants } from '../../domain/variants';
-import type { Exercise, GeneralAdvice, Session, SessionExercise, Variant } from '../../domain/model';
+import type { CycleState, Exercise, GeneralAdvice, Session, SessionExercise, Variant } from '../../domain/model';
 
 /* Lignes snake_case (validées par Zod) → modèle (INV §2.2). Performances : voir `../shared/rules`. */
 
@@ -80,3 +80,17 @@ export function mapAdviceRow(raw: unknown): GeneralAdvice | null {
   return { training: r.training_notes ?? '', nutrition: r.nutrition_notes ?? '', sleep: r.sleep_notes ?? '' };
 }
 
+
+const cycleStateRow = z.object({
+  current: z.enum(['A', 'B']),
+  started_on: z.string().regex(/^\d{4}-\d{2}-\d{2}/),
+  weeks: z.union([z.literal(2), z.literal(3)]),
+});
+
+/** `started_on` (type `date`) → `IsoDate` ; ligne invalide → `null`. */
+export function mapCycleStateRow(raw: unknown): CycleState | null {
+  const parsed = cycleStateRow.safeParse(raw);
+  if (!parsed.success) return null;
+  const r = parsed.data;
+  return { current: r.current, startedOn: r.started_on.slice(0, 10), weeks: r.weeks };
+}

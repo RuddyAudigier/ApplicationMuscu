@@ -256,7 +256,7 @@ describe('exercises (Supabase)', () => {
   });
 });
 
-describe('coach notes, shared, advice (Supabase)', () => {
+describe('coach notes, advice (Supabase)', () => {
   it('coachNotes.save updates when a row exists, inserts otherwise', async () => {
     let exists = true;
     const { client, calls } = fakeSupabase((c) => (has(c, 'select') ? ok(exists ? [{ id: 1 }] : []) : ok(null)));
@@ -266,13 +266,6 @@ describe('coach notes, shared, advice (Supabase)', () => {
     exists = false;
     await b.coachNotes.save('e1', 'c');
     expect(op(calls[3] as FakeCall, 'insert')?.[0]).toEqual([{ exercise_id: 'e1', notes: 'c' }]);
-  });
-
-  it('shared.get returns payload or null on PGRST116', async () => {
-    const found = fakeSupabase(() => ok({ payload: { name: 'P' } }));
-    expect(await createSupabaseBackend(found.client).shared.get('x')).toEqual({ name: 'P' });
-    const none = fakeSupabase(() => ({ data: null, error: { code: 'PGRST116', message: '0 rows' } }));
-    expect(await createSupabaseBackend(none.client).shared.get('x')).toBeNull();
   });
 
   it('advice get/save singleton', async () => {
