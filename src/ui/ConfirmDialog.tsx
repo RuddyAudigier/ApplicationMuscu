@@ -1,4 +1,13 @@
-import { createContext, useCallback, useContext, useId, useRef, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import styles from './ConfirmDialog.module.css';
 import { Button } from './Button';
 import { Sheet } from './Sheet';
@@ -72,6 +81,15 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
       }),
     [],
   );
+
+  // Démontage avec une demande en attente : la promesse se résout à false.
+  useEffect(() => {
+    const ref = pending;
+    return () => {
+      ref.current?.(false);
+      ref.current = null;
+    };
+  }, []);
 
   const settle = (value: boolean) => {
     const resolve = pending.current;

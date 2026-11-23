@@ -82,7 +82,7 @@
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* Thème clair */
+/* Thème clair — bloc dupliqué ci-dessous pour [data-theme='light'] : garder les deux synchronisés. */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme='dark']) {
     color-scheme: light;

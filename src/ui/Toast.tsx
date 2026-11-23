@@ -20,7 +20,7 @@ export interface ToastProps {
   onDismiss: () => void;
 }
 
-const icons: Record<ToastKind, IconName> = { info: 'chevron', success: 'check', error: 'x' };
+const icons: Record<ToastKind, IconName> = { info: 'info', success: 'check', error: 'x' };
 
 export function Toast({ message, kind = 'info', onDismiss }: ToastProps) {
   return (
@@ -51,7 +51,8 @@ interface ToastItem {
   kind: ToastKind;
 }
 
-const DURATION_MS: Record<ToastKind, number> = { info: 4000, success: 4000, error: 6000 };
+/** Durée d'affichage ; les erreurs restent jusqu'à fermeture manuelle (WCAG 2.2.1). */
+const DURATION_MS: Record<ToastKind, number | null> = { info: 4000, success: 4000, error: null };
 
 const ToastContext = createContext<ToastApi | null>(null);
 
@@ -73,11 +74,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       nextId.current += 1;
       const id = nextId.current;
       setToasts((list) => [...list, { id, message, kind }]);
+      const duration = DURATION_MS[kind];
+      if (duration === null) return;
       timers.current.set(
         id,
         setTimeout(() => {
           dismiss(id);
-        }, DURATION_MS[kind]),
+        }, duration),
       );
     },
     [dismiss],

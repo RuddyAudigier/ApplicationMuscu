@@ -28,6 +28,8 @@ const FOCUSABLE = [
 
 /** Pile des modales ouvertes : seule la plus haute réagit au clavier. */
 const openStack: object[] = [];
+/** overflow du body avant l'ouverture de la première modale de la pile. */
+let savedOverflow = '';
 
 function focusables(root: HTMLElement): HTMLElement[] {
   return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE));
@@ -57,9 +59,9 @@ export function Sheet({
     const panel = panelRef.current;
     if (!panel) return undefined;
     const token = {};
+    if (openStack.length === 0) savedOverflow = document.body.style.overflow;
     openStack.push(token);
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     (focusables(panel)[0] ?? panel).focus();
 
@@ -94,7 +96,8 @@ export function Sheet({
     return () => {
       document.removeEventListener('keydown', onKeyDown);
       openStack.splice(openStack.indexOf(token), 1);
-      document.body.style.overflow = previousOverflow;
+      // Le verrou ne tombe qu'à la fermeture de la dernière modale, quel que soit l'ordre.
+      if (openStack.length === 0) document.body.style.overflow = savedOverflow;
       opener?.focus();
     };
   }, [open]);

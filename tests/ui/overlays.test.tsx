@@ -73,6 +73,26 @@ describe('Sheet', () => {
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 
+  it('keeps body scroll locked until the last stacked sheet closes, in any order', () => {
+    const noop = () => undefined;
+    const tree = (a: boolean, b: boolean) => (
+      <>
+        <Sheet open={a} title="A" onClose={noop}>
+          a
+        </Sheet>
+        <Sheet open={b} title="B" onClose={noop}>
+          b
+        </Sheet>
+      </>
+    );
+    const { rerender } = render(tree(true, true));
+    expect(document.body.style.overflow).toBe('hidden');
+    rerender(tree(false, true));
+    expect(document.body.style.overflow).toBe('hidden');
+    rerender(tree(false, false));
+    expect(document.body.style.overflow).toBe('');
+  });
+
   it('renders footer into document.body and refocuses panel when nothing is focusable', () => {
     render(
       <Sheet open title="T" onClose={() => undefined} footer={<span>pied</span>} hideClose>
@@ -157,6 +177,21 @@ describe('ConfirmDialog', () => {
     expect(results).toEqual([false, true]);
   });
 
+  it('resolves a pending request with false on unmount', async () => {
+    const user = userEvent.setup();
+    const onResult = vi.fn();
+    const { unmount } = render(
+      <UiProvider>
+        <ConfirmHarness onResult={onResult} />
+      </UiProvider>,
+    );
+    await user.click(screen.getByRole('button', { name: 'Lancer' }));
+    unmount();
+    await vi.waitFor(() => {
+      expect(onResult).toHaveBeenCalledWith(false);
+    });
+  });
+
   it('hooks throw outside UiProvider', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     function C() {
@@ -220,7 +255,24 @@ describe('Toast', () => {
     expect(status).toHaveTextContent('Info simple');
   });
 
-  it('error toasts use role=alert and toasts auto-dismiss', () => {
+  it('success toasts auto-dismiss', () => {
+    vi.useFakeTimers();
+    render(
+      <UiProvider>
+        <ToastHarness />
+      </UiProvider>,
+    );
+    act(() => {
+      screen.getByRole('button', { name: 'Ok' }).click();
+    });
+    expect(screen.getByText('Séance enregistrée')).toBeInTheDocument();
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(screen.queryByText('Séance enregistrée')).not.toBeInTheDocument();
+  });
+
+  it('error toasts use role=alert and stay until dismissed', () => {
     vi.useFakeTimers();
     render(
       <UiProvider>
@@ -232,7 +284,11 @@ describe('Toast', () => {
     });
     expect(screen.getByRole('alert')).toHaveTextContent('Échec réseau');
     act(() => {
-      vi.advanceTimersByTime(10_000);
+      vi.advanceTimersByTime(60_000);
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent('Échec réseau');
+    act(() => {
+      screen.getByRole('button', { name: 'Masquer la notification' }).click();
     });
     expect(screen.queryByText('Échec réseau')).not.toBeInTheDocument();
   });
