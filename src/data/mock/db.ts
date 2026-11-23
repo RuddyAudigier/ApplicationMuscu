@@ -1,0 +1,97 @@
+import { z } from 'zod';
+import type { GeneralAdvice, Id, IsoDateTime } from '../../domain/model';
+import { buildSeed } from './seed';
+
+export const MOCK_DB_STORAGE_KEY = 'local_test_db_v2';
+export const MOCK_DB_VERSION = 2;
+
+const variantSchema = z.object({ id: z.string().nullable(), exerciseId: z.string().nullable(), name: z.string(), isDefault: z.boolean() });
+
+const mockDbSchema = z.object({
+  version: z.literal(MOCK_DB_VERSION),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  exercises: z.array(z.object({
+    id: z.string(), name: z.string(), description: z.string(), muscleGroups: z.array(z.string()),
+    variants: z.array(variantSchema), isCustom: z.boolean(), createdAt: z.string(),
+  })),
+  sessions: z.array(z.object({ id: z.string(), name: z.string(), createdAt: z.string() })),
+  sessionExercises: z.array(z.object({ sessionId: z.string(), exerciseId: z.string(), seriesCount: z.number() })),
+  /** Lignes snake_case comme la table `performances` (validées à la lecture par le mapper partagé). */
+  performances: z.array(z.record(z.string(), z.unknown())),
+  coachNotesByExerciseId: z.record(z.string(), z.object({ notes: z.string(), updatedAt: z.string() })),
+  sharedSessions: z.array(z.object({ id: z.string(), payload: z.unknown(), createdAt: z.string() })),
+  generalAdvice: z.object({ training: z.string(), nutrition: z.string(), sleep: z.string(), updatedAt: z.string() }).nullable(),
+});
+
+export type MockDb = z.infer<typeof mockDbSchema>;
+export type MockExercise = MockDb['exercises'][number];
+export type MockAdvice = GeneralAdvice & { updatedAt: IsoDateTime };
+
+export interface MockContext {
+  genId: (prefix: string) => Id;
+  now: () => Date;
+  /** Lit la base (seed si absente, invalide ou d'une autre version). */
+  read: () => MockDb;
+  /** Applique `fn` sur une copie fraîche puis persiste. */
+  write: <T>(fn: (db: MockDb) => T) => T;
+  reset: () => void;
+}
+
+/** Exécute `fn` en asynchrone : une exception devient un rejet (même contrat que Supabase). */
+export function task<T>(fn: () => T): Promise<T> {
+  return new Promise<T>((resolve) => {
+    resolve(fn());
+  });
+}
+
+export interface MockOptions { genId?: (prefix: string) => Id; now?: () => Date }
+
+function defaultGenId(prefix: string): Id {
+  const uuid = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : null;
+  return uuid ?? `${prefix}_${String(Date.now())}_${Math.random().toString(16).slice(2)}`;
+}
+
+export function createMockContext(storage: Storage, opts: MockOptions = {}): MockContext {
+  const genId = opts.genId ?? defaultGenId;
+  const now = opts.now ?? (() => new Date());
+
+  const persist = (db: MockDb): void => {
+    storage.setItem(MOCK_DB_STORAGE_KEY, JSON.stringify({ ...db, updatedAt: now().toISOString() }));
+  };
+
+  const seed = (): MockDb => {
+    const db = buildSeed(genId, now().toISOString());
+    persist(db);
+    return db;
+  };
+
+  const read = (): MockDb => {
+    const raw = storage.getItem(MOCK_DB_STORAGE_KEY);
+    if (!raw) return seed();
+    let json: unknown;
+    try {
+      json = JSON.parse(raw);
+    } catch {
+      return seed();
+    }
+    const parsed = mockDbSchema.safeParse(json);
+    return parsed.success ? parsed.data : seed();
+  };
+
+  return {
+    genId,
+    now,
+    read,
+    write(fn) {
+      const db = read();
+      const out = fn(db);
+      persist(db);
+      return out;
+    },
+    reset() {
+      storage.removeItem(MOCK_DB_STORAGE_KEY);
+      seed();
+    },
+  };
+}

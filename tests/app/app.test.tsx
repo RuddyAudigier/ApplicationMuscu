@@ -1,8 +1,9 @@
 import { render, renderHook, screen } from '@testing-library/react';
 import { RouterProvider } from 'react-router';
 import { ErrorBoundary } from '../../src/app/ErrorBoundary';
-import { Providers, useBackend } from '../../src/app/providers';
+import { BackendProvider, Providers, useBackend } from '../../src/app/providers';
 import { createTestRouter } from '../../src/app/router';
+import { createMockBackend } from '../../src/data/mock';
 import { NetworkError, ValidationError } from '../../src/data/ports';
 
 describe('ErrorBoundary', () => {
@@ -29,13 +30,21 @@ describe('ErrorBoundary', () => {
 
 describe('providers', () => {
   it('renders children', () => {
-    render(<Providers><p>contenu</p></Providers>);
+    render(<Providers backend={createMockBackend(localStorage)}><p>contenu</p></Providers>);
     expect(screen.getByText('contenu')).toBeInTheDocument();
   });
 
-  it('useBackend throws until a backend is configured', () => {
+  it('useBackend throws without a BackendProvider', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     expect(() => renderHook(() => useBackend())).toThrow('Backend non configuré');
+  });
+
+  it('useBackend returns the provided backend', () => {
+    const backend = createMockBackend(localStorage);
+    const { result } = renderHook(() => useBackend(), {
+      wrapper: ({ children }) => <BackendProvider backend={backend}>{children}</BackendProvider>,
+    });
+    expect(result.current).toBe(backend);
   });
 });
 
