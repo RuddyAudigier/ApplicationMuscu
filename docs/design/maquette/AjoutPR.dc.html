@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>MyMuscle — Ajouter un PR</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f5f5f4}a:hover{color:#ffffff}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0a0a0a; color: #f5f5f4; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; padding: 24px">
+  <div style="display: flex; justify-content: space-between; align-items: center">
+    <a href="Performances.dc.html" aria-label="Fermer" style="width: 44px; height: 44px; border-radius: 999px; background: #161615; display: flex; align-items: center; justify-content: center; color: #f5f5f4">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+    </a>
+    <span style="font-size: 13px; color: #a8a29e">Hors séance</span>
+    <span style="width: 44px"></span>
+  </div>
+
+  <h1 style="margin: 16px 0 0; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 34px; letter-spacing: -0.03em">Ajouter un PR</h1>
+
+  <button type="button" style="margin-top: 18px; min-height: 52px; padding: 0 16px; border-radius: 18px; border: none; background: #161615; color: #f5f5f4; display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-family: Inter, sans-serif">
+    <span style="display: flex; flex-direction: column; gap: 2px; text-align: left"><span style="font-size: 12px; color: #a8a29e">Exercice</span><span style="font-size: 16px; font-weight: 600">Développé couché</span></span>
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+  </button>
+
+  <div role="radiogroup" aria-label="Variante" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px">
+    <button type="button" role="radio" aria-checked="true" style="height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid #f5f5f4; background: #f5f5f4; color: #0a0a0a; font: 700 13px Inter, sans-serif">Classique</button>
+    <button type="button" role="radio" aria-checked="false" style="height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid #292524; background: transparent; color: #a8a29e; font: 500 13px Inter, sans-serif">Pausé 2 ct</button>
+    <button type="button" role="radio" aria-checked="false" style="height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid #292524; background: transparent; color: #a8a29e; font: 500 13px Inter, sans-serif">Prise serrée</button>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 16px">
+    <label style="background: #161615; border-radius: 18px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px">
+      <span style="font-size: 11px; color: #a8a29e">Reps</span>
+      <input type="text" inputmode="numeric" value="5" style="background: transparent; border: none; outline: none; color: #f5f5f4; font: 700 28px 'Space Grotesk', sans-serif; width: 100%; padding: 0">
+    </label>
+    <label style="background: #161615; border-radius: 18px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px">
+      <span style="font-size: 11px; color: #a8a29e">Kg</span>
+      <input type="text" inputmode="decimal" value="97,5" style="background: transparent; border: none; outline: none; color: #f5f5f4; font: 700 28px 'Space Grotesk', sans-serif; width: 100%; padding: 0">
+    </label>
+    <label style="background: #161615; border-radius: 18px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px">
+      <span style="font-size: 11px; color: #a8a29e">RPE</span>
+      <input type="text" inputmode="numeric" value="9" style="background: transparent; border: none; outline: none; color: #f5f5f4; font: 700 28px 'Space Grotesk', sans-serif; width: 100%; padding: 0">
+    </label>
+  </div>
+
+  <span style="font-size: 12px; color: #a8a29e; margin-top: 18px">Date du PR</span>
+  <div role="radiogroup" aria-label="Date du PR" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 8px">
+    <button type="button" role="radio" aria-checked="false" style="height: 44px; border-radius: 999px; border: 1px solid #292524; background: transparent; color: #a8a29e; font: 500 14px Inter, sans-serif">Aujourd'hui</button>
+    <button type="button" role="radio" aria-checked="true" style="height: 44px; border-radius: 999px; border: 1px solid #f5f5f4; background: #f5f5f4; color: #0a0a0a; font: 700 14px Inter, sans-serif">Hier</button>
+    <button type="button" role="radio" aria-checked="false" style="height: 44px; border-radius: 999px; border: 1px solid #292524; background: transparent; color: #a8a29e; font: 500 14px Inter, sans-serif; display: flex; align-items: center; justify-content: center; gap: 6px">
+      <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>
+      Autre
+    </button>
+  </div>
+  <span style="font-size: 13px; color: #d6d3d1; margin-top: 10px">Dimanche 22 novembre 2026 · rattaché à <span style="color: #f5f5f4; font-weight: 600">A1 Haut du corps</span></span>
+
+  <div style="margin-top: 18px; padding: 14px 16px; border-radius: 18px; background: rgb(212 245 60 / 0.1); border: 1px solid rgb(212 245 60 / 0.35); display: flex; gap: 12px; align-items: center">
+    <span style="font-size: 11px; font-weight: 700; color: #0a0a0a; background: {{accent}}; padding: 4px 8px; border-radius: 999px; flex-shrink: 0">PR</span>
+    <span style="font-size: 14px; line-height: 1.4">Bat ton record à 5 reps : <span style="font-weight: 700">95 kg</span> du 16/11 (+2,5 kg)</span>
+  </div>
+
+  <div style="flex-grow: 1"></div>
+
+  <button type="button" style="height: 58px; flex-shrink: 0; border-radius: 999px; border: none; background: {{accent}}; color: #0a0a0a; font: 700 17px Inter, sans-serif; cursor: pointer">Enregistrer le PR</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#d4f53c","options":["#d4f53c","#ff6b3d","#7dd3fc","#f5f5f4"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#d4f53c' };
+  }
+}
+</script>
+</body>
+</html>

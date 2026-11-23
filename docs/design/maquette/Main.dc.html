@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>MyMuscle — Accueil</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f5f5f4}a:hover{color:#ffffff}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0a0a0a; color: #f5f5f4; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column">
+  <div style="flex-grow: 1; padding: 32px 24px 0; display: flex; flex-direction: column; gap: 28px">
+    <div style="display: flex; justify-content: space-between; align-items: center">
+      <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 18px; letter-spacing: -0.02em">mymuscle<span style="color: {{accent}}">.</span></span>
+      <a href="Main.dc.html" aria-label="Réglages" style="width: 44px; height: 44px; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: #a8a29e">
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"></path><circle cx="16" cy="7" r="2"></circle><circle cx="10" cy="17" r="2"></circle></svg>
+      </a>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 16px">
+      <div style="display: flex; align-items: baseline; justify-content: space-between">
+        <div style="display: flex; align-items: baseline; gap: 12px">
+          <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 72px; line-height: 0.9; letter-spacing: -0.05em; color: {{accent}}">A</span>
+          <div style="display: flex; flex-direction: column; gap: 2px">
+            <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.02em">Cycle A</span>
+            <span style="font-size: 14px; color: #a8a29e">Semaine 2 sur 2</span>
+          </div>
+        </div>
+        <span style="font-size: 13px; color: #a8a29e; text-align: right">Bascule vers B<br><span style="color: #f5f5f4; font-weight: 600">dans 4 jours</span></span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px">
+        <div style="display: flex; flex-direction: column; gap: 6px"><span style="height: 6px; border-radius: 999px; background: #3f3f3c"></span><span style="font-size: 11px; color: #78716c">B</span></div>
+        <div style="display: flex; flex-direction: column; gap: 6px"><span style="height: 6px; border-radius: 999px; background: #3f3f3c"></span><span style="font-size: 11px; color: #78716c">B</span></div>
+        <div style="display: flex; flex-direction: column; gap: 6px"><span style="height: 6px; border-radius: 999px; background: {{accent}}"></span><span style="font-size: 11px; color: #f5f5f4; font-weight: 600">A</span></div>
+        <div style="display: flex; flex-direction: column; gap: 6px"><span style="height: 6px; border-radius: 999px; background: linear-gradient(90deg, {{accent}} 40%, #262624 40%)"></span><span style="font-size: 11px; color: #f5f5f4; font-weight: 600">A</span></div>
+        <div style="display: flex; flex-direction: column; gap: 6px"><span style="height: 6px; border-radius: 999px; background: #1c1c1a"></span><span style="font-size: 11px; color: #78716c">B</span></div>
+        <div style="display: flex; flex-direction: column; gap: 6px"><span style="height: 6px; border-radius: 999px; background: #1c1c1a"></span><span style="font-size: 11px; color: #78716c">B</span></div>
+      </div>
+    </div>
+
+    <a href="SeanceEnCours.dc.html" style="text-decoration: none; color: #0a0a0a; background: {{accent}}; border-radius: 28px; padding: 22px 22px 20px; display: flex; flex-direction: column; gap: 22px">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start">
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 13px; font-weight: 600; opacity: 0.7">Séance du jour · A2</span>
+          <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -0.02em">Haut du corps</span>
+        </div>
+        <span style="width: 48px; height: 48px; border-radius: 999px; background: #0a0a0a; color: {{accent}}; display: flex; align-items: center; justify-content: center; flex-shrink: 0">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"></path></svg>
+        </span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 32px; letter-spacing: -0.03em">14</span>
+        <span style="font-size: 14px; font-weight: 500; line-height: 1.25">PR à portée<br>sur 5 exercices</span>
+      </div>
+    </a>
+
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline">
+        <span style="font-size: 13px; color: #a8a29e">Derniers PR</span>
+        <a href="Performances.dc.html" style="font-size: 13px; text-decoration: none; color: #a8a29e">Tout voir</a>
+      </div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; padding: 14px 0; border-bottom: 1px solid #1f1f1d">
+        <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 500">Développé couché</span><span style="font-size: 12px; color: #a8a29e">Record reps · jeudi</span></div>
+        <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px">4 × 100<span style="font-size: 13px; color: #a8a29e; font-weight: 500"> kg</span></span>
+      </div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; padding: 14px 0">
+        <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 500">Tractions lestées</span><span style="font-size: 12px; color: #a8a29e">Record charge · jeudi</span></div>
+        <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px">6 × +22,5<span style="font-size: 13px; color: #a8a29e; font-weight: 500"> kg</span></span>
+      </div>
+    </div>
+  </div>
+
+  <nav aria-label="Navigation principale" style="margin: 0 24px 24px; height: 64px; border-radius: 999px; background: #161615; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: center; padding: 0 6px">
+    <a href="Main.dc.html" aria-current="page" aria-label="Accueil" style="height: 52px; border-radius: 999px; background: #f5f5f4; color: #0a0a0a; display: flex; align-items: center; justify-content: center">
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-6 8 6v8a1 1 0 0 1-1 1h-4v-5h-6v5H5a1 1 0 0 1-1-1z"></path></svg>
+    </a>
+    <a href="Seances.dc.html" aria-label="Programme" style="height: 52px; color: #a8a29e; display: flex; align-items: center; justify-content: center">
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 8v8M18 8v8M3 10.5v3M21 10.5v3M6 12h12"></path></svg>
+    </a>
+    <a href="Performances.dc.html" aria-label="Records" style="height: 52px; color: #a8a29e; display: flex; align-items: center; justify-content: center">
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l5-5 4 3 7-8"></path></svg>
+    </a>
+    <a href="Main.dc.html" aria-label="Exercices" style="height: 52px; color: #a8a29e; display: flex; align-items: center; justify-content: center">
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6"></circle><path d="M20 20l-4.5-4.5"></path></svg>
+    </a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#d4f53c","options":["#d4f53c","#ff6b3d","#7dd3fc","#f5f5f4"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#d4f53c' };
+  }
+}
+</script>
+</body>
+</html>

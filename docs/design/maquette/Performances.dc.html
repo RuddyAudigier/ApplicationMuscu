@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>MyMuscle — Records</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f5f5f4}a:hover{color:#ffffff}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0a0a0a; color: #f5f5f4; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column">
+  <div style="flex-grow: 1; padding: 32px 24px 0; display: flex; flex-direction: column; gap: 18px">
+    <h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 40px; letter-spacing: -0.03em">Records</h1>
+
+    <div style="display: flex; gap: 8px">
+      <button type="button" style="min-height: 44px; padding: 0 14px 0 16px; border-radius: 999px; border: none; background: #f5f5f4; color: #0a0a0a; font: 600 15px Inter, sans-serif; display: flex; align-items: center; gap: 8px; cursor: pointer">
+        Développé couché
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+      </button>
+    </div>
+
+    <div role="tablist" aria-label="Variante" style="display: flex; gap: 6px; margin-top: -6px">
+      <button type="button" role="tab" aria-selected="true" style="height: 36px; padding: 0 14px; border-radius: 999px; border: none; background: {{accent}}; color: #0a0a0a; font: 700 13px Inter, sans-serif">Classique</button>
+      <button type="button" role="tab" aria-selected="false" style="height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid #292524; background: transparent; color: #a8a29e; font: 500 13px Inter, sans-serif">Pausé 2 ct</button>
+      <button type="button" role="tab" aria-selected="false" style="height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid #292524; background: transparent; color: #a8a29e; font: 500 13px Inter, sans-serif">Prise serrée</button>
+    </div>
+
+    <div style="display: flex; flex-direction: column">
+      <div style="display: grid; grid-template-columns: 44px minmax(0, 1fr) 56px 64px; gap: 8px; padding-bottom: 8px; font-size: 12px; color: #78716c">
+        <span>Reps</span><span>Poids</span><span>RPE</span><span style="text-align: right">Date</span>
+      </div>
+      <div style="height: 452px; overflow-y: auto; display: flex; flex-direction: column">
+      <sc-for list="{{rows}}" as="row" hint-placeholder-count="10">
+        <div style="display: grid; grid-template-columns: 44px minmax(0, 1fr) 56px 64px; gap: 8px; align-items: center; min-height: 46px; border-top: 1px solid #1f1f1d">
+          <span style="font-size: 14px; color: #a8a29e">{{row.reps}}</span>
+          <span style="font-family: 'Space Grotesk', sans-serif; font-size: {{row.wsize}}; font-weight: {{row.wweight}}; color: {{row.wcolor}}">{{row.weight}}</span>
+          <span style="font-size: 13px; color: #a8a29e">{{row.rpe}}</span>
+          <span style="text-align: right; font-size: 13px; font-weight: {{row.dweight}}; color: {{row.dcolor}}">{{row.date}}</span>
+        </div>
+      </sc-for>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 14px; font-size: 12px; color: #a8a29e">
+      <span style="display: flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 999px; background: {{accent}}"></span>PR cette semaine</span>
+      <span style="display: flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 999px; box-sizing: border-box; border: 1.5px dashed #78716c"></span>À conquérir</span>
+    </div>
+  </div>
+
+  <nav aria-label="Navigation principale" style="margin: 0 24px 24px; height: 64px; border-radius: 999px; background: #161615; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: center; padding: 0 6px">
+    <a href="Main.dc.html" aria-label="Accueil" style="height: 52px; color: #a8a29e; display: flex; align-items: center; justify-content: center">
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-6 8 6v8a1 1 0 0 1-1 1h-4v-5h-6v5H5a1 1 0 0 1-1-1z"></path></svg>
+    </a>
+    <a href="Seances.dc.html" aria-label="Programme" style="height: 52px; color: #a8a29e; display: flex; align-items: center; justify-content: center">
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 8v8M18 8v8M3 10.5v3M21 10.5v3M6 12h12"></path></svg>
+    </a>
+    <a href="Performances.dc.html" aria-current="page" aria-label="Records" style="height: 52px; border-radius: 999px; background: #f5f5f4; color: #0a0a0a; display: flex; align-items: center; justify-content: center">
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l5-5 4 3 7-8"></path></svg>
+    </a>
+    <a href="Main.dc.html" aria-label="Exercices" style="height: 52px; color: #a8a29e; display: flex; align-items: center; justify-content: center">
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6"></circle><path d="M20 20l-4.5-4.5"></path></svg>
+    </a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#d4f53c","options":["#d4f53c","#ff6b3d","#7dd3fc","#f5f5f4"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#d4f53c';
+    const known = { 1: ['115 kg', '10', '12/10'], 2: ['107,5 kg', '9', '26/10'], 3: ['102,5 kg', '9', '02/11'], 4: ['100 kg', '9', 'auj.', true], 5: ['95 kg', '8', '16/11'], 7: ['87,5 kg', '9', '09/11'], 8: ['85 kg', '9', '09/11'], 10: ['77,5 kg', '8', '19/10'], 12: ['70 kg', '9', '05/10'], 15: ['60 kg', '10', '28/09'], 20: ['50 kg', '10', '14/09'] };
+    const data = [];
+    for (let r = 1; r <= 30; r++) { const k = known[r]; data.push(k ? [r, k[0], k[1], k[2], k[3]] : [r, null]); }
+    const rows = data.map(([reps, weight, rpe, date, fresh]) => {
+      const empty = weight == null;
+      return {
+        reps: reps + '',
+        weight: empty ? 'à conquérir' : weight,
+        rpe: empty ? '' : rpe,
+        date: empty ? '' : date,
+        wsize: empty ? '14px' : '19px',
+        wweight: empty ? '400' : '700',
+        wcolor: empty ? '#78716c' : (fresh ? accent : '#f5f5f4'),
+        dweight: fresh ? '600' : '400',
+        dcolor: fresh ? '#f5f5f4' : '#a8a29e'
+      };
+    });
+    return { accent, rows };
+  }
+}
+</script>
+</body>
+</html>

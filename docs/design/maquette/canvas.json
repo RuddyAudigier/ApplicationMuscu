@@ -1,0 +1,21 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-11-23T15:00:00Z" },
+  "title": "MyMuscle — nouveau design",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 390, "h": 844, "title": "Accueil — cycle A/B", "radius": 40 },
+    "Seances.dc.html": { "x": 470, "y": 0, "w": 390, "h": 844, "title": "Programme — cycles A et B", "radius": 40, "is_interactive": true },
+    "SeanceEnCours.dc.html": { "x": 940, "y": 0, "w": 390, "h": 844, "title": "Séance — choisir sa tentative de PR", "radius": 40, "is_interactive": true },
+    "Performances.dc.html": { "x": 1410, "y": 0, "w": 390, "h": 844, "title": "Records — tableau des PR", "radius": 40 },
+    "Exercice.dc.html": { "x": 1880, "y": 0, "w": 390, "h": 844, "title": "Exercice — variantes et remarques du coach", "radius": 40 },
+    "AjoutPR.dc.html": { "x": 2350, "y": 0, "w": 390, "h": 844, "title": "Ajouter un PR hors séance", "radius": 40 },
+    "Recap.dc.html": { "x": 2820, "y": 0, "w": 390, "h": 844, "title": "Fin de séance — compte rendu PDF", "radius": 40 }
+  },
+  "order": ["Main.dc.html", "Seances.dc.html", "SeanceEnCours.dc.html", "Performances.dc.html", "Exercice.dc.html", "AjoutPR.dc.html", "Recap.dc.html"],
+  "notes": {
+    "titre": { "x": 0, "y": -260, "text": "MyMuscle — méthode fontesque", "kind": "title1", "maxW": 1800 }
+  },
+  "designSystems": []
+}
