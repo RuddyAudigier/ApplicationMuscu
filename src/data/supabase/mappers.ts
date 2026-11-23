@@ -134,7 +134,7 @@ export function parseRows<T>(raw: unknown, map: (row: unknown) => T | null, labe
 
 /* ---------- Écriture : validations partagées Supabase / mock ---------- */
 
-export const INVALID_PERFORMANCE_MESSAGE =
+const INVALID_PERFORMANCE_MESSAGE =
   'Entrée performance invalide: mets reps > 0 avec un poids >= 0, ou reps=0 et poids vide pour une série non complétée.';
 
 export interface PerformanceRowWrite {

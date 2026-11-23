@@ -1,9 +1,9 @@
 import { z } from 'zod';
-import type { GeneralAdvice, Id, IsoDateTime } from '../../domain/model';
+import type { Id } from '../../domain/model';
 import { buildSeed } from './seed';
 
-export const MOCK_DB_STORAGE_KEY = 'local_test_db_v2';
-export const MOCK_DB_VERSION = 2;
+const MOCK_DB_STORAGE_KEY = 'local_test_db_v2';
+const MOCK_DB_VERSION = 2;
 
 const variantSchema = z.object({ id: z.string().nullable(), exerciseId: z.string().nullable(), name: z.string(), isDefault: z.boolean() });
 
@@ -26,7 +26,6 @@ const mockDbSchema = z.object({
 
 export type MockDb = z.infer<typeof mockDbSchema>;
 export type MockExercise = MockDb['exercises'][number];
-export type MockAdvice = GeneralAdvice & { updatedAt: IsoDateTime };
 
 export interface MockContext {
   genId: (prefix: string) => Id;

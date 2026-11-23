@@ -9,7 +9,7 @@ export interface PgResult { data: unknown; error: PgError | null }
  * Sous-ensemble chaînable du query builder supabase-js utilisé par les repos.
  * Les résultats restent `unknown` : chaque ligne est validée par Zod (mappers).
  */
-export interface Query extends PromiseLike<PgResult> {
+interface Query extends PromiseLike<PgResult> {
   select(columns?: string): Query;
   insert(rows: object[]): Query;
   update(values: object): Query;
@@ -35,7 +35,7 @@ export function createSupabaseClient(url: string, anonKey: string): SupabaseClie
 }
 
 /** Codes « schéma incomplet » tolérés (INV §2.4). */
-export const SCHEMA_GAP_CODES: readonly string[] = ['42P01', '42703', 'PGRST204'];
+const SCHEMA_GAP_CODES: readonly string[] = ['42P01', '42703', 'PGRST204'];
 export const NO_ROWS = 'PGRST116';
 
 export function isSchemaGap(error: PgError, keyword?: string): boolean {

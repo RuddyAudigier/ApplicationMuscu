@@ -4,7 +4,7 @@ import type { PerformancesRepo } from '../ports';
 import { type Db, fail, must, run } from './client';
 import { mapPerformanceRow, parseRows, preparePerformances, type PerformanceRowWrite } from './mappers';
 
-export const PAGE_SIZE = 1000;
+const PAGE_SIZE = 1000;
 
 /** Erreurs justifiant le retry « legacy » sans `rpe` / `variant_*` (INV §3.4). */
 function isLegacySchemaError(error: { code?: string; message: string }): boolean {
