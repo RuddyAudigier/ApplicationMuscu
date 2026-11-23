@@ -26,7 +26,11 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
-async function nativeShare(file: File, meta: { title: string; text: string }): Promise<void> {
+async function nativeShare(
+  file: File,
+  meta: { title: string; text: string },
+  dialogTitle = 'Partager la séance',
+): Promise<void> {
   const path = `shares/${String(Date.now())}-${file.name}`;
   await Filesystem.writeFile({
     path,
@@ -35,7 +39,7 @@ async function nativeShare(file: File, meta: { title: string; text: string }): P
     recursive: true,
   });
   const { uri } = await Filesystem.getUri({ path, directory: Directory.Cache });
-  await Share.share({ title: meta.title, text: meta.text, url: uri, dialogTitle: 'Partager la séance' });
+  await Share.share({ title: meta.title, text: meta.text, url: uri, dialogTitle });
 }
 
 export async function shareImage(
@@ -58,4 +62,50 @@ export async function shareImage(
   } catch (error) {
     return error instanceof Error && error.name === 'AbortError' ? 'cancelled' : 'unavailable';
   }
+}
+
+export type ShareFileResult = 'shared' | 'cancelled' | 'downloaded';
+
+function download(file: File): void {
+  const url = URL.createObjectURL(file);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = file.name;
+  a.rel = 'noopener';
+  document.body.append(a);
+  a.click();
+  a.remove();
+  // Laisse au navigateur le temps de démarrer le téléchargement.
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 1000);
+}
+
+/**
+ * Partage un fichier (PDF…) : partage natif Capacitor, puis Web Share (fichiers),
+ * puis téléchargement direct. Une annulation par l'utilisateur arrête la chaîne.
+ */
+export async function shareFile(
+  file: File,
+  meta: { title: string; text: string; dialogTitle?: string },
+): Promise<ShareFileResult> {
+  if (isNative()) {
+    try {
+      await nativeShare(file, meta, meta.dialogTitle ?? meta.title);
+      return 'shared';
+    } catch (error) {
+      if (isCancel(error)) return 'cancelled';
+    }
+  }
+  // Pas de canShare : il renvoie false à tort sur certains appareils.
+  if (typeof navigator.share === 'function') {
+    try {
+      await navigator.share({ title: meta.title, text: meta.text, files: [file] });
+      return 'shared';
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') return 'cancelled';
+    }
+  }
+  download(file);
+  return 'downloaded';
 }
