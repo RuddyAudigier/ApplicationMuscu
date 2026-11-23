@@ -1,10 +1,18 @@
-import { render, renderHook, screen } from '@testing-library/react';
+import { render, renderHook, screen, within } from '@testing-library/react';
 import { RouterProvider } from 'react-router';
 import { ErrorBoundary } from '../../src/app/ErrorBoundary';
 import { BackendProvider, Providers, useBackend } from '../../src/app/providers';
 import { createTestRouter } from '../../src/app/router';
 import { createMockBackend } from '../../src/data/mock';
 import { NetworkError, ValidationError } from '../../src/data/ports';
+
+/** Les écrans lisent leurs données : providers + backend mock. */
+const renderRoute = (entries: string[]) =>
+  render(
+    <Providers backend={createMockBackend(localStorage)}>
+      <RouterProvider router={createTestRouter(entries)} />
+    </Providers>,
+  );
 
 describe('ErrorBoundary', () => {
   it('shows a French fallback when a child throws', () => {
@@ -81,7 +89,7 @@ describe('router placeholders', () => {
     ['/exercises/abc', 'Fiche exercice'],
     ['/settings', 'Réglages'],
   ])('renders %s', (path, title) => {
-    render(<RouterProvider router={createTestRouter([path])} />);
+    renderRoute([path]);
     expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
   });
 
@@ -90,7 +98,7 @@ describe('router placeholders', () => {
     (path) => {
       vi.spyOn(console, 'warn').mockImplementation(() => undefined);
       vi.spyOn(console, 'error').mockImplementation(() => undefined);
-      render(<RouterProvider router={createTestRouter([path])} />);
+      renderRoute([path]);
       expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
     },
   );
@@ -100,10 +108,10 @@ describe('layout navigation', () => {
   it.each(['/', '/program', '/records', '/exercises', '/settings'])(
     'shows the bottom nav on %s',
     (path) => {
-      render(<RouterProvider router={createTestRouter([path])} />);
+      renderRoute([path]);
       const nav = screen.getByRole('navigation', { name: 'Navigation principale' });
       expect(nav).toBeInTheDocument();
-      expect(screen.getAllByRole('link').map((l) => l.getAttribute('aria-label'))).toEqual([
+      expect(within(nav).getAllByRole('link').map((l) => l.getAttribute('aria-label'))).toEqual([
         'Accueil',
         'Programme',
         'Records',
@@ -113,12 +121,12 @@ describe('layout navigation', () => {
   );
 
   it('marks the current section', () => {
-    render(<RouterProvider router={createTestRouter(['/records/abc'])} />);
+    renderRoute(['/records/abc']);
     expect(screen.getByRole('link', { name: 'Records' })).toHaveAttribute('aria-current', 'page');
   });
 
   it.each(['/workout', '/report'])('hides the bottom nav on %s', (path) => {
-    render(<RouterProvider router={createTestRouter([path])} />);
+    renderRoute([path]);
     expect(screen.queryByRole('navigation')).toBeNull();
   });
 });
