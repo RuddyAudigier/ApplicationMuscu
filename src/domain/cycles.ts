@@ -68,3 +68,10 @@ export function timeline(state: CycleState, today: IsoDate, blocks = 6): Timelin
   }
   return out;
 }
+
+/** État par défaut quand aucun cycle n'est enregistré : cycle A, 2 semaines, démarré aujourd'hui. */
+export const defaultCycleState = (today: IsoDate): CycleState => ({
+  current: 'A',
+  startedOn: today,
+  weeks: STANDARD_WEEKS,
+});

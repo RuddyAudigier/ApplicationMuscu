@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CycleState } from '@/domain/model';
-import { cycleStatus, extendCycle, switchCycle, timeline } from '@/domain/cycles';
+import { cycleStatus, defaultCycleState, extendCycle, switchCycle, timeline } from '@/domain/cycles';
 
 const A2: CycleState = { current: 'A', startedOn: '2026-11-02', weeks: 2 };
 
@@ -85,5 +85,11 @@ describe('timeline', () => {
   it('small block counts keep the current block', () => {
     expect(timeline(A2, '2026-11-02', 1)).toEqual([{ cycle: 'A', status: 'current', progress: 0 }]);
     expect(timeline(A2, '2026-11-02', 2).map((b) => b.status)).toEqual(['past', 'current']);
+  });
+});
+
+describe('defaultCycleState', () => {
+  it('démarre le cycle A pour 2 semaines aujourd’hui', () => {
+    expect(defaultCycleState('2026-11-23')).toEqual({ current: 'A', startedOn: '2026-11-23', weeks: 2 });
   });
 });
