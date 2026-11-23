@@ -51,7 +51,7 @@ function featureBlocks(): Linter.Config[] {
 
 export default defineConfig(
   {
-    ignores: ['dist', 'coverage', 'legacy/**', 'tests/golden/legacy*.js', 'android/**', 'node_modules/**', 'public/**'],
+    ignores: ['dist', 'coverage', '.claude/**', 'legacy/**', 'tests/golden/legacy*.js', 'android/**', 'node_modules/**', 'public/**'],
   },
   {
     files: ['**/*.{ts,tsx}'],

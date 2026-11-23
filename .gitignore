@@ -21,3 +21,6 @@ Thumbs.db
 
 # Agent scratch
 .superpowers/
+
+# Agent worktrees
+.claude/
