@@ -1,0 +1,99 @@
+import { useState } from 'react';
+import { isoToShortFr, todayIso } from '@/domain/dates';
+import type { Performance, Variant } from '@/domain/model';
+import { formatWeight } from '@/domain/numbers';
+import { variantLabel } from '@/domain/variants';
+import { recordsTable, type RecordRow } from '@/domain/workout';
+import { Pill, Sheet } from '@/ui';
+import { cx } from './cx';
+import { isSameVariant, variantKeyOf } from './livePr';
+import styles from './WorkoutScreen.module.css';
+
+export interface RecordsSheetProps {
+  open: boolean;
+  onClose: () => void;
+  exerciseId: string;
+  exerciseName: string;
+  variants: Variant[];
+  /** Variante de la série en cours (sélection initiale). */
+  variantKey: string;
+  /** Reps de la cible actuelle (ligne surlignée). */
+  targetReps: number | null;
+  perfs: Performance[];
+  onPick: (row: RecordRow, variant: Variant) => void;
+}
+
+/** « Mes records » : pastilles de variantes fixes, tableau 1–30 défilant ; toucher une ligne = cible. */
+export function RecordsSheet(props: RecordsSheetProps) {
+  return (
+    <Sheet open={props.open} onClose={props.onClose} title="Mes records">
+      <RecordsBody {...props} />
+    </Sheet>
+  );
+}
+
+const shortDate = (iso: string | null): string => (iso === null ? '' : iso === todayIso() ? 'auj.' : isoToShortFr(iso));
+
+function RecordsBody({ exerciseId, exerciseName, variants, variantKey, targetReps, perfs, onPick }: RecordsSheetProps) {
+  const initial = variants.find((v) => isSameVariant(v, variantKey)) ?? variants[0];
+  const [selectedKey, setSelectedKey] = useState(initial ? variantKeyOf(initial) : variantKey);
+  const variant = variants.find((v) => variantKeyOf(v) === selectedKey) ?? initial;
+  const sameAsSerie = variant !== undefined && isSameVariant(variant, variantKey);
+  const rows = variant ? recordsTable(perfs, exerciseId, variant) : [];
+
+  return (
+    <div className={styles.records}>
+      <p className={styles.recordsSub}>{exerciseName} · touche ta cible</p>
+      <div role="radiogroup" aria-label="Variante du tableau" className={styles.sheetPills}>
+        {variants.map((v) => (
+          <Pill
+            key={variantKeyOf(v)}
+            tone="accent"
+            selected={variant !== undefined && variantKeyOf(v) === variantKeyOf(variant)}
+            onSelect={() => {
+              setSelectedKey(variantKeyOf(v));
+            }}
+          >
+            {variantLabel(v.name)}
+          </Pill>
+        ))}
+      </div>
+      <div className={styles.tableHead} aria-hidden="true">
+        <span>Reps</span>
+        <span>Record</span>
+        <span>RPE</span>
+        <span className={styles.right}>Date</span>
+      </div>
+      <ul className={styles.table} aria-label={`Records ${variant ? variantLabel(variant.name) : ''}`}>
+        {rows.map((row) => {
+          const selected = sameAsSerie && targetReps === row.reps;
+          const repsLabel = `${String(row.reps)} rep${row.reps > 1 ? 's' : ''}`;
+          const label =
+            row.weight === null
+              ? `${repsLabel} : vide, viser un premier record`
+              : `${repsLabel} : ${formatWeight(row.weight)} kg${row.rpe === null ? '' : `, RPE ${String(row.rpe)}`}${row.date ? `, le ${isoToShortFr(row.date)}` : ''}`;
+          return (
+            <li key={row.reps}>
+              <button
+                type="button"
+                className={cx(styles.row, selected && styles.rowSelected)}
+                aria-pressed={selected}
+                aria-label={label}
+                onClick={() => {
+                  if (variant) onPick(row, variant);
+                }}
+              >
+                <span className={styles.rowReps}>{repsLabel}</span>
+                <span className={row.weight === null ? styles.rowEmpty : styles.rowWeight}>
+                  {row.weight === null ? 'vide' : `${formatWeight(row.weight)} kg`}
+                </span>
+                <span className={styles.rowMeta}>{row.rpe ?? ''}</span>
+                <span className={cx(styles.rowMeta, styles.right)}>{shortDate(row.date)}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
