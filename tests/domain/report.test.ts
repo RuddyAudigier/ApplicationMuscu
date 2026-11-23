@@ -13,7 +13,7 @@ const exercises = [bench];
 
 const START = new Date(2026, 10, 23, 18, 0);
 const serie = (reps: number, kg: number, over: Partial<SerieEntry> = {}): SerieEntry => ({
-  variantKey: 'v-tng', reps: String(reps), kg: String(kg), rpe: 9, target: null, validated: true, ...over,
+  variantKey: 'v-tng', reps: String(reps), kg: String(kg), rpe: 9, target: null, validated: true, validatedAt: null, ...over,
 });
 const wex = (series: SerieEntry[], over: Partial<WorkoutExercise> = {}): WorkoutExercise => ({
   exerciseId: 'bench', name: 'Développé couché', plannedSeries: 3, stoppedEarly: false, series, ...over,
@@ -89,6 +89,55 @@ describe('buildReport', () => {
     );
     expect(r.date).toBe('2026-11-21');
     expect(r.exercises[0]?.series.map((s) => s.prKind)).toEqual(['charge', 'reps']);
+  });
+
+  it('processes series in real validation order (validatedAt), document order as fallback', () => {
+    const at = (min: number): string => new Date(START.getTime() + min * 60_000).toISOString();
+    // S2 (5 × 100) validée avant S1 (5 × 102) : les deux sont des PR charge, S3 non validée-horodatée vient après.
+    const r = buildReport(state([wex([
+      serie(5, 102, { validatedAt: at(10) }),
+      serie(5, 100, { validatedAt: at(5) }),
+      serie(5, 101),
+    ])]), [hist(5, 90, '2026-11-01')], exercises, END);
+    expect(r.exercises[0]?.series.map((s) => [s.n, s.prKind])).toEqual([[1, 'charge'], [2, 'charge'], [3, null]]);
+    // Ordre réel inverse : 5 × 102 d'abord, puis 5 × 100 n'est plus un PR.
+    const r2 = buildReport(state([wex([
+      serie(5, 100, { validatedAt: at(10) }),
+      serie(5, 102, { validatedAt: at(5) }),
+    ])]), [hist(5, 90, '2026-11-01')], exercises, END);
+    expect(r2.exercises[0]?.series.map((s) => s.prKind)).toEqual([null, 'charge']);
+  });
+
+  it('same-day history rows count only if recorded before the workout started', () => {
+    const local = (d: number, h: number): string => new Date(2026, 10, d, h).toISOString();
+    const history = [
+      hist(5, 100, '2026-11-23', { createdAt: local(23, 17) }),
+      hist(6, 200, '2026-11-23', { createdAt: local(23, 19) }),
+    ];
+    const r = buildReport(state([wex([serie(6, 100)])]), history, exercises, END);
+    expect(r.exercises[0]?.series[0]?.prKind).toBe('reps');
+  });
+
+  it('moved to an earlier day: that day rows (with createdAt) are history', () => {
+    const local = (d: number, h: number): string => new Date(2026, 10, d, h).toISOString();
+    const r = buildReport(
+      state([wex([serie(6, 100), serie(6, 100)])], { date: '2026-11-21' }),
+      [hist(5, 100, '2026-11-21', { createdAt: local(21, 20) })],
+      exercises,
+      END,
+    );
+    expect(r.exercises[0]?.series.map((s) => s.prKind)).toEqual(['reps', null]);
+  });
+
+  it('moved to a later day: rows of that day recorded after the start are ignored', () => {
+    const local = (d: number, h: number): string => new Date(2026, 10, d, h).toISOString();
+    const r = buildReport(
+      state([wex([serie(5, 100)])], { date: '2026-11-25' }),
+      [hist(5, 90, '2026-11-20'), hist(5, 150, '2026-11-25', { createdAt: local(25, 8) }), hist(5, 999, 'garbage')],
+      exercises,
+      END,
+    );
+    expect(r.exercises[0]?.series[0]?.prKind).toBe('charge');
   });
 
   it('skips exercises without validated series and invalid series', () => {

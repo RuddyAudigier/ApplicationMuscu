@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Exercise, Performance, Session, Variant } from '@/domain/model';
 import {
-  type SerieEntry, type WorkoutState, canValidate, recordsTable, startWorkout, toPerformanceInputs, workoutReducer,
+  type SerieEntry, type WorkoutState, canValidate, parseWorkoutState, recordsTable, startWorkout, toPerformanceInputs, workoutReducer,
 } from '@/domain/workout';
 
 const tng: Variant = { id: 'v-tng', exerciseId: 'bench', name: 'Touch and Go', isDefault: true };
@@ -18,6 +18,7 @@ const session: Session = {
   exercises: [{ exerciseId: 'bench', name: 'Développé couché', series: 3 }, { exerciseId: 'curl', name: 'Curl', series: 2 }],
 };
 const NOW = new Date(2026, 10, 23, 18, 30);
+const AT = '2026-11-23T17:40:00.000Z';
 
 const filled = (s: SerieEntry, reps: string, kg: string): SerieEntry => ({ ...s, reps, kg });
 
@@ -33,7 +34,7 @@ describe('startWorkout', () => {
       ['bench', 'Développé couché', 3, 3, false],
       ['curl', 'Curl', 2, 2, false],
     ]);
-    expect(w.exercises[0]?.series[0]).toEqual({ variantKey: 'v-tng', reps: '', kg: '', rpe: 9, target: null, validated: false });
+    expect(w.exercises[0]?.series[0]).toEqual({ variantKey: 'v-tng', reps: '', kg: '', rpe: 9, target: null, validated: false, validatedAt: null });
     // Exercice sans variante : variante par défaut implicite.
     expect(w.exercises[1]?.series[0]?.variantKey).toBe('Touch and Go');
   });
@@ -46,7 +47,7 @@ describe('startWorkout', () => {
 });
 
 describe('canValidate', () => {
-  const base: SerieEntry = { variantKey: 'x', reps: '5', kg: '100', rpe: 9, target: null, validated: false };
+  const base: SerieEntry = { variantKey: 'x', reps: '5', kg: '100', rpe: 9, target: null, validated: false, validatedAt: null };
   it('accepts integer reps ≥ 1, weight ≥ 0 and RPE 6–10', () => {
     expect(canValidate(base)).toBe(true);
     expect(canValidate({ ...base, kg: '0' })).toBe(true);
@@ -74,36 +75,39 @@ describe('workoutReducer', () => {
     w = workoutReducer(w, { type: 'setField', ex: 0, serie: 0, field: 'variantKey', value: 'v-pause' });
     expect(w.exercises[0]?.series[0]).toMatchObject({ reps: '5', kg: '100', rpe: 8, variantKey: 'v-pause' });
 
-    w = workoutReducer(w, { type: 'validate', ex: 0, serie: 0 });
-    expect(w.exercises[0]?.series[0]?.validated).toBe(true);
+    w = workoutReducer(w, { type: 'validate', ex: 0, serie: 0, at: AT });
+    expect(w.exercises[0]?.series[0]).toMatchObject({ validated: true, validatedAt: AT });
+    // Déjà validée : inchangée.
+    expect(workoutReducer(w, { type: 'validate', ex: 0, serie: 0, at: 'later' })).toBe(w);
     // Série verrouillée : saisie ignorée.
     const locked = workoutReducer(w, { type: 'setField', ex: 0, serie: 0, field: 'reps', value: '9' });
     expect(locked).toBe(w);
     w = workoutReducer(w, { type: 'unlock', ex: 0, serie: 0 });
-    expect(w.exercises[0]?.series[0]?.validated).toBe(false);
+    expect(w.exercises[0]?.series[0]).toMatchObject({ validated: false, validatedAt: null });
+    expect(workoutReducer(w, { type: 'unlock', ex: 0, serie: 0 })).toBe(w);
   });
 
   it('refuses to validate an invalid serie', () => {
     const w = fresh();
-    expect(workoutReducer(w, { type: 'validate', ex: 0, serie: 0 })).toBe(w);
+    expect(workoutReducer(w, { type: 'validate', ex: 0, serie: 0, at: AT })).toBe(w);
   });
 
   it('ignores out-of-range indexes', () => {
     const w = fresh();
-    expect(workoutReducer(w, { type: 'validate', ex: 9, serie: 0 })).toBe(w);
+    expect(workoutReducer(w, { type: 'validate', ex: 9, serie: 0, at: AT })).toBe(w);
     expect(workoutReducer(w, { type: 'unlock', ex: 0, serie: 9 })).toBe(w);
     expect(workoutReducer(w, { type: 'addSerie', ex: 9 })).toBe(w);
     expect(workoutReducer(w, { type: 'stopExercise', ex: 9 })).toBe(w);
     expect(workoutReducer(w, { type: 'removeExercise', ex: 9 })).toBe(w);
   });
 
-  it('setTarget pre-fills reps and kg', () => {
-    let w = workoutReducer(fresh(), { type: 'setTarget', ex: 0, serie: 1, target: { reps: 6, weight: 92.5 } });
-    expect(w.exercises[0]?.series[1]).toMatchObject({ target: { reps: 6, weight: 92.5 }, reps: '6', kg: '92.5' });
+  it('setTarget pre-fills reps, kg and the target variant', () => {
+    let w = workoutReducer(fresh(), { type: 'setTarget', ex: 0, serie: 1, target: { reps: 6, weight: 92.5, variantKey: 'v-pause' } });
+    expect(w.exercises[0]?.series[1]).toMatchObject({ target: { reps: 6, weight: 92.5 }, reps: '6', kg: '92.5', variantKey: 'v-pause' });
     // Premier record à R reps : poids inconnu, la saisie de poids est conservée.
     w = workoutReducer(w, { type: 'setField', ex: 0, serie: 2, field: 'kg', value: '70' });
-    w = workoutReducer(w, { type: 'setTarget', ex: 0, serie: 2, target: { reps: 12, weight: null } });
-    expect(w.exercises[0]?.series[2]).toMatchObject({ target: { reps: 12, weight: null }, reps: '12', kg: '70' });
+    w = workoutReducer(w, { type: 'setTarget', ex: 0, serie: 2, target: { reps: 12, weight: null, variantKey: 'v-tng' } });
+    expect(w.exercises[0]?.series[2]).toMatchObject({ target: { reps: 12, weight: null }, reps: '12', kg: '70', variantKey: 'v-tng' });
     w = workoutReducer(w, { type: 'setTarget', ex: 0, serie: 2, target: null });
     expect(w.exercises[0]?.series[2]).toMatchObject({ target: null, reps: '12', kg: '70' });
   });
@@ -112,12 +116,12 @@ describe('workoutReducer', () => {
     let w = workoutReducer(fresh(), { type: 'setField', ex: 1, serie: 1, field: 'variantKey', value: 'Marteau' });
     w = workoutReducer(w, { type: 'addSerie', ex: 1 });
     expect(w.exercises[1]?.series).toHaveLength(3);
-    expect(w.exercises[1]?.series[2]).toEqual({ variantKey: 'Marteau', reps: '', kg: '', rpe: 9, target: null, validated: false });
+    expect(w.exercises[1]?.series[2]).toEqual({ variantKey: 'Marteau', reps: '', kg: '', rpe: 9, target: null, validated: false, validatedAt: null });
     w = workoutReducer(w, { type: 'removeSerie', ex: 1, serie: 0 });
     expect(w.exercises[1]?.series).toHaveLength(2);
     w = workoutReducer(w, { type: 'setField', ex: 1, serie: 0, field: 'reps', value: '10' });
     w = workoutReducer(w, { type: 'setField', ex: 1, serie: 0, field: 'kg', value: '14' });
-    w = workoutReducer(w, { type: 'validate', ex: 1, serie: 0 });
+    w = workoutReducer(w, { type: 'validate', ex: 1, serie: 0, at: AT });
     expect(workoutReducer(w, { type: 'removeSerie', ex: 1, serie: 0 })).toBe(w);
   });
 
@@ -125,7 +129,7 @@ describe('workoutReducer', () => {
     let w = fresh();
     w = workoutReducer(w, { type: 'setField', ex: 0, serie: 0, field: 'reps', value: '5' });
     w = workoutReducer(w, { type: 'setField', ex: 0, serie: 0, field: 'kg', value: '100' });
-    w = workoutReducer(w, { type: 'validate', ex: 0, serie: 0 });
+    w = workoutReducer(w, { type: 'validate', ex: 0, serie: 0, at: AT });
     w = workoutReducer(w, { type: 'setField', ex: 0, serie: 1, field: 'reps', value: '4' });
     w = workoutReducer(w, { type: 'stopExercise', ex: 0 });
     expect(w.exercises[0]?.stoppedEarly).toBe(true);
@@ -142,7 +146,7 @@ describe('workoutReducer', () => {
     let w = fresh();
     w = workoutReducer(w, { type: 'setField', ex: 0, serie: 1, field: 'reps', value: '5' });
     w = workoutReducer(w, { type: 'setField', ex: 0, serie: 1, field: 'kg', value: '100' });
-    w = workoutReducer(w, { type: 'validate', ex: 0, serie: 1 });
+    w = workoutReducer(w, { type: 'validate', ex: 0, serie: 1, at: AT });
     w = workoutReducer(w, { type: 'stopExercise', ex: 0 });
     expect(w.exercises[0]?.series.map((s) => s.validated)).toEqual([false, true]);
   });
@@ -179,7 +183,7 @@ describe('toPerformanceInputs', () => {
           { ...filled(c.series[1] as SerieEntry, '0', '14'), validated: true },
         ] },
         { exerciseId: 'gone', name: 'Ancien', plannedSeries: 1, stoppedEarly: false, series: [
-          { variantKey: 'Pause', reps: '3', kg: '50', rpe: 9, target: null, validated: true },
+          { variantKey: 'Pause', reps: '3', kg: '50', rpe: 9, target: null, validated: true, validatedAt: null },
         ] },
       ],
     };
@@ -223,5 +227,40 @@ describe('recordsTable', () => {
     expect(rows[3]).toEqual({ reps: 4, weight: null, rpe: null, date: null });
     expect(rows[9]).toEqual({ reps: 10, weight: null, rpe: 8, date: '2026-11-06' });
     expect(recordsTable(perfs, 'bench', pause)[2]).toEqual({ reps: 3, weight: 120, rpe: 8, date: '2026-11-05' });
+  });
+});
+
+describe('parseWorkoutState', () => {
+  it('accepts a valid v2 state (JSON round trip)', () => {
+    let w = workoutReducer(fresh(), { type: 'setTarget', ex: 0, serie: 0, target: { reps: 5, weight: 100, variantKey: 'v-tng' } });
+    w = workoutReducer(w, { type: 'validate', ex: 0, serie: 0, at: AT });
+    w = workoutReducer(w, { type: 'stopExercise', ex: 1 });
+    const raw: unknown = JSON.parse(JSON.stringify(w));
+    expect(parseWorkoutState(raw)).toEqual(w);
+    expect(parseWorkoutState({ ...w, cycle: null })?.cycle).toBeNull();
+  });
+
+  it('rejects other versions and garbage', () => {
+    const w = fresh();
+    expect(parseWorkoutState({ ...w, version: 1 })).toBeNull();
+    expect(parseWorkoutState(null)).toBeNull();
+    expect(parseWorkoutState('x')).toBeNull();
+    expect(parseWorkoutState([])).toBeNull();
+    expect(parseWorkoutState({ ...w, cycle: 'C' })).toBeNull();
+    expect(parseWorkoutState({ ...w, sessionId: 3 })).toBeNull();
+    expect(parseWorkoutState({ ...w, exercises: 'x' })).toBeNull();
+    expect(parseWorkoutState({ ...w, exercises: [null] })).toBeNull();
+    const ex0 = w.exercises[0];
+    if (!ex0) throw new Error('fixture');
+    const withSerie = (serie: unknown): unknown => ({ ...w, exercises: [{ ...ex0, series: [serie] }] });
+    const s0 = ex0.series[0];
+    expect(parseWorkoutState({ ...w, exercises: [{ ...ex0, stoppedEarly: 'no' }] })).toBeNull();
+    expect(parseWorkoutState({ ...w, exercises: [{ ...ex0, series: 'x' }] })).toBeNull();
+    expect(parseWorkoutState(withSerie(null))).toBeNull();
+    expect(parseWorkoutState(withSerie({ ...s0, rpe: '9' }))).toBeNull();
+    expect(parseWorkoutState(withSerie({ ...s0, validatedAt: 3 }))).toBeNull();
+    expect(parseWorkoutState(withSerie({ ...s0, target: { reps: 5 } }))).toBeNull();
+    expect(parseWorkoutState(withSerie({ ...s0, target: 'x' }))).toBeNull();
+    expect(parseWorkoutState(withSerie({ ...s0, target: { reps: 5, weight: null } }))).not.toBeNull();
   });
 });

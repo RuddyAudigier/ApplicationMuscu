@@ -48,8 +48,8 @@ const sessionRow = z.object({
   id: z.string(),
   name: z.string(),
   created_at: z.string(),
-  /** Colonne ajoutée par la migration cycles (Task 21) : absente → `null`. */
-  cycle: z.enum(['A', 'B']).nullish(),
+  /** Colonne ajoutée par la migration cycles (Task 21) : absente ou invalide → `null` (la séance reste). */
+  cycle: z.enum(['A', 'B']).nullish().catch(null),
   session_exercises: z.array(z.object({
     series_count: numeric.nullish(),
     exercise_id: z.string().nullish(),

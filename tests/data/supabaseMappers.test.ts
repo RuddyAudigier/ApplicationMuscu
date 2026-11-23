@@ -69,6 +69,10 @@ describe('other mappers', () => {
     });
     expect(mapSessionRow({ id: 's2', name: 'Vide', created_at: 'x', session_exercises: null })?.exercises).toEqual([]);
     expect(mapSessionRow({ id: 's4', name: 'B', created_at: 'x', cycle: 'B' })?.cycle).toBe('B');
+    const bad = mapSessionRow({ id: 's5', name: 'C', created_at: 'x', cycle: 'Z' });
+    expect(bad).not.toBeNull();
+    expect(bad?.cycle).toBeNull();
+    expect(mapSessionRow({ id: 's6', name: 'D', created_at: 'x', cycle: 4 })?.cycle).toBeNull();
     expect(mapSessionRow({ id: 's3' })).toBeNull();
   });
 

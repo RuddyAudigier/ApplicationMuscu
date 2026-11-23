@@ -21,7 +21,7 @@ describe('cycleStatus', () => {
   });
 
   it('extended block lasts 3 weeks, then 2-week alternation resumes', () => {
-    const ext = extendCycle(A2);
+    const ext = extendCycle(A2, '2026-11-05');
     expect(ext).toEqual({ current: 'A', startedOn: '2026-11-02', weeks: 3 });
     expect(cycleStatus(ext, '2026-11-22')).toEqual({ current: 'A', week: 3, weeks: 3, daysLeft: 1, next: 'B' });
     expect(cycleStatus(ext, '2026-11-23')).toEqual({ current: 'B', week: 1, weeks: 2, daysLeft: 14, next: 'A' });
@@ -31,7 +31,7 @@ describe('cycleStatus', () => {
     // A [0,14) B [14,28) A [28,42) : jour 35 = A semaine 2.
     expect(cycleStatus(A2, '2026-12-07')).toEqual({ current: 'A', week: 2, weeks: 2, daysLeft: 7, next: 'B' });
     // Prolongé : A [0,21) B [21,35) A [35,49) : jour 35 = A semaine 1 (le bloc de 3 semaines ne compte qu'une fois).
-    expect(cycleStatus(extendCycle(A2), '2026-12-07')).toEqual({ current: 'A', week: 1, weeks: 2, daysLeft: 14, next: 'B' });
+    expect(cycleStatus(extendCycle(A2, '2026-11-02'), '2026-12-07')).toEqual({ current: 'A', week: 1, weeks: 2, daysLeft: 14, next: 'B' });
   });
 
   it('counts calendar days across a DST change', () => {
@@ -42,6 +42,14 @@ describe('cycleStatus', () => {
 
   it('a start in the future stays on week 1', () => {
     expect(cycleStatus(A2, '2026-10-31')).toEqual({ current: 'A', week: 1, weeks: 2, daysLeft: 16, next: 'B' });
+  });
+});
+
+describe('extendCycle', () => {
+  it('extends the resolved current block, not the stale stored one', () => {
+    const ext = extendCycle(A2, '2026-11-20');
+    expect(ext).toEqual({ current: 'B', startedOn: '2026-11-16', weeks: 3 });
+    expect(cycleStatus(ext, '2026-11-20')).toEqual({ current: 'B', week: 1, weeks: 3, daysLeft: 17, next: 'A' });
   });
 });
 
@@ -68,7 +76,7 @@ describe('timeline', () => {
   });
 
   it('follows the rolled-forward block and the block length', () => {
-    const t = timeline(extendCycle(A2), '2026-11-09', 4);
+    const t = timeline(extendCycle(A2, '2026-11-09'), '2026-11-09', 4);
     expect(t).toHaveLength(4);
     expect(t[2]).toEqual({ cycle: 'A', status: 'current', progress: 1 / 3 });
     expect(timeline(A2, '2026-11-16', 3).map((b) => b.cycle)).toEqual(['B', 'A', 'B']);

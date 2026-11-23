@@ -1,8 +1,8 @@
 import { parseDateToIso } from './dates';
 import type { Exercise, IsoDate, PerformanceInput } from './model';
-import { normalizeHeader } from './names';
-import { parseRpe, toNumber } from './numbers';
-import { getDefaultVariant } from './variants';
+import { normalizeHeader, normalizeVariantName } from './names';
+import { toNumber } from './numbers';
+import { getDefaultVariant, variantMatches } from './variants';
 
 const lines = (text: string): string[] =>
   text.replace(/\r\n?/g, '\n').trim().split('\n').filter((l) => l.trim() !== '');
@@ -56,8 +56,6 @@ const ALIASES = {
 } as const;
 type Column = keyof typeof ALIASES;
 
-const lowerFr = (s: string): string => s.toLocaleLowerCase('fr-FR');
-
 type LineResult = { row: PerformanceInput } | { error: string };
 
 function importLine(
@@ -82,7 +80,9 @@ function importLine(
   const serie = Number.parseInt(get('serie') || '1', 10);
   if (Number.isNaN(serie) || serie <= 0) return fail('numéro de série invalide.');
   const rpeRaw = get('rpe');
-  const rpe = rpeRaw === '' ? 10 : parseRpe(rpeRaw);
+  // Parité legacy `parseInt` : « 9,5 » → 9 (comme reps et série).
+  const rpeInt = Number.parseInt(rpeRaw, 10);
+  const rpe = rpeRaw === '' ? 10 : rpeInt >= 6 && rpeInt <= 10 ? rpeInt : null;
   if (rpe === null) return fail('RPE doit être entre 6 et 10.');
   const dateRaw = get('date');
   const date = dateRaw === '' ? today : parseDateToIso(dateRaw);
@@ -90,9 +90,11 @@ function importLine(
   if (reps === 0) return fail('0 rep, ignorée.');
 
   const variantRaw = get('variant');
-  const variant = variantRaw
-    ? exercise.variants.find((v) => lowerFr(v.name) === lowerFr(variantRaw))
-    : getDefaultVariant(exercise.variants);
+  // Nom normalisé (casse, espaces) ; « Classique » = libellé de la variante par défaut.
+  const variant =
+    variantRaw === '' || normalizeVariantName(variantRaw) === 'classique'
+      ? getDefaultVariant(exercise.variants)
+      : exercise.variants.find((v) => variantMatches(v, { variantId: null, variantName: variantRaw }));
 
   return {
     row: {

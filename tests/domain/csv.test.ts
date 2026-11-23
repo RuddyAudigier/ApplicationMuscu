@@ -81,6 +81,25 @@ describe('importPerformances', () => {
     expect(r.rows[0]).toMatchObject({ reps: 5, rpe: 6 });
   });
 
+  it('matches variants by normalized name; « Classique » is the default variant; RPE truncated like parseInt', () => {
+    const text = [
+      'exercice;reps;poids;variante;rpe',
+      'Squat;5;100;Classique;9,5',
+      'Squat;5;100;touch  and   go;',
+      'Squat;5;100;  PAUSE ;',
+      'Squat;5;100;Box  Squat;',
+    ].join('\n');
+    const r = importPerformances(text, ex, d);
+    expect(r.errors).toEqual([]);
+    expect(r.rows.map((x) => [x.variantId, x.variantName, x.rpe])).toEqual([
+      ['v-tng', 'Touch and Go', 9],
+      ['v-tng', 'Touch and Go', 10],
+      ['v-pause', 'Pause', 10],
+      [null, 'Box  Squat', 10],
+    ]);
+    expect(importPerformances('exercice;reps;poids;rpe\nSquat;5;100;abc', ex, d).errors).toEqual(['Ligne 2: RPE doit être entre 6 et 10.']);
+  });
+
   it('matches the v1 plan examples', () => {
     expect(importPerformances('exercice;reps;poids;rpe\nSquat;5;100;11', ex, d).errors).toEqual(['Ligne 2: RPE doit être entre 6 et 10.']);
   });

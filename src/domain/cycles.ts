@@ -39,9 +39,10 @@ export function cycleStatus(
   };
 }
 
-/** Prolonge le cycle en cours à 3 semaines (semaine manquée). */
-export function extendCycle(state: CycleState): CycleState {
-  return { ...state, weeks: 3 };
+/** Prolonge à 3 semaines le bloc en cours à `today` (résolu, pas le bloc stocké périmé). */
+export function extendCycle(state: CycleState, today: IsoDate): CycleState {
+  const b = resolveBlock(state, today);
+  return { current: b.cycle, startedOn: fromDayNumber(b.start), weeks: 3 };
 }
 
 /** Passe manuellement à l'autre cycle à partir d'aujourd'hui, pour 2 semaines. */

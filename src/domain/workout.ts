@@ -8,6 +8,8 @@ import { DEFAULT_VARIANT, getDefaultVariant } from './variants';
 export interface SerieTarget { reps: number; weight: number | null }
 export interface SerieEntry {
   variantKey: string; reps: string; kg: string; rpe: number; target: SerieTarget | null; validated: boolean;
+  /** Horodatage de validation (ordre réel des séries pour le compte rendu), `null` si non validée. */
+  validatedAt: IsoDateTime | null;
 }
 export interface WorkoutExercise {
   exerciseId: Id; name: string; plannedSeries: number; stoppedEarly: boolean; series: SerieEntry[];
@@ -20,8 +22,8 @@ export interface WorkoutState {
 export type WorkoutAction =
   | { type: 'setField'; ex: number; serie: number; field: 'variantKey' | 'reps' | 'kg'; value: string }
   | { type: 'setField'; ex: number; serie: number; field: 'rpe'; value: number }
-  | { type: 'setTarget'; ex: number; serie: number; target: SerieTarget | null }
-  | { type: 'validate'; ex: number; serie: number }
+  | { type: 'setTarget'; ex: number; serie: number; target: (SerieTarget & { variantKey: string }) | null }
+  | { type: 'validate'; ex: number; serie: number; at: IsoDateTime }
   | { type: 'unlock'; ex: number; serie: number }
   | { type: 'addSerie'; ex: number }
   | { type: 'removeSerie'; ex: number; serie: number }
@@ -40,7 +42,7 @@ const defaultKey = (exercise: Exercise | undefined): string =>
   exercise && exercise.variants.length > 0 ? keyOf(getDefaultVariant(exercise.variants)) : DEFAULT_VARIANT;
 
 const emptySerie = (variantKey: string): SerieEntry => ({
-  variantKey, reps: '', kg: '', rpe: DEFAULT_RPE, target: null, validated: false,
+  variantKey, reps: '', kg: '', rpe: DEFAULT_RPE, target: null, validated: false, validatedAt: null,
 });
 
 const buildExercise = (exerciseId: Id, name: string, series: number, exercise: Exercise | undefined): WorkoutExercise => ({
@@ -125,13 +127,21 @@ export function workoutReducer(state: WorkoutState, action: WorkoutAction): Work
       const { target } = action;
       return updateSerie(state, action.ex, action.serie, editable((s) => {
         if (target === null) return { ...s, target: null };
-        return { ...s, target, reps: String(target.reps), kg: target.weight === null ? s.kg : String(target.weight) };
+        // La cible porte sa variante : la série passe sur cette variante (cible et variante cohérentes).
+        return {
+          ...s,
+          target: { reps: target.reps, weight: target.weight },
+          variantKey: target.variantKey,
+          reps: String(target.reps),
+          kg: target.weight === null ? s.kg : String(target.weight),
+        };
       }));
     }
     case 'validate':
-      return updateSerie(state, action.ex, action.serie, (s) => (s.validated || !canValidate(s) ? s : { ...s, validated: true }));
+      return updateSerie(state, action.ex, action.serie, (s) =>
+        s.validated || !canValidate(s) ? s : { ...s, validated: true, validatedAt: action.at });
     case 'unlock':
-      return updateSerie(state, action.ex, action.serie, (s) => (s.validated ? { ...s, validated: false } : s));
+      return updateSerie(state, action.ex, action.serie, (s) => (s.validated ? { ...s, validated: false, validatedAt: null } : s));
     case 'addSerie':
       return updateExercise(state, action.ex, (e) => {
         const last = e.series[e.series.length - 1];
@@ -193,4 +203,32 @@ export function recordsTable(perfs: Performance[], exerciseId: Id, variant: Vari
     rpe: p?.rpe ?? null,
     date: p?.performanceDate ?? null,
   }));
+}
+
+type Guard = (v: unknown) => boolean;
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+const isString: Guard = (v) => typeof v === 'string';
+const isNumber: Guard = (v) => typeof v === 'number' && Number.isFinite(v);
+const isBoolean: Guard = (v) => typeof v === 'boolean';
+const orNull = (g: Guard): Guard => (v) => v === null || g(v);
+const isCycle: Guard = (v) => v === 'A' || v === 'B';
+const shape = (fields: Record<string, Guard>): Guard => (v) =>
+  isRecord(v) && Object.entries(fields).every(([k, g]) => g(v[k]));
+const arrayOf = (g: Guard): Guard => (v) => Array.isArray(v) && v.every((x) => g(x));
+
+const isSerie = shape({
+  variantKey: isString, reps: isString, kg: isString, rpe: isNumber, validated: isBoolean,
+  validatedAt: orNull(isString), target: orNull(shape({ reps: isNumber, weight: orNull(isNumber) })),
+});
+const isWorkoutState = shape({
+  version: (v) => v === 2, sessionId: isString, sessionName: isString, cycle: orNull(isCycle), date: isString,
+  startedAt: isString,
+  exercises: arrayOf(shape({
+    exerciseId: isString, name: isString, plannedSeries: isNumber, stoppedEarly: isBoolean, series: arrayOf(isSerie),
+  })),
+});
+
+/** Relit une séance en cours sauvegardée (localStorage) : `null` si autre version ou invalide. */
+export function parseWorkoutState(raw: unknown): WorkoutState | null {
+  return isWorkoutState(raw) ? (raw as WorkoutState) : null;
 }

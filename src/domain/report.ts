@@ -1,4 +1,4 @@
-import { performanceTimestamp } from './dates';
+import { parseDateToIso, performanceTimestamp, todayIso } from './dates';
 import type { CycleId, Exercise, IsoDate, Performance } from './model';
 import { parseReps, parseWeight } from './numbers';
 import { buildHistoryIndex, classify, findPreviousBest } from './records';
@@ -16,32 +16,41 @@ export interface Report {
 }
 
 interface Pending {
-  exIndex: number; n: number; rpe: number; at: number; perf: Performance;
+  exIndex: number; n: number; rpe: number; order: number; perf: Omit<Performance, 'createdAt'>;
 }
 
 const seriesLabel = (count: number, stoppedEarly: boolean): string =>
   `${String(count)} ${count > 1 ? 'séries' : 'série'}${stoppedEarly ? ' · fatigué' : ''}`;
 
+const localMidnight = (iso: IsoDate): number => {
+  const [y = 0, m = 1, d = 1] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).getTime();
+};
+
 /**
- * Compte rendu de fin de séance. Les séries validées sont traitées dans l'ordre de la séance ;
- * chacune est comparée à l'historique + aux séries précédentes de la séance (horodatages
- * strictement croissants à partir du début de séance, ramené au jour de la séance).
- * `history` ne doit pas contenir les performances de cette séance déjà enregistrées.
+ * Compte rendu de fin de séance.
+ *
+ * - Les séries validées sont traitées dans l'ordre réel de validation (`validatedAt`), à défaut
+ *   dans l'ordre de la séance ; chacune est comparée à l'historique + aux séries précédentes.
+ * - Début de séance W = min(`startedAt`, premier `validatedAt`). Une ligne d'historique compte si
+ *   sa date est antérieure à `state.date`, ou si elle est du même jour avec un horodatage < W.
+ *
+ * Précondition stricte : `history` ne doit PAS contenir les performances de cette séance
+ * (l'appelant les filtre) ; aucune marque ne permet de les reconnaître ici.
  */
 export function buildReport(state: WorkoutState, history: Performance[], exercises: Exercise[], now: Date = new Date()): Report {
   const start = Date.parse(state.startedAt);
-  const base = performanceTimestamp({ performanceDate: state.date, createdAt: state.startedAt }) ?? start;
 
   const pending: Pending[] = [];
   state.exercises.forEach((we, exIndex) => {
     const exercise = exercises.find((e) => e.id === we.exerciseId);
     we.series.forEach((s, i) => {
       if (!s.validated || !canValidate(s)) return;
-      const at = base + pending.length + 1;
+      const validatedAt = s.validatedAt === null ? Number.NaN : Date.parse(s.validatedAt);
       pending.push({
-        exIndex, n: i + 1, rpe: s.rpe, at,
+        exIndex, n: i + 1, rpe: s.rpe, order: Number.isFinite(validatedAt) ? validatedAt : Number.POSITIVE_INFINITY,
         perf: {
-          id: `report-${String(at)}`,
+          id: `report-${String(pending.length)}`,
           exerciseId: we.exerciseId,
           exerciseName: exercise?.name ?? we.name,
           sessionName: state.sessionName,
@@ -51,17 +60,39 @@ export function buildReport(state: WorkoutState, history: Performance[], exercis
           ...resolveVariant(exercise, s.variantKey),
           serieNumber: i + 1,
           performanceDate: state.date,
-          createdAt: new Date(at).toISOString(),
         },
       });
     });
   });
+  // Tri stable : ordre de validation, puis ordre de la séance.
+  pending.sort((a, b) => a.order - b.order);
+
+  const workoutStart = Math.min(...[start, ...pending.map((p) => p.order)].filter(Number.isFinite));
+  const before: Performance[] = [];
+  let latest = Number.NEGATIVE_INFINITY;
+  for (const h of history) {
+    const day = parseDateToIso(h.performanceDate);
+    const ts = performanceTimestamp(h);
+    if (day === null || ts === null) continue;
+    if (day < state.date || (day === state.date && ts < workoutStart)) {
+      before.push(h);
+      latest = Math.max(latest, ts);
+    }
+  }
+  // Horodatages des séries : strictement après tout l'historique retenu, dans le jour de la séance.
+  const midnight = localMidnight(state.date);
+  const startSameDay = todayIso(new Date(workoutStart)) === state.date ? workoutStart : midnight;
+  const base = Math.max(midnight, startSameDay, latest + 1);
+  const dated = pending.map((p, k) => {
+    const at = base + k + 1;
+    return { ...p, at, perf: { ...p.perf, createdAt: new Date(at).toISOString() } };
+  });
 
   // Un seul index : le filtre `timestamp < atTimestamp` ne garde que les séries antérieures.
-  const index = buildHistoryIndex([...history, ...pending.map((p) => p.perf)]);
+  const index = buildHistoryIndex([...before, ...dated.map((p) => p.perf)]);
   const byExercise = new Map<number, ReportSerie[]>();
   let prCount = 0;
-  for (const p of pending) {
+  for (const p of dated) {
     const weight = p.perf.weight ?? 0;
     const ref = findPreviousBest(index, p.perf.exerciseId, p.perf, { atTimestamp: p.at });
     const c = classify({ reps: p.perf.reps, weight }, ref);
@@ -78,14 +109,14 @@ export function buildReport(state: WorkoutState, history: Performance[], exercis
     const series = byExercise.get(exIndex);
     if (!series) return;
     const name = exercises.find((e) => e.id === we.exerciseId)?.name ?? we.name;
-    reportExercises.push({ name, seriesLabel: seriesLabel(series.length, we.stoppedEarly), series });
+    reportExercises.push({ name, seriesLabel: seriesLabel(series.length, we.stoppedEarly), series: series.sort((x, y) => x.n - y.n) });
   });
 
   return {
     title: state.sessionName,
     cycle: state.cycle,
     date: state.date,
-    durationMin: Math.max(0, Math.round((now.getTime() - start) / 60_000)),
+    durationMin: Number.isFinite(start) ? Math.max(0, Math.round((now.getTime() - start) / 60_000)) : 0,
     prCount,
     seriesCount: pending.length,
     exerciseCount: reportExercises.length,
