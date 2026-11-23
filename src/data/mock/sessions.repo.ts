@@ -1,6 +1,6 @@
 import type { Id, Session } from '../../domain/model';
 import type { SessionsRepo } from '../ports';
-import { prepareSession } from '../supabase/mappers';
+import { prepareSession } from '../shared/rules';
 import { task, type MockContext, type MockDb } from './db';
 
 type MockSession = MockDb['sessions'][number];

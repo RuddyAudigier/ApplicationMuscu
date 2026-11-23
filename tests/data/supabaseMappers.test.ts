@@ -1,6 +1,5 @@
-import {
-  mapAdviceRow, mapExerciseRow, mapPerformanceRow, mapSessionRow, mapVariantRow, parseRows, toPerformanceRow,
-} from '../../src/data/supabase/mappers';
+import { mapPerformanceRow, parseRows, toPerformanceRow } from '../../src/data/shared/rules';
+import { mapAdviceRow, mapExerciseRow, mapSessionRow, mapVariantRow } from '../../src/data/supabase/mappers';
 import type { PerformanceInput } from '../../src/domain/model';
 
 const row = {

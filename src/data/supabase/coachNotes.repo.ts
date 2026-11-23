@@ -1,7 +1,7 @@
 import type { Id } from '../../domain/model';
 import type { CoachNotesRepo } from '../ports';
 import { type Db, fail, isSchemaGap, must, run } from './client';
-import { normalizeNotes } from './mappers';
+import { normalizeNotes } from '../shared/rules';
 
 export function createCoachNotesRepo(db: Db): CoachNotesRepo {
   return {

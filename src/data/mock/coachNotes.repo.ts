@@ -1,6 +1,6 @@
 import type { Id } from '../../domain/model';
 import { ValidationError, type CoachNotesRepo } from '../ports';
-import { normalizeNotes } from '../supabase/mappers';
+import { normalizeNotes } from '../shared/rules';
 import { task, type MockContext } from './db';
 
 export function createMockCoachNotesRepo(ctx: MockContext): CoachNotesRepo {

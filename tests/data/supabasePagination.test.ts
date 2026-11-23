@@ -26,7 +26,7 @@ describe('performances.list pagination (D4)', () => {
     expect(list).toHaveLength(2350);
     expect(calls.map((c) => op(c, 'range'))).toEqual([[0, 999], [1000, 1999], [2000, 2999]]);
     const orders = calls[0]?.ops.filter((o) => o.m === 'order').map((o) => o.args);
-    expect(orders).toEqual([['performance_date', { ascending: false }], ['created_at', { ascending: false }]]);
+    expect(orders).toEqual([['performance_date', { ascending: false }], ['created_at', { ascending: false }], ['id', { ascending: false }]]);
     expect(calls[0]?.table).toBe('performances');
   });
 
@@ -35,8 +35,19 @@ describe('performances.list pagination (D4)', () => {
     expect(await createSupabaseBackend(client).performances.list()).toEqual([]);
     expect(calls).toHaveLength(1);
 
-    const net = fakeSupabase(() => ({ data: null, error: { code: '', message: 'TypeError: Failed to fetch' } }));
+    const net = fakeSupabase(() => ({ data: null, error: { code: '', message: 'TypeError: Failed to fetch' }, status: 0 }));
     await expect(createSupabaseBackend(net.client).performances.list()).rejects.toBeInstanceOf(NetworkError);
+
+    const gateway = fakeSupabase(() => ({ data: null, error: { message: '<html>Service Unavailable</html>' }, status: 503 }));
+    await expect(createSupabaseBackend(gateway.client).performances.list()).rejects.toBeInstanceOf(NetworkError);
+
+    for (const status of [401, 413]) {
+      const codeless = fakeSupabase(() => ({ data: null, error: { message: 'Invalid API key' }, status }));
+      const e = await createSupabaseBackend(codeless.client).performances.list().catch((x: unknown) => x);
+      expect(e).toBeInstanceOf(Error);
+      expect(e).not.toBeInstanceOf(NetworkError);
+      expect((e as Error).message).toContain('Lecture des performances');
+    }
 
     const thrown = fakeSupabase(() => Promise.reject(new TypeError('Failed to fetch')));
     await expect(createSupabaseBackend(thrown.client).performances.list()).rejects.toBeInstanceOf(NetworkError);
@@ -85,6 +96,23 @@ describe('performances.add (Supabase)', () => {
     expect(retried).toMatchObject({ reps: 5, weight: 100.5, series_number: 1 });
   });
 
+  it('does not retry on an FK error mentioning variant (23503)', async () => {
+    const { client, calls } = fakeSupabase(() => ({
+      data: null, error: { code: '23503', message: 'insert violates foreign key constraint "performances_variant_id_fkey"' }, status: 409,
+    }));
+    const err = await createSupabaseBackend(client).performances.add([input()]).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(Error);
+    expect(err).not.toBeInstanceOf(NetworkError);
+    expect(calls).toHaveLength(1);
+  });
+
+  it('retries on a codeless 400 mentioning rpe', async () => {
+    const { client, calls } = fakeSupabase(() =>
+      calls.length === 1 ? { data: null, error: { message: 'column rpe unknown' }, status: 400 } : ok(null));
+    expect(await createSupabaseBackend(client).performances.add([input()])).toEqual({ written: 1 });
+    expect(calls).toHaveLength(2);
+  });
+
   it('does not retry on other errors', async () => {
     const { client, calls } = fakeSupabase(() => ({ data: null, error: { code: '23505', message: 'duplicate' } }));
     await expect(createSupabaseBackend(client).performances.add([input()])).rejects.toThrow('duplicate');
@@ -105,6 +133,28 @@ describe('sessions (Supabase)', () => {
     expect(calls).toHaveLength(1);
     expect(op(calls[0] as FakeCall, 'select')?.[0]).toContain('session_exercises(series_count, exercise_id, exercises(name))');
     expect(op(calls[0] as FakeCall, 'order')).toEqual(['created_at', { ascending: false }]);
+  });
+
+  it('update() renames performances before the session, so a retry after a failed rename still renames (D5)', async () => {
+    let failRename = true;
+    let sessionName = 'Push';
+    const { client, calls } = fakeSupabase((c) => {
+      if (c.table === 'performances') {
+        if (failRename) { failRename = false; return { data: null, error: { code: '57014', message: 'timeout' }, status: 500 }; }
+        return ok(null);
+      }
+      if (isOp(c, 'update', 'sessions')) { sessionName = 'Push A'; return ok(null); }
+      if (c.table === 'sessions' && has(c, 'single')) return ok(sessionRow(sessionName));
+      return ok(null);
+    });
+    const b = createSupabaseBackend(client);
+    const draft = { name: 'Push A', exercises: [{ exerciseId: 'e1', series: 3 }] };
+    await expect(b.sessions.update('s1', draft)).rejects.toThrow('timeout');
+    expect(calls.some((c) => isOp(c, 'update', 'sessions'))).toBe(false);
+    expect((await b.sessions.update('s1', draft)).name).toBe('Push A');
+    const renames = calls.filter((c) => c.table === 'performances');
+    expect(renames).toHaveLength(2);
+    expect(op(renames[1] as FakeCall, 'eq')).toEqual(['session_name', 'Push']);
   });
 
   it('update() renames performances when the name changes (D5)', async () => {

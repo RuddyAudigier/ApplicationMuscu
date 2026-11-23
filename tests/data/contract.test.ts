@@ -215,12 +215,14 @@ describe('mock backend specifics', () => {
     expect(await b.exercises.list()).toHaveLength(2);
   });
 
-  it('reseeds when stored JSON is corrupt or an old version', async () => {
+  it('reseeds when stored JSON is corrupt or an old version, with a warning', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const storage = new MemoryStorage();
     storage.setItem('local_test_db_v2', '{oops');
     expect(await createMockBackend(storage).exercises.list()).toHaveLength(2);
     storage.setItem('local_test_db_v2', JSON.stringify({ version: 1 }));
     expect(await createMockBackend(storage).exercises.list()).toHaveLength(2);
+    expect(warn).toHaveBeenCalledTimes(2);
   });
 
   it('skips malformed stored performance rows with one warning', async () => {

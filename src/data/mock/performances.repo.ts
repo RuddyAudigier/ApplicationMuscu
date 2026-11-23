@@ -1,7 +1,7 @@
 import { todayIso } from '../../domain/dates';
 import type { Performance } from '../../domain/model';
 import type { PerformancesRepo } from '../ports';
-import { mapPerformanceRow, parseRows, preparePerformances } from '../supabase/mappers';
+import { mapPerformanceRow, parseRows, preparePerformances } from '../shared/rules';
 import { task, type MockContext } from './db';
 
 /** Même tri que Supabase : `performance_date desc`, puis `created_at desc`. */

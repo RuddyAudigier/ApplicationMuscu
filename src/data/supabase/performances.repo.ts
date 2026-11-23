@@ -1,15 +1,21 @@
 import { todayIso } from '../../domain/dates';
 import type { Performance } from '../../domain/model';
 import type { PerformancesRepo } from '../ports';
-import { type Db, fail, must, run } from './client';
-import { mapPerformanceRow, parseRows, preparePerformances, type PerformanceRowWrite } from './mappers';
+import { type Db, fail, must, type PgResult, run } from './client';
+import { mapPerformanceRow, parseRows, preparePerformances, type PerformanceRowWrite } from '../shared/rules';
 
 const PAGE_SIZE = 1000;
 
-/** Erreurs justifiant le retry « legacy » sans `rpe` / `variant_*` (INV §3.4). */
-function isLegacySchemaError(error: { code?: string; message: string }): boolean {
+/**
+ * Retry « legacy » sans `rpe` / `variant_*` (INV §3.4) : uniquement sur colonne absente
+ * (`PGRST204`, `42703`), ou erreur 400 sans code citant ces colonnes. Jamais sur 23503/23514.
+ */
+function isLegacySchemaError(res: PgResult): boolean {
+  const { error, status } = res;
+  if (!error) return false;
+  if (error.code === 'PGRST204' || error.code === '42703') return true;
   const msg = error.message.toLowerCase();
-  return error.code === 'PGRST204' || error.code === '42703' || msg.includes('rpe') || msg.includes('variant');
+  return !error.code && status === 400 && (msg.includes('rpe') || msg.includes('variant'));
 }
 
 const withoutRpeAndVariant = (r: PerformanceRowWrite) => ({
@@ -27,6 +33,8 @@ export function createPerformancesRepo(db: Db, now: () => Date = () => new Date(
           db.from('performances').select('*')
             .order('performance_date', { ascending: false })
             .order('created_at', { ascending: false })
+            // Départage unique : les lots partagent date et `created_at` (pages stables).
+            .order('id', { ascending: false })
             .range(from, from + PAGE_SIZE - 1),
           'Lecture des performances',
         );
@@ -41,9 +49,9 @@ export function createPerformancesRepo(db: Db, now: () => Date = () => new Date(
       const ctx = 'Enregistrement des performances';
       const rows = preparePerformances(inputs, todayIso(now()));
       if (rows.length === 0) return { written: 0 };
-      const { error } = await run(db.from('performances').insert(rows), ctx);
-      if (error) {
-        if (!isLegacySchemaError(error)) fail(error, ctx);
+      const res = await run(db.from('performances').insert(rows), ctx);
+      if (res.error) {
+        if (!isLegacySchemaError(res)) fail(res.error, ctx);
         await must(db.from('performances').insert(rows.map(withoutRpeAndVariant)), ctx);
       }
       return { written: rows.length };

@@ -17,7 +17,7 @@ export function sequentialIds(prefix = 'id'): () => string {
 }
 
 export interface FakeCall { table: string; ops: { m: string; args: unknown[] }[] }
-export interface FakeResult { data: unknown; error: { code?: string; message: string } | null }
+export interface FakeResult { data: unknown; error: { code?: string; message: string } | null; status?: number }
 export type Responder = (call: FakeCall) => FakeResult | Promise<FakeResult>;
 
 /** Faux client Supabase chaînable : enregistre chaque requête, la résout via `respond`. */

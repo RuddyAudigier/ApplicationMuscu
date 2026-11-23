@@ -1,7 +1,8 @@
 import type { Exercise, Id, Variant } from '../../domain/model';
 import type { CoachNotesRepo, ExercisesRepo } from '../ports';
 import { type Db, fail, isSchemaGap, must, run } from './client';
-import { mapExerciseRow, mapVariantRow, parseRows, prepareExercise, type PreparedExercise } from './mappers';
+import { parseRows, prepareExercise, type PreparedExercise } from '../shared/rules';
+import { mapExerciseRow, mapVariantRow } from './mappers';
 
 const VARIANT_COLS = 'id, exercise_id, name, is_default';
 

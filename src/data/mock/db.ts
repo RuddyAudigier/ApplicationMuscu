@@ -72,10 +72,13 @@ export function createMockContext(storage: Storage, opts: MockOptions = {}): Moc
     try {
       json = JSON.parse(raw);
     } catch {
+      console.warn('[mock] Base locale illisible (JSON invalide) : réinitialisée avec le seed.');
       return seed();
     }
     const parsed = mockDbSchema.safeParse(json);
-    return parsed.success ? parsed.data : seed();
+    if (parsed.success) return parsed.data;
+    console.warn("[mock] Base locale invalide ou d'une autre version : réinitialisée avec le seed.");
+    return seed();
   };
 
   return {

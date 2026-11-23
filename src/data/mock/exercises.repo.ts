@@ -1,6 +1,6 @@
 import type { Exercise, Id } from '../../domain/model';
 import type { ExercisesRepo } from '../ports';
-import { prepareExercise } from '../supabase/mappers';
+import { prepareExercise } from '../shared/rules';
 import { task, type MockContext, type MockDb, type MockExercise } from './db';
 import { withVariantIds } from './seed';
 

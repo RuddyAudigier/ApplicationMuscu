@@ -3,7 +3,8 @@ import { NetworkError } from '../ports';
 
 /** Erreur renvoyée par PostgREST / supabase-js. */
 export interface PgError { code?: string; message: string }
-export interface PgResult { data: unknown; error: PgError | null }
+/** `status` : code HTTP (0 quand `fetch` a échoué, cf. postgrest-js). */
+export interface PgResult { data: unknown; error: PgError | null; status?: number }
 
 /**
  * Sous-ensemble chaînable du query builder supabase-js utilisé par les repos.
@@ -43,13 +44,19 @@ export function isSchemaGap(error: PgError, keyword?: string): boolean {
   return keyword !== undefined && error.message.toLowerCase().includes(keyword);
 }
 
-/** supabase-js renvoie `code: ''` quand `fetch` échoue (« TypeError: Failed to fetch »). */
-function isNetworkError(error: PgError): boolean {
-  return !error.code;
+/**
+ * Rejouable uniquement si la requête n'a pas atteint PostgREST : `fetch` échoué (status 0)
+ * ou passerelle indisponible (502/503/504). Une erreur sans `code` (401 Kong, 413, page HTML…)
+ * n'est PAS réseau : la rejouer en boucle ne servirait à rien (D8).
+ */
+const RETRYABLE_STATUS: readonly number[] = [0, 502, 503, 504];
+
+function isNetworkFailure(res: PgResult): boolean {
+  return res.status !== undefined && RETRYABLE_STATUS.includes(res.status);
 }
 
 /**
- * Exécute une requête. Panne réseau (rejet, `TypeError`, erreur sans `code`) → `NetworkError`.
+ * Exécute une requête. Panne réseau (rejet `TypeError`/fetch, status 0, 502-504) → `NetworkError`.
  * Les erreurs PostgREST codées sont renvoyées à l'appelant (fallbacks tolérés).
  */
 export async function run(query: PromiseLike<PgResult>, context: string): Promise<PgResult> {
@@ -63,7 +70,7 @@ export async function run(query: PromiseLike<PgResult>, context: string): Promis
     }
     throw e;
   }
-  if (res.error && isNetworkError(res.error)) {
+  if (res.error && isNetworkFailure(res)) {
     throw new NetworkError(`${context} : réseau indisponible (${res.error.message}).`);
   }
   return res;
