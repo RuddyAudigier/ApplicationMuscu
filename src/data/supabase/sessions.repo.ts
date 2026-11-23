@@ -16,7 +16,8 @@ const links = (sessionId: Id, d: SessionDraft) =>
 /**
  * Colonne `sessions.cycle` : lue et écrite si elle existe. Absente (`42703`/`PGRST204`…) → la requête
  * est rejouée sans elle et le cycle est stocké en local (`CycleFallback`). L'absence est mémorisée
- * pour la durée du backend (rechargement de l'app après la migration).
+ * pour la durée du backend (rechargement de l'app après la migration). Le stockage local n'est lu
+ * et écrit QUE tant que la colonne est absente : en base, `NULL` signifie « hors cycle ».
  */
 export function createSessionsRepo(db: Db, fallback: CycleFallback): SessionsRepo {
   let hasCycleColumn = true;
@@ -33,12 +34,12 @@ export function createSessionsRepo(db: Db, fallback: CycleFallback): SessionsRep
     return must(without(), ctx);
   }
 
-  /** La base fait foi ; le local ne complète qu'une séance sans cycle en base. */
-  const withLocalCycle = (s: Session): Session => (s.cycle ? s : { ...s, cycle: fallback.sessionCycle(s.id) });
+  /** En repli uniquement : le cycle vient du stockage local. */
+  const withLocalCycle = (s: Session): Session => (hasCycleColumn ? s : { ...s, cycle: fallback.sessionCycle(s.id) });
 
-  /** Après écriture : en base → entrée locale obsolète retirée ; en repli → entrée locale à jour. */
+  /** En repli uniquement : mémorise le cycle en local ; une erreur de stockage fait échouer l'appel. */
   const rememberCycle = (id: Id, cycle: SessionDraft['cycle']): void => {
-    fallback.setSessionCycle(id, hasCycleColumn ? null : cycle);
+    if (!hasCycleColumn) fallback.setSessionCycle(id, cycle);
   };
 
   async function readOne(id: Id): Promise<Session> {
@@ -91,7 +92,7 @@ export function createSessionsRepo(db: Db, fallback: CycleFallback): SessionsRep
 
     async remove(id) {
       await must(db.from('sessions').delete().eq('id', id), 'Suppression de la séance');
-      fallback.setSessionCycle(id, null);
+      rememberCycle(id, null);
     },
   };
 }

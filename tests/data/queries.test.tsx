@@ -6,7 +6,7 @@ import { OFFLINE_QUEUE_KEY } from '../../src/data/offlineQueue';
 import { NetworkError, ValidationError, type DataBackend } from '../../src/data/ports';
 import {
   BackendProvider, queryKeys, useAddPerformances, useAdvice, useBackend, useCreateExercise, useCycleState,
-  useDeleteExercise, useDeleteSession, useExercises, useHistoryIndex, useOfflineQueueSync, usePerformances,
+  useDeleteExercise, useDeleteSession, useResetBackend, useExercises, useHistoryIndex, useOfflineQueueSync, usePerformances,
   useSaveAdvice, useSaveCoachNotes, useSaveCycleState, useSaveSession, useSessions, useUpdateExercise,
 } from '../../src/data/queries';
 import type { PerformanceInput } from '../../src/domain/model';
@@ -31,6 +31,10 @@ function setup(backend: DataBackend = createMockBackend(new MemoryStorage(), { g
 
 beforeEach(() => {
   localStorage.clear();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe('backend context', () => {
@@ -84,7 +88,7 @@ describe('mutations and invalidations', () => {
     if (!ex) throw new Error('seed expected');
     const { result } = renderHook(() => useUpdateExercise(), { wrapper });
     await act(() => result.current.mutateAsync({ id: ex.id, draft: { name: 'Développé', description: '', muscleGroups: [], variants: ex.variants } }));
-    expect(invalidated()).toEqual(expect.arrayContaining(['exercises', 'sessions']));
+    expect(invalidated()).toEqual(expect.arrayContaining(['exercises', 'sessions', 'performances']));
   });
 
   it('create/delete exercise and coach notes invalidate exercises', async () => {
@@ -96,7 +100,7 @@ describe('mutations and invalidations', () => {
     expect((await backend.exercises.list()).find((e) => e.id === created.id)?.coachNotes).toBe('serrer');
     await act(() => result.current.del.mutateAsync(created.id));
     expect(invalidated().filter((k) => k === 'exercises')).toHaveLength(3);
-    expect(invalidated()).toContain('sessions');
+    expect(invalidated()).toEqual(expect.arrayContaining(['sessions', 'performances']));
   });
 
   it('useSaveSession creates without id, updates with id (renaming invalidates performances), useDeleteSession removes', async () => {
@@ -156,6 +160,41 @@ describe('useAddPerformances (D7/D8)', () => {
       await expect(result.current.mutateAsync([perf()])).rejects.toThrow('permission denied');
     });
     expect(localStorage.getItem(OFFLINE_QUEUE_KEY)).toBeNull();
+  });
+});
+
+describe('useAddPerformances storage failure', () => {
+  it('rejects (no queued:true) when the offline queue cannot be written', async () => {
+    const backend = createMockBackend(new MemoryStorage());
+    vi.spyOn(backend.performances, 'add').mockRejectedValueOnce(new NetworkError('offline'));
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('QuotaExceededError'); });
+    const { wrapper } = setup(backend);
+    const { result } = renderHook(() => useAddPerformances(), { wrapper });
+    await act(async () => {
+      await expect(result.current.mutateAsync([perf()])).rejects.toThrow('QuotaExceededError');
+    });
+  });
+});
+
+describe('useResetBackend', () => {
+  it('resets the mock data and refetches the queries', async () => {
+    const storage = new MemoryStorage();
+    const backend = createMockBackend(storage);
+    await backend.exercises.create({ name: 'Temp', description: '', muscleGroups: [], variants: [] });
+    const { wrapper } = setup(backend);
+    const { result } = renderHook(() => ({ ex: useExercises(), reset: useResetBackend() }), { wrapper });
+    await waitFor(() => { expect(result.current.ex.data).toHaveLength(3); });
+    await act(() => result.current.reset.mutateAsync());
+    await waitFor(() => { expect(result.current.ex.data).toHaveLength(2); });
+  });
+
+  it('rejects when the backend cannot be reset (Supabase)', async () => {
+    const backend = createMockBackend(new MemoryStorage());
+    const { wrapper } = setup({ ...backend, reset: undefined });
+    const { result } = renderHook(() => useResetBackend(), { wrapper });
+    await act(async () => {
+      await expect(result.current.mutateAsync()).rejects.toThrow('mode mock');
+    });
   });
 });
 

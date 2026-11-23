@@ -11,44 +11,58 @@ const stateSchema = z.object({
   weeks: z.union([z.literal(2), z.literal(3)]),
 });
 const fileSchema = z.object({
-  sessions: z.record(z.string(), cycleId).catch({}),
+  sessions: z.record(z.string(), z.unknown()).catch({}),
   state: stateSchema.nullable().catch(null),
 });
-type FallbackFile = z.infer<typeof fileSchema>;
+interface FallbackFile { sessions: Record<Id, CycleId>; state: CycleState | null }
 
 export interface CycleFallback {
   /** Signale (une seule fois par backend) que la migration n'est pas jouée. */
   warn(): void;
   sessionCycle(id: Id): CycleId | null;
+  /** Lève si le stockage refuse l'écriture (pas de perte silencieuse). */
   setSessionCycle(id: Id, cycle: CycleId | null): void;
   state(): CycleState | null;
+  /** Lève si le stockage refuse l'écriture (pas de perte silencieuse). */
   setState(s: CycleState): void;
+}
+
+/** Seules les entrées invalides sont ignorées, pas toute la table. */
+function parse(raw: string | null): FallbackFile {
+  if (!raw) return { sessions: {}, state: null };
+  let json: unknown;
+  try {
+    json = JSON.parse(raw);
+  } catch {
+    return { sessions: {}, state: null };
+  }
+  const parsed = fileSchema.safeParse(json);
+  if (!parsed.success) return { sessions: {}, state: null };
+  const sessions: Record<Id, CycleId> = {};
+  for (const [id, value] of Object.entries(parsed.data.sessions)) {
+    const c = cycleId.safeParse(value);
+    if (c.success) sessions[id] = c.data;
+  }
+  return { sessions, state: parsed.data.state };
 }
 
 export function createCycleFallback(storage: Storage): CycleFallback {
   let warned = false;
 
+  /** Lecture tolérante (affichage) : stockage indisponible → vide. */
   const read = (): FallbackFile => {
     try {
-      const raw = storage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = fileSchema.safeParse(JSON.parse(raw));
-        if (parsed.success) return parsed.data;
-      }
+      return parse(storage.getItem(STORAGE_KEY));
     } catch {
-      // Stockage indisponible ou JSON illisible : on repart d'un fichier vide.
+      return { sessions: {}, state: null };
     }
-    return { sessions: {}, state: null };
   };
 
+  /** Écriture stricte : toute erreur de stockage remonte à l'appelant. */
   const write = (fn: (f: FallbackFile) => void): void => {
-    const f = read();
+    const f = parse(storage.getItem(STORAGE_KEY));
     fn(f);
-    try {
-      storage.setItem(STORAGE_KEY, JSON.stringify(f));
-    } catch {
-      // Stockage plein ou refusé : la valeur reste valable pour cette session uniquement côté serveur.
-    }
+    storage.setItem(STORAGE_KEY, JSON.stringify(f));
   };
 
   return {

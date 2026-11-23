@@ -53,16 +53,23 @@ export function isSchemaGap(error: PgError, keyword?: string): boolean {
  * n'est PAS réseau : la rejouer en boucle ne servirait à rien (D8).
  */
 const RETRYABLE_STATUS: readonly number[] = [0, 502, 503, 504];
+/**
+ * Écriture non idempotente (insert) : seuls `fetch` échoué (status 0) et 503 (service indisponible,
+ * requête non transmise) sont rejouables. 502/504 peuvent arriver APRÈS un insert validé : les
+ * rejouer créerait des doublons.
+ */
+const WRITE_RETRYABLE_STATUS: readonly number[] = [0, 503];
+const WRITE_UNCERTAIN_STATUS: readonly number[] = [502, 504];
 
-function isNetworkFailure(res: PgResult): boolean {
-  return res.status !== undefined && RETRYABLE_STATUS.includes(res.status);
-}
+export interface RunOptions { /** `false` pour un insert : pas de rejeu sur réponse perdue. */ idempotent?: boolean }
 
 /**
  * Exécute une requête. Panne réseau (rejet `TypeError`/fetch, status 0, 502-504) → `NetworkError`.
+ * Pour une écriture non idempotente, 502/504 → `Error` « a peut-être abouti » (non rejouable).
  * Les erreurs PostgREST codées sont renvoyées à l'appelant (fallbacks tolérés).
  */
-export async function run(query: PromiseLike<PgResult>, context: string): Promise<PgResult> {
+export async function run(query: PromiseLike<PgResult>, context: string, opts: RunOptions = {}): Promise<PgResult> {
+  const idempotent = opts.idempotent ?? true;
   let res: PgResult;
   try {
     res = await query;
@@ -73,8 +80,16 @@ export async function run(query: PromiseLike<PgResult>, context: string): Promis
     }
     throw e;
   }
-  if (res.error && isNetworkFailure(res)) {
-    throw new NetworkError(`${context} : réseau indisponible (${res.error.message}).`);
+  if (res.error && res.status !== undefined) {
+    if ((idempotent ? RETRYABLE_STATUS : WRITE_RETRYABLE_STATUS).includes(res.status)) {
+      throw new NetworkError(`${context} : réseau indisponible (${res.error.message}).`);
+    }
+    if (!idempotent && WRITE_UNCERTAIN_STATUS.includes(res.status)) {
+      throw new Error(
+        `${context} : réponse du serveur perdue (${String(res.status)}), l'enregistrement a peut-être abouti. `
+        + 'Vérifiez vos performances avant de réessayer.',
+      );
+    }
   }
   return res;
 }
@@ -84,8 +99,8 @@ export function fail(error: PgError, context: string): never {
 }
 
 /** Exécute et lève sur toute erreur ; renvoie `data`. */
-export async function must(query: PromiseLike<PgResult>, context: string): Promise<unknown> {
-  const { data, error } = await run(query, context);
+export async function must(query: PromiseLike<PgResult>, context: string, opts: RunOptions = {}): Promise<unknown> {
+  const { data, error } = await run(query, context, opts);
   if (error) fail(error, context);
   return data;
 }

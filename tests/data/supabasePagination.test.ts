@@ -113,6 +113,35 @@ describe('performances.add (Supabase)', () => {
     expect(calls).toHaveLength(2);
   });
 
+  it('add() only reports a replayable NetworkError when the request never reached the database', async () => {
+    for (const res of [
+      { data: null, error: { code: '', message: 'TypeError: Failed to fetch' }, status: 0 },
+      { data: null, error: { message: 'Service Unavailable' }, status: 503 },
+    ]) {
+      const { client } = fakeSupabase(() => res);
+      await expect(createSupabaseBackend(client).performances.add([input()])).rejects.toBeInstanceOf(NetworkError);
+    }
+    const thrown = fakeSupabase(() => Promise.reject(new TypeError('Failed to fetch')));
+    await expect(createSupabaseBackend(thrown.client).performances.add([input()])).rejects.toBeInstanceOf(NetworkError);
+
+    // 502/504 : l'insert a pu être validé avant la perte de la réponse → pas de rejeu (doublons).
+    for (const status of [502, 504]) {
+      const { client, calls } = fakeSupabase(() => ({ data: null, error: { message: 'Gateway Timeout' }, status }));
+      const e = await createSupabaseBackend(client).performances.add([input()]).catch((x: unknown) => x);
+      expect(e).toBeInstanceOf(Error);
+      expect(e).not.toBeInstanceOf(NetworkError);
+      expect((e as Error).message).toContain('a peut-être abouti');
+      expect(calls).toHaveLength(1);
+    }
+  });
+
+  it('reads still treat 502/504 as network errors', async () => {
+    for (const status of [502, 504]) {
+      const { client } = fakeSupabase(() => ({ data: null, error: { message: 'Bad Gateway' }, status }));
+      await expect(createSupabaseBackend(client).performances.list()).rejects.toBeInstanceOf(NetworkError);
+    }
+  });
+
   it('does not retry on other errors', async () => {
     const { client, calls } = fakeSupabase(() => ({ data: null, error: { code: '23505', message: 'duplicate' } }));
     await expect(createSupabaseBackend(client).performances.add([input()])).rejects.toThrow('duplicate');

@@ -85,7 +85,7 @@ describe('router placeholders', () => {
     expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
   });
 
-  it.each(['/shared/xyz', '/sessions', '/performances', '/progress'])(
+  it.each(['/sessions', '/performances', '/progress'])(
     'no longer serves %s',
     (path) => {
       vi.spyOn(console, 'warn').mockImplementation(() => undefined);

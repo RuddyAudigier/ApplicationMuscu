@@ -19,7 +19,7 @@ export function useCreateExercise(): UseMutationResult<Exercise, Error, Exercise
 
 export interface UpdateExerciseVars { id: Id; draft: ExerciseDraft }
 
-/** Les séances embarquent le nom des exercices : elles sont rechargées aussi. */
+/** Séances et performances embarquent le nom des exercices : elles sont rechargées aussi. */
 export function useUpdateExercise(): UseMutationResult<Exercise, Error, UpdateExerciseVars> {
   const { exercises } = useBackend();
   const client = useQueryClient();
@@ -28,6 +28,7 @@ export function useUpdateExercise(): UseMutationResult<Exercise, Error, UpdateEx
     onSuccess: () => Promise.all([
       client.invalidateQueries({ queryKey: queryKeys.exercises }),
       client.invalidateQueries({ queryKey: queryKeys.sessions }),
+      client.invalidateQueries({ queryKey: queryKeys.performances }),
     ]),
   });
 }
@@ -40,6 +41,7 @@ export function useDeleteExercise(): UseMutationResult<void, Error, Id> {
     onSuccess: () => Promise.all([
       client.invalidateQueries({ queryKey: queryKeys.exercises }),
       client.invalidateQueries({ queryKey: queryKeys.sessions }),
+      client.invalidateQueries({ queryKey: queryKeys.performances }),
     ]),
   });
 }

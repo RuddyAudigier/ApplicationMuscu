@@ -49,10 +49,11 @@ export function createPerformancesRepo(db: Db, now: () => Date = () => new Date(
       const ctx = 'Enregistrement des performances';
       const rows = preparePerformances(inputs, todayIso(now()));
       if (rows.length === 0) return { written: 0 };
-      const res = await run(db.from('performances').insert(rows), ctx);
+      const insertOnce = { idempotent: false };
+      const res = await run(db.from('performances').insert(rows), ctx, insertOnce);
       if (res.error) {
         if (!isLegacySchemaError(res)) fail(res.error, ctx);
-        await must(db.from('performances').insert(rows.map(withoutRpeAndVariant)), ctx);
+        await must(db.from('performances').insert(rows.map(withoutRpeAndVariant)), ctx, insertOnce);
       }
       return { written: rows.length };
     },

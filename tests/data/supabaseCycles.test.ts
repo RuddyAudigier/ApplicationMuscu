@@ -97,18 +97,46 @@ describe('sessions cycle column (Supabase)', () => {
     await expect(b.sessions.create(draft('A'))).rejects.toThrow('permission denied');
   });
 
-  it('a db value wins over a stale local one; a column write clears the local entry', async () => {
+  it('while the column exists, local cycles are ignored and never written', async () => {
     const storage = new MemoryStorage();
     storage.setItem(FALLBACK_KEY, JSON.stringify({ sessions: { s1: 'B', s2: 'A' }, state: null }));
+    const setItem = vi.spyOn(storage, 'setItem');
     const { client } = fakeSupabase((c) => {
       if (c.table === 'sessions' && has(c, 'single')) return ok(sessionRow({ cycle: 'A' }));
       if (c.table === 'sessions' && has(c, 'select')) return ok([sessionRow({ cycle: 'A' }), sessionRow({ id: 's2', cycle: null })]);
       return ok(null);
     });
     const b = createSupabaseBackend(client, storage);
-    expect((await b.sessions.list()).map((s) => s.cycle)).toEqual(['A', 'A']);
+    // Un NULL en base est une vraie valeur (séance hors cycle), pas un trou à combler.
+    expect((await b.sessions.list()).map((s) => s.cycle)).toEqual(['A', null]);
     await b.sessions.update('s1', draft('A'));
-    expect(stored(storage)).toEqual({ sessions: { s2: 'A' }, state: null });
+    await b.sessions.remove('s1');
+    expect(setItem).not.toHaveBeenCalled();
+  });
+
+  it('rejects a session write when the fallback storage refuses it', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const storage = new MemoryStorage();
+    vi.spyOn(storage, 'setItem').mockImplementation(() => { throw new Error('QuotaExceededError'); });
+    const { client } = fakeSupabase((c) => {
+      if (isOp(c, 'insert', 'sessions')) return 'cycle' in ((op(c, 'insert')?.[0] as object[])[0] ?? {}) ? missingCache : ok({ id: 's1' });
+      if (isOp(c, 'update', 'sessions')) return 'cycle' in (op(c, 'update')?.[0] as object) ? missingCache : ok(null);
+      if (c.table === 'sessions' && has(c, 'select')) return /\bcycle\b/.test(selectOf(c)) ? missingColumn : ok(sessionRow());
+      return ok(null);
+    });
+    const b = createSupabaseBackend(client, storage);
+    await expect(b.sessions.create(draft('B'))).rejects.toThrow('QuotaExceededError');
+    await expect(b.sessions.update('s1', draft('A'))).rejects.toThrow('QuotaExceededError');
+  });
+
+  it('drops only the invalid local session entries', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const storage = new MemoryStorage();
+    storage.setItem(FALLBACK_KEY, JSON.stringify({ sessions: { s1: 'B', s2: 'Z', s3: 4 }, state: null }));
+    const { client } = fakeSupabase((c) => (/\bcycle\b/.test(selectOf(c))
+      ? missingColumn
+      : ok([sessionRow(), sessionRow({ id: 's2' }), sessionRow({ id: 's3' })])));
+    expect((await createSupabaseBackend(client, storage).sessions.list()).map((s) => s.cycle)).toEqual(['B', null, null]);
   });
 
   it('ignores a corrupt fallback entry', async () => {
@@ -171,14 +199,18 @@ describe('cycles repo (Supabase)', () => {
     await expect(createSupabaseBackend(net.client, new MemoryStorage()).cycles.get()).rejects.toBeInstanceOf(NetworkError);
   });
 
-  it('survives a storage that throws', async () => {
+  it('save() rejects when the fallback storage refuses the write; reads stay tolerant', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const storage = new MemoryStorage();
     vi.spyOn(storage, 'getItem').mockImplementation(() => { throw new Error('denied'); });
-    vi.spyOn(storage, 'setItem').mockImplementation(() => { throw new Error('denied'); });
+    vi.spyOn(storage, 'setItem').mockImplementation(() => { throw new Error('QuotaExceededError'); });
     const { client } = fakeSupabase(() => missingTable);
     const b = createSupabaseBackend(client, storage);
-    await b.cycles.save({ current: 'A', startedOn: '2026-11-23', weeks: 2 });
+    await expect(b.cycles.save({ current: 'A', startedOn: '2026-11-23', weeks: 2 })).rejects.toThrow('denied');
     expect(await b.cycles.get()).toBeNull();
+    const full = new MemoryStorage();
+    vi.spyOn(full, 'setItem').mockImplementation(() => { throw new Error('QuotaExceededError'); });
+    const b2 = createSupabaseBackend(fakeSupabase(() => missingTable).client, full);
+    await expect(b2.cycles.save({ current: 'A', startedOn: '2026-11-23', weeks: 2 })).rejects.toThrow('QuotaExceededError');
   });
 });
