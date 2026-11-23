@@ -1,8 +1,12 @@
 import { z } from 'zod';
 import type { CycleId, CycleState, Id } from '../../domain/model';
+import { appendToArchive } from '../shared/storage';
 
 /** Repli local tant que `scripts/sql/2026-11-23_cycles.sql` n'est pas joué (Task 21). */
 const STORAGE_KEY = 'mymuscle_cycles_v1';
+/** Contenus illisibles du repli, conservés (ajout en fin) avant toute réécriture. */
+const CORRUPT_KEY = `${STORAGE_KEY}_corrupt`;
+const EMPTY = (): FallbackFile => ({ sessions: {}, state: null });
 
 const cycleId = z.enum(['A', 'B']);
 const stateSchema = z.object({
@@ -27,17 +31,17 @@ export interface CycleFallback {
   setState(s: CycleState): void;
 }
 
-/** Seules les entrées invalides sont ignorées, pas toute la table. */
-function parse(raw: string | null): FallbackFile {
-  if (!raw) return { sessions: {}, state: null };
+/** `null` = fichier illisible. Seules les entrées invalides sont ignorées, pas toute la table. */
+function parse(raw: string | null): FallbackFile | null {
+  if (!raw) return EMPTY();
   let json: unknown;
   try {
     json = JSON.parse(raw);
   } catch {
-    return { sessions: {}, state: null };
+    return null;
   }
   const parsed = fileSchema.safeParse(json);
-  if (!parsed.success) return { sessions: {}, state: null };
+  if (!parsed.success) return null;
   const sessions: Record<Id, CycleId> = {};
   for (const [id, value] of Object.entries(parsed.data.sessions)) {
     const c = cycleId.safeParse(value);
@@ -52,15 +56,23 @@ export function createCycleFallback(storage: Storage): CycleFallback {
   /** Lecture tolérante (affichage) : stockage indisponible → vide. */
   const read = (): FallbackFile => {
     try {
-      return parse(storage.getItem(STORAGE_KEY));
+      return parse(storage.getItem(STORAGE_KEY)) ?? EMPTY();
     } catch {
-      return { sessions: {}, state: null };
+      return EMPTY();
     }
   };
 
-  /** Écriture stricte : toute erreur de stockage remonte à l'appelant. */
+  /**
+   * Écriture stricte : toute erreur de stockage remonte à l'appelant. Fichier illisible : archivé
+   * d'abord sous `CORRUPT_KEY` ; si l'archivage échoue, rien n'est écrasé.
+   */
   const write = (fn: (f: FallbackFile) => void): void => {
-    const f = parse(storage.getItem(STORAGE_KEY));
+    const raw = storage.getItem(STORAGE_KEY);
+    let f = parse(raw);
+    if (f === null) {
+      appendToArchive(storage, CORRUPT_KEY, raw);
+      f = EMPTY();
+    }
     fn(f);
     storage.setItem(STORAGE_KEY, JSON.stringify(f));
   };

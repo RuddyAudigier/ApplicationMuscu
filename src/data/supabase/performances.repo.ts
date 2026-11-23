@@ -44,7 +44,15 @@ export function createPerformancesRepo(db: Db, now: () => Date = () => new Date(
       }
     },
 
-    /** Aucune suppression de performance (D1 : pas de nettoyage « obsolètes »). */
+    /**
+     * Aucune suppression de performance (D1 : pas de nettoyage « obsolètes »).
+     *
+     * Rejeu hors-ligne (D8), compromis assumé : un échec `fetch` / status 0 (ou 503) peut survenir
+     * après que l'insert a été validé côté serveur. Il lève quand même `NetworkError` et le lot est
+     * mis en file : au rejeu, une ligne peut être dupliquée. Une ligne dupliquée est identique
+     * (reps, poids, date) : elle ne crée jamais de faux PR, alors que l'abandonner perdrait la
+     * performance. 502/504 (réponse perdue après traitement probable) ne sont PAS mis en file.
+     */
     async add(inputs) {
       const ctx = 'Enregistrement des performances';
       const rows = preparePerformances(inputs, todayIso(now()));
@@ -52,7 +60,7 @@ export function createPerformancesRepo(db: Db, now: () => Date = () => new Date(
       const insertOnce = { idempotent: false };
       const res = await run(db.from('performances').insert(rows), ctx, insertOnce);
       if (res.error) {
-        if (!isLegacySchemaError(res)) fail(res.error, ctx);
+        if (!isLegacySchemaError(res)) fail(res.error, ctx, res.status);
         await must(db.from('performances').insert(rows.map(withoutRpeAndVariant)), ctx, insertOnce);
       }
       return { written: rows.length };

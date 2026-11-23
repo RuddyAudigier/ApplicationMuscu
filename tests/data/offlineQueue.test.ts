@@ -2,7 +2,7 @@ import type { Mock } from 'vitest';
 import {
   enqueue, failedCount, flush, OFFLINE_QUEUE_CORRUPT_KEY, OFFLINE_QUEUE_FAILED_KEY, OFFLINE_QUEUE_KEY, pendingCount,
 } from '../../src/data/offlineQueue';
-import { NetworkError, ValidationError, type PerformancesRepo } from '../../src/data/ports';
+import { BackendError, NetworkError, ValidationError, type PerformancesRepo } from '../../src/data/ports';
 import type { PerformanceInput } from '../../src/domain/model';
 import { MemoryStorage } from './helpers';
 
@@ -60,7 +60,7 @@ describe('offline queue', () => {
 
     // Ajout en fin, jamais d'écrasement.
     enqueue([perf(4)], storage);
-    await flush(repo(() => Promise.reject(new Error('23503 fk'))), storage);
+    await flush(repo(() => Promise.reject(new BackendError('fk', { status: 409, code: '23503' }))), storage);
     expect(queued(storage, OFFLINE_QUEUE_FAILED_KEY).map((b) => b.payload[0]?.serieNumber)).toEqual([2, 4]);
   });
 
@@ -72,8 +72,46 @@ describe('offline queue', () => {
       if (k === OFFLINE_QUEUE_FAILED_KEY) throw new Error('full');
       set(k, v);
     });
-    await expect(flush(repo(() => Promise.reject(new Error('boom'))), storage)).rejects.toThrow('full');
+    await expect(flush(repo(() => Promise.reject(new ValidationError('boom'))), storage)).rejects.toThrow('full');
     expect(queued(storage)).toHaveLength(1);
+  });
+
+  it.each<[string, Error]>([
+    ['NetworkError', new NetworkError('offline')],
+    ['5xx', new BackendError('boom', { status: 500 })],
+    ['uncertain 504', new BackendError('maybe', { status: 504 })],
+    ['uncertain 502', new BackendError('maybe', { status: 502 })],
+    ['429', new BackendError('slow down', { status: 429 })],
+    ['401', new BackendError('jwt', { status: 401 })],
+    ['403', new BackendError('rls', { status: 403, code: '42501' })],
+    ['status 0', new BackendError('down', { status: 0 })],
+    ['unknown error', new Error('???')],
+  ])('transient failure (%s): stops, keeps the batch and the order', async (_label, err) => {
+    const storage = new MemoryStorage();
+    enqueue([perf(1)], storage);
+    enqueue([perf(2)], storage);
+    const r = repo(() => Promise.reject(err));
+    expect(await flush(r, storage)).toEqual({ sent: 0, remaining: 2, failed: 0, corrupt: false });
+    expect(r.add).toHaveBeenCalledTimes(1);
+    expect(queued(storage).map((b) => b.payload[0]?.serieNumber)).toEqual([1, 2]);
+    expect(failedCount(storage)).toBe(0);
+  });
+
+  it.each<[string, Error]>([
+    ['validation', new ValidationError('bad')],
+    ['400', new BackendError('bad request', { status: 400 })],
+    ['404', new BackendError('not found', { status: 404 })],
+    ['409', new BackendError('conflict', { status: 409 })],
+    ['422', new BackendError('unprocessable', { status: 422 })],
+    ['22P02 code', new BackendError('invalid input', { code: '22P02' })],
+    ['23505 code', new BackendError('duplicate', { code: '23505', status: 500 })],
+  ])('definitive rejection (%s): archived, next batches still sent', async (_label, err) => {
+    const storage = new MemoryStorage();
+    enqueue([perf(1)], storage);
+    enqueue([perf(2)], storage);
+    const r = repo((inputs) => (inputs[0]?.serieNumber === 1 ? Promise.reject(err) : Promise.resolve({ written: 1 })));
+    expect(await flush(r, storage)).toEqual({ sent: 1, remaining: 0, failed: 1, corrupt: false });
+    expect(failedCount(storage)).toBe(1);
   });
 
   it('stops at the first network error and keeps the rest', async () => {
@@ -164,6 +202,16 @@ describe('offline queue', () => {
     });
     expect(() => { enqueue([perf(1)], storage); }).toThrow('full');
     expect(storage.getItem(OFFLINE_QUEUE_KEY)).toBe('{oops');
+  });
+
+  it('counts an unreadable archive as one; an unavailable storage reads as empty', () => {
+    const storage = new MemoryStorage();
+    storage.setItem(OFFLINE_QUEUE_FAILED_KEY, 'garbage');
+    expect(failedCount(storage)).toBe(1);
+    const blocked = new MemoryStorage();
+    vi.spyOn(blocked, 'getItem').mockImplementation(() => { throw new Error('SecurityError'); });
+    expect(pendingCount(blocked)).toBe(0);
+    expect(failedCount(blocked)).toBe(0);
   });
 
   it('keeps an unreadable archive entry when appending to it', () => {

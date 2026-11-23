@@ -1,14 +1,15 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { z } from 'zod';
 import type { PerformanceInput } from '../domain/model';
 import { useBackend } from './context';
-import { NetworkError, type PerformancesRepo } from './ports';
+import { BackendError, ValidationError, type PerformancesRepo } from './ports';
 import { queryKeys } from './queries/keys';
+import { appendToArchive, archiveCount } from './shared/storage';
 
 /** Même clé et même format que l'ancienne app (INV §3.17) : les files existantes sont reprises. */
 export const OFFLINE_QUEUE_KEY = 'pending_performances_queue_v1';
-/** Lots refusés par le serveur (hors panne réseau), conservés pour action manuelle. Ajout en fin. */
+/** Lots refusés définitivement par le serveur, conservés pour action manuelle. Ajout en fin. */
 export const OFFLINE_QUEUE_FAILED_KEY = `${OFFLINE_QUEUE_KEY}_failed`;
 /** Contenus illisibles de la file, conservés tels quels (chaînes brutes). Ajout en fin. */
 export const OFFLINE_QUEUE_CORRUPT_KEY = `${OFFLINE_QUEUE_KEY}_corrupt`;
@@ -25,6 +26,24 @@ export interface FlushResult {
   /** `true` si la file est illisible (laissée en place, rien n'est envoyé). */
   corrupt: boolean;
 }
+
+export interface OfflineQueueStatus {
+  /** Lots en attente (≥ 1 si la file est illisible). */
+  pending: number;
+  /** Lots à traiter à la main : refus définitifs + files illisibles archivées. */
+  failed: number;
+  /** La file courante est illisible. */
+  corrupt: boolean;
+}
+
+/* ---------- Notification des changements (hook de statut) ---------- */
+
+const listeners = new Set<() => void>();
+const notify = (): void => {
+  for (const l of listeners) l();
+};
+
+/* ---------- Lecture / écriture ---------- */
 
 const queueSchema = z.array(z.looseObject({ createdAt: z.string().catch(''), payload: z.array(z.unknown()).catch([]) }));
 
@@ -45,33 +64,6 @@ function writeQueue(storage: Storage, queue: QueuedBatch[]): void {
   else storage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
 }
 
-/** Ajoute `item` en fin d'archive ; une archive illisible est gardée comme première entrée brute. */
-function appendTo(storage: Storage, key: string, item: unknown): void {
-  const raw = storage.getItem(key);
-  let list: unknown[] = [];
-  if (raw !== null) {
-    try {
-      const json: unknown = JSON.parse(raw);
-      list = Array.isArray(json) ? json : [raw];
-    } catch {
-      list = [raw];
-    }
-  }
-  storage.setItem(key, JSON.stringify([...list, item]));
-}
-
-/** Taille d'une archive en lecture tolérante (illisible = 1). */
-function archiveCount(storage: Storage, key: string): number {
-  try {
-    const raw = storage.getItem(key);
-    if (raw === null) return 0;
-    const json: unknown = JSON.parse(raw);
-    return Array.isArray(json) ? json.length : 1;
-  } catch {
-    return 1;
-  }
-}
-
 /**
  * Ajoute un lot à la file (uniquement après une `NetworkError`, D8).
  * Lève si le stockage est indisponible ou plein : l'appelant ne doit PAS annoncer « mis en file ».
@@ -83,24 +75,32 @@ export function enqueue(inputs: PerformanceInput[], storage: Storage = localStor
   let queue = parseQueue(raw);
   if (queue === null) {
     console.error('[offline] File de performances illisible : archivée sous', OFFLINE_QUEUE_CORRUPT_KEY);
-    appendTo(storage, OFFLINE_QUEUE_CORRUPT_KEY, raw);
+    appendToArchive(storage, OFFLINE_QUEUE_CORRUPT_KEY, raw);
     queue = [];
   }
   writeQueue(storage, [...queue, { createdAt: now.toISOString(), payload: inputs }]);
+  notify();
 }
 
 /** Lots en attente d'envoi ; une file illisible compte pour au moins 1 (jamais « 0 » trompeur). */
 export function pendingCount(storage: Storage = localStorage): number {
-  try {
-    return parseQueue(storage.getItem(OFFLINE_QUEUE_KEY))?.length ?? 1;
-  } catch {
-    return 0;
-  }
+  return queueStatus(storage).pending;
 }
 
-/** Lots à traiter à la main : refusés par le serveur + files illisibles archivées. */
+/** Lots à traiter à la main : refus définitifs + files illisibles archivées. */
 export function failedCount(storage: Storage = localStorage): number {
   return archiveCount(storage, OFFLINE_QUEUE_FAILED_KEY) + archiveCount(storage, OFFLINE_QUEUE_CORRUPT_KEY);
+}
+
+/** État complet de la file, en lecture tolérante (stockage indisponible → 0). */
+export function queueStatus(storage: Storage = localStorage): OfflineQueueStatus {
+  let queue: QueuedBatch[] | null;
+  try {
+    queue = parseQueue(storage.getItem(OFFLINE_QUEUE_KEY));
+  } catch {
+    queue = [];
+  }
+  return { pending: queue?.length ?? 1, failed: failedCount(storage), corrupt: queue === null };
 }
 
 const sameBatch = (a: QueuedBatch, b: QueuedBatch): boolean => JSON.stringify(a) === JSON.stringify(b);
@@ -113,14 +113,32 @@ function removeBatch(storage: Storage, batch: QueuedBatch): void {
   if (i >= 0) writeQueue(storage, [...queue.slice(0, i), ...queue.slice(i + 1)]);
 }
 
+/* ---------- Politique de rejeu ---------- */
+
+const DEFINITIVE_STATUS: readonly number[] = [400, 404, 409, 422];
+
+/**
+ * Refus DÉFINITIF (archivé) : `ValidationError` locale, HTTP 400/404/409/422, ou code Postgres
+ * de donnée/contrainte (classes `22xxx` et `23xxx`). Tout le reste est TRANSITOIRE (gardé) :
+ * `NetworkError`, status 0, 401/403 (clé, RLS), 429, 5xx dont 502/504 incertains, erreur inconnue.
+ * Le code Postgres prime sur le statut (ex. 23505 renvoyé avec 500 → définitif).
+ */
+function isDefinitiveRejection(e: unknown): boolean {
+  if (e instanceof ValidationError) return true;
+  if (!(e instanceof BackendError)) return false;
+  if (e.code !== undefined && /^2[23]/.test(e.code)) return true;
+  return e.status !== undefined && DEFINITIVE_STATUS.includes(e.status);
+}
+
 /**
  * Pour chaque lot, dans l'ordre de la file :
  * 1. lot vide (ancienne app) → retiré ;
  * 2. envoi ; succès → retiré de la file AVANT le lot suivant (jamais renvoyé en double) ;
- * 3. `NetworkError` → arrêt, ce lot et les suivants restent en file, dans le même ordre ;
- * 4. autre erreur (validation, contrainte, réponse perdue…) → le lot est d'abord AJOUTÉ à
- *    `OFFLINE_QUEUE_FAILED_KEY`, puis seulement retiré de la file ; si l'ajout échoue, le flush
- *    rejette et le lot reste en file. Les lots suivants continuent.
+ * 3. échec transitoire (voir `isDefinitiveRejection`) → ARRÊT : ce lot et les suivants restent en
+ *    file, dans le même ordre, et seront rejoués au prochain flush (montage, `online`) ;
+ * 4. refus définitif → le lot est d'abord AJOUTÉ à `OFFLINE_QUEUE_FAILED_KEY`, puis seulement
+ *    retiré de la file ; si l'ajout échoue, le flush rejette et le lot reste en file. Les lots
+ *    suivants continuent.
  */
 async function flushOnce(repo: PerformancesRepo, storage: Storage): Promise<FlushResult> {
   const snapshot = parseQueue(storage.getItem(OFFLINE_QUEUE_KEY));
@@ -138,8 +156,8 @@ async function flushOnce(repo: PerformancesRepo, storage: Storage): Promise<Flus
     try {
       await repo.add(batch.payload);
     } catch (e) {
-      if (e instanceof NetworkError) break;
-      appendTo(storage, OFFLINE_QUEUE_FAILED_KEY, {
+      if (!isDefinitiveRejection(e)) break;
+      appendToArchive(storage, OFFLINE_QUEUE_FAILED_KEY, {
         ...batch, error: e instanceof Error ? e.message : String(e), failedAt: new Date().toISOString(),
       });
       removeBatch(storage, batch);
@@ -156,7 +174,7 @@ async function flushOnce(repo: PerformancesRepo, storage: Storage): Promise<Flus
 const inFlight = new WeakMap<Storage, Promise<FlushResult>>();
 
 /**
- * Envoie la file (ordre détaillé sur `flushOnce`). Rejette sur erreur de stockage.
+ * Envoie la file (ordre et politique détaillés sur `flushOnce`). Rejette sur erreur de stockage.
  * Deux appels simultanés partagent le même envoi (pas de doublon montage + `online`).
  */
 export function flush(repo: PerformancesRepo, storage: Storage = localStorage): Promise<FlushResult> {
@@ -164,10 +182,13 @@ export function flush(repo: PerformancesRepo, storage: Storage = localStorage): 
   if (running) return running;
   const p = flushOnce(repo, storage).finally(() => {
     inFlight.delete(storage);
+    notify();
   });
   inFlight.set(storage, p);
   return p;
 }
+
+/* ---------- Hooks ---------- */
 
 /** Rejoue la file au montage et à chaque retour en ligne ; recharge les performances si envoi. */
 export function useOfflineQueueSync(): void {
@@ -187,4 +208,26 @@ export function useOfflineQueueSync(): void {
       window.removeEventListener('online', sync);
     };
   }, [performances, client]);
+}
+
+const sameStatus = (a: OfflineQueueStatus, b: OfflineQueueStatus): boolean =>
+  a.pending === b.pending && a.failed === b.failed && a.corrupt === b.corrupt;
+
+/** État de la file (Réglages) : relu après chaque ajout / flush et sur l'événement `storage`. */
+export function useOfflineQueueStatus(): OfflineQueueStatus {
+  const [status, setStatus] = useState(() => queueStatus());
+  useEffect(() => {
+    const refresh = (): void => {
+      const next = queueStatus();
+      setStatus((prev) => (sameStatus(prev, next) ? prev : next));
+    };
+    refresh();
+    listeners.add(refresh);
+    window.addEventListener('storage', refresh);
+    return () => {
+      listeners.delete(refresh);
+      window.removeEventListener('storage', refresh);
+    };
+  }, []);
+  return status;
 }

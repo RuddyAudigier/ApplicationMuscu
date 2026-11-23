@@ -16,3 +16,14 @@ export interface DataBackend {
 /** Erreur réseau (rejouable) vs validation (non rejouable). D8. */
 export class NetworkError extends Error { override name = 'NetworkError' }
 export class ValidationError extends Error { override name = 'ValidationError' }
+/** Refus du serveur, avec statut HTTP et code Postgres/PostgREST quand connus (tri file hors-ligne). */
+export class BackendError extends Error {
+  override name = 'BackendError';
+  readonly status: number | undefined;
+  readonly code: string | undefined;
+  constructor(message: string, info: { status?: number; code?: string } = {}) {
+    super(message);
+    this.status = info.status;
+    this.code = info.code;
+  }
+}

@@ -1,5 +1,5 @@
 import { createSupabaseBackend } from '../../src/data/supabase';
-import { NetworkError, ValidationError } from '../../src/data/ports';
+import { BackendError, NetworkError, ValidationError } from '../../src/data/ports';
 import type { PerformanceInput } from '../../src/domain/model';
 import { fakeSupabase, has, ok, op, type FakeCall, type FakeResult } from './helpers';
 
@@ -113,7 +113,7 @@ describe('performances.add (Supabase)', () => {
     expect(calls).toHaveLength(2);
   });
 
-  it('add() only reports a replayable NetworkError when the request never reached the database', async () => {
+  it('add(): possibly-uncommitted network failure (status 0, fetch, 503) is queued (duplicate accepted); 502/504 are not', async () => {
     for (const res of [
       { data: null, error: { code: '', message: 'TypeError: Failed to fetch' }, status: 0 },
       { data: null, error: { message: 'Service Unavailable' }, status: 503 },
@@ -131,6 +131,8 @@ describe('performances.add (Supabase)', () => {
       expect(e).toBeInstanceOf(Error);
       expect(e).not.toBeInstanceOf(NetworkError);
       expect((e as Error).message).toContain('a peut-être abouti');
+      expect(e).toBeInstanceOf(BackendError);
+      expect((e as BackendError).status).toBe(status);
       expect(calls).toHaveLength(1);
     }
   });
@@ -140,6 +142,13 @@ describe('performances.add (Supabase)', () => {
       const { client } = fakeSupabase(() => ({ data: null, error: { message: 'Bad Gateway' }, status }));
       await expect(createSupabaseBackend(client).performances.list()).rejects.toBeInstanceOf(NetworkError);
     }
+  });
+
+  it('add() rejections carry the HTTP status and Postgres code', async () => {
+    const { client } = fakeSupabase(() => ({ data: null, error: { code: '23505', message: 'duplicate' }, status: 409 }));
+    const e = await createSupabaseBackend(client).performances.add([input()]).catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(BackendError);
+    expect(e).toMatchObject({ status: 409, code: '23505' });
   });
 
   it('does not retry on other errors', async () => {

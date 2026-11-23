@@ -1,6 +1,8 @@
 /* Point d'entrée des écrans pour les données serveur (TanStack Query). */
 export { BackendProvider, useBackend } from '../context';
-export { failedCount, pendingCount, useOfflineQueueSync, type FlushResult } from '../offlineQueue';
+export {
+  failedCount, pendingCount, useOfflineQueueStatus, useOfflineQueueSync, type FlushResult, type OfflineQueueStatus,
+} from '../offlineQueue';
 export { queryKeys } from './keys';
 export { useCreateExercise, useDeleteExercise, useExercises, useUpdateExercise, type UpdateExerciseVars } from './exercises';
 export { useDeleteSession, useSaveSession, useSessions, type SaveSessionVars } from './sessions';

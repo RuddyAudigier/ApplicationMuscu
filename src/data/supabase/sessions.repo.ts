@@ -65,15 +65,17 @@ export function createSessionsRepo(db: Db, fallback: CycleFallback): SessionsRep
       const row = await withCycle(() => insert({ name: d.name, cycle: d.cycle }), () => insert({ name: d.name }), ctx);
       const id = (row as { id?: unknown } | null)?.id;
       if (typeof id !== 'string') throw new Error(`${ctx} : id manquant.`);
-      rememberCycle(id, d.cycle);
       await must(db.from('session_exercises').insert(links(id, d)), ctx);
+      // Cycle local écrit en DERNIER : un échec de stockage ne laisse pas de séance sans exercices.
+      rememberCycle(id, d.cycle);
       return readOne(id);
     },
 
     /**
      * Non transactionnel (comme l'existant). Renommage (D5) : les performances liées par nom
      * sont renommées AVANT la séance, pour qu'un nouvel essai après échec voie encore l'ancien nom
-     * (opération idempotente). Puis nom + cycle, puis delete + insert des exercices.
+     * (opération idempotente). Puis nom + cycle, puis delete + insert des exercices, puis (repli
+     * uniquement) cycle local en dernier.
      */
     async update(id, draft) {
       const ctx = 'Mise à jour de la séance';
@@ -84,9 +86,9 @@ export function createSessionsRepo(db: Db, fallback: CycleFallback): SessionsRep
       }
       const update = (values: object) => db.from('sessions').update(values).eq('id', id);
       await withCycle(() => update({ name: d.name, cycle: d.cycle }), () => update({ name: d.name }), ctx);
-      rememberCycle(id, d.cycle);
       await must(db.from('session_exercises').delete().eq('session_id', id), ctx);
       await must(db.from('session_exercises').insert(links(id, d)), ctx);
+      rememberCycle(id, d.cycle);
       return readOne(id);
     },
 

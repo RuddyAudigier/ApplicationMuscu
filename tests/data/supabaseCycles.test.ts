@@ -129,6 +129,29 @@ describe('sessions cycle column (Supabase)', () => {
     await expect(b.sessions.update('s1', draft('A'))).rejects.toThrow('QuotaExceededError');
   });
 
+  it('fallback create/update write the local cycle last (after the exercise links)', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const storage = new MemoryStorage();
+    const order: string[] = [];
+    vi.spyOn(storage, 'setItem').mockImplementation(() => {
+      order.push('local');
+      throw new Error('QuotaExceededError');
+    });
+    const { client } = fakeSupabase((c) => {
+      if (isOp(c, 'insert', 'sessions')) return 'cycle' in ((op(c, 'insert')?.[0] as object[])[0] ?? {}) ? missingCache : ok({ id: 's1' });
+      if (isOp(c, 'update', 'sessions')) return 'cycle' in (op(c, 'update')?.[0] as object) ? missingCache : ok(null);
+      if (c.table === 'session_exercises') { order.push(has(c, 'insert') ? 'links' : 'unlink'); return ok(null); }
+      if (c.table === 'sessions' && has(c, 'select')) return /\bcycle\b/.test(selectOf(c)) ? missingColumn : ok(sessionRow());
+      return ok(null);
+    });
+    const b = createSupabaseBackend(client, storage);
+    await expect(b.sessions.create(draft('B'))).rejects.toThrow('QuotaExceededError');
+    expect(order).toEqual(['links', 'local']);
+    order.length = 0;
+    await expect(b.sessions.update('s1', draft('A'))).rejects.toThrow('QuotaExceededError');
+    expect(order).toEqual(['unlink', 'links', 'local']);
+  });
+
   it('drops only the invalid local session entries', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const storage = new MemoryStorage();
@@ -149,6 +172,31 @@ describe('sessions cycle column (Supabase)', () => {
 });
 
 describe('cycles repo (Supabase)', () => {
+  it('archives an unreadable fallback file before overwriting it', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const storage = new MemoryStorage();
+    storage.setItem(FALLBACK_KEY, '{oops');
+    storage.setItem(`${FALLBACK_KEY}_corrupt`, JSON.stringify(['{older']));
+    const b = createSupabaseBackend(fakeSupabase(() => missingTable).client, storage);
+    await b.cycles.save({ current: 'B', startedOn: '2026-11-16', weeks: 2 });
+    expect(JSON.parse(storage.getItem(`${FALLBACK_KEY}_corrupt`) ?? '[]')).toEqual(['{older', '{oops']);
+    expect(await b.cycles.get()).toEqual({ current: 'B', startedOn: '2026-11-16', weeks: 2 });
+  });
+
+  it('refuses to overwrite an unreadable fallback file it cannot archive', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const storage = new MemoryStorage();
+    storage.setItem(FALLBACK_KEY, '{oops');
+    const set = storage.setItem.bind(storage);
+    vi.spyOn(storage, 'setItem').mockImplementation((k, v) => {
+      if (k.endsWith('_corrupt')) throw new Error('full');
+      set(k, v);
+    });
+    const b = createSupabaseBackend(fakeSupabase(() => missingTable).client, storage);
+    await expect(b.cycles.save({ current: 'B', startedOn: '2026-11-16', weeks: 2 })).rejects.toThrow('full');
+    expect(storage.getItem(FALLBACK_KEY)).toBe('{oops');
+  });
+
   it('get() maps the singleton row; save() upserts id 1', async () => {
     const { client, calls } = fakeSupabase((c) => (has(c, 'single') ? ok({ current: 'B', started_on: '2026-11-09', weeks: 3 }) : ok(null)));
     const b = createSupabaseBackend(client, new MemoryStorage());

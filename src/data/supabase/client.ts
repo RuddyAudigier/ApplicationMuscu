@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { NetworkError } from '../ports';
+import { BackendError, NetworkError } from '../ports';
 
 /** Erreur renvoyée par PostgREST / supabase-js. */
 export interface PgError { code?: string; message: string }
@@ -65,7 +65,7 @@ export interface RunOptions { /** `false` pour un insert : pas de rejeu sur rép
 
 /**
  * Exécute une requête. Panne réseau (rejet `TypeError`/fetch, status 0, 502-504) → `NetworkError`.
- * Pour une écriture non idempotente, 502/504 → `Error` « a peut-être abouti » (non rejouable).
+ * Pour une écriture non idempotente, 502/504 → `BackendError` « a peut-être abouti » (non mis en file).
  * Les erreurs PostgREST codées sont renvoyées à l'appelant (fallbacks tolérés).
  */
 export async function run(query: PromiseLike<PgResult>, context: string, opts: RunOptions = {}): Promise<PgResult> {
@@ -85,22 +85,27 @@ export async function run(query: PromiseLike<PgResult>, context: string, opts: R
       throw new NetworkError(`${context} : réseau indisponible (${res.error.message}).`);
     }
     if (!idempotent && WRITE_UNCERTAIN_STATUS.includes(res.status)) {
-      throw new Error(
+      throw new BackendError(
         `${context} : réponse du serveur perdue (${String(res.status)}), l'enregistrement a peut-être abouti. `
         + 'Vérifiez vos performances avant de réessayer.',
+        { status: res.status, ...(res.error.code ? { code: res.error.code } : {}) },
       );
     }
   }
   return res;
 }
 
-export function fail(error: PgError, context: string): never {
-  throw new Error(`${context} : ${error.message}${error.code ? ` (${error.code})` : ''}`);
+/** Lève une `BackendError` (statut HTTP + code) ; le message reste lisible pour l'utilisateur. */
+export function fail(error: PgError, context: string, status?: number): never {
+  throw new BackendError(`${context} : ${error.message}${error.code ? ` (${error.code})` : ''}`, {
+    ...(status === undefined ? {} : { status }),
+    ...(error.code ? { code: error.code } : {}),
+  });
 }
 
 /** Exécute et lève sur toute erreur ; renvoie `data`. */
 export async function must(query: PromiseLike<PgResult>, context: string, opts: RunOptions = {}): Promise<unknown> {
-  const { data, error } = await run(query, context, opts);
-  if (error) fail(error, context);
+  const { data, error, status } = await run(query, context, opts);
+  if (error) fail(error, context, status);
   return data;
 }

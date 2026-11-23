@@ -2,11 +2,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { createMockBackend } from '../../src/data/mock';
-import { OFFLINE_QUEUE_KEY } from '../../src/data/offlineQueue';
+import { enqueue, flush, OFFLINE_QUEUE_KEY } from '../../src/data/offlineQueue';
 import { NetworkError, ValidationError, type DataBackend } from '../../src/data/ports';
 import {
   BackendProvider, queryKeys, useAddPerformances, useAdvice, useBackend, useCreateExercise, useCycleState,
-  useDeleteExercise, useDeleteSession, useResetBackend, useExercises, useHistoryIndex, useOfflineQueueSync, usePerformances,
+  useDeleteExercise, useDeleteSession, useOfflineQueueStatus, useResetBackend, useExercises, useHistoryIndex, useOfflineQueueSync, usePerformances,
   useSaveAdvice, useSaveCoachNotes, useSaveCycleState, useSaveSession, useSessions, useUpdateExercise,
 } from '../../src/data/queries';
 import type { PerformanceInput } from '../../src/domain/model';
@@ -173,6 +173,25 @@ describe('useAddPerformances storage failure', () => {
     await act(async () => {
       await expect(result.current.mutateAsync([perf()])).rejects.toThrow('QuotaExceededError');
     });
+  });
+});
+
+describe('useOfflineQueueStatus', () => {
+  it('reports pending/failed/corrupt, refreshed after flush and on the storage event', async () => {
+    localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify([{ createdAt: 'x', payload: [perf({ exerciseId: 'q9' })] }]));
+    const { result } = renderHook(() => useOfflineQueueStatus());
+    expect(result.current).toEqual({ pending: 1, failed: 0, corrupt: false });
+
+    await act(() => flush(createMockBackend(new MemoryStorage()).performances));
+    expect(result.current).toEqual({ pending: 0, failed: 0, corrupt: false });
+
+    localStorage.setItem(OFFLINE_QUEUE_KEY, '{oops');
+    act(() => { window.dispatchEvent(new StorageEvent('storage', { key: OFFLINE_QUEUE_KEY })); });
+    expect(result.current).toEqual({ pending: 1, failed: 0, corrupt: true });
+
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    act(() => { enqueue([perf()]); });
+    expect(result.current).toEqual({ pending: 1, failed: 1, corrupt: false });
   });
 });
 
