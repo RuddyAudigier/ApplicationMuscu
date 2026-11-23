@@ -1,0 +1,35 @@
+.group {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+}
+
+.option {
+  flex: 1 1 0;
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
+  padding: 0 var(--space-2);
+  border: none;
+  border-radius: calc(var(--radius-md) - 4px);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+  transition:
+    background-color var(--duration-fast) ease,
+    color var(--duration-fast) ease;
+}
+
+.option:hover:not(.checked) {
+  color: var(--color-text);
+}
+
+.checked {
+  background: var(--color-primary-solid);
+  color: var(--color-on-primary);
+  font-weight: var(--weight-bold);
+  box-shadow: var(--shadow-sm);
+}
