@@ -111,7 +111,7 @@ function contract(name: string, make: () => DataBackend): void {
       const exs = await b.exercises.list();
       const [e1, e2] = exs;
       if (!e1 || !e2) throw new Error('seed expected');
-      const s = await b.sessions.create({ name: '  Push  ', exercises: [{ exerciseId: e1.id, series: 4 }, { exerciseId: e2.id, series: 2 }] });
+      const s = await b.sessions.create({ cycle: null, name: '  Push  ', exercises: [{ exerciseId: e1.id, series: 4 }, { exerciseId: e2.id, series: 2 }] });
       expect(s.name).toBe('Push');
       expect(s.exercises).toEqual(expect.arrayContaining([
         { exerciseId: e1.id, name: e1.name, series: 4 }, { exerciseId: e2.id, name: e2.name, series: 2 },
@@ -119,8 +119,8 @@ function contract(name: string, make: () => DataBackend): void {
       expect(Number.isNaN(Date.parse(s.createdAt))).toBe(false);
       await b.performances.add([perf({ sessionName: 'Push' }), perf({ sessionName: 'Autre', serieNumber: 2 })]);
 
-      const renamed = await b.sessions.update(s.id, { name: 'Push A', exercises: [{ exerciseId: e1.id, series: 5 }] });
-      expect(renamed).toEqual({ id: s.id, name: 'Push A', createdAt: s.createdAt, exercises: [{ exerciseId: e1.id, name: e1.name, series: 5 }] });
+      const renamed = await b.sessions.update(s.id, { cycle: null, name: 'Push A', exercises: [{ exerciseId: e1.id, series: 5 }] });
+      expect(renamed).toEqual({ id: s.id, name: 'Push A', createdAt: s.createdAt, cycle: null, exercises: [{ exerciseId: e1.id, name: e1.name, series: 5 }] });
       const perfs = await b.performances.list();
       expect(perfs.filter((p) => p.sessionName === 'Push')).toHaveLength(0);
       expect(perfs.filter((p) => p.sessionName === 'Push A')).toHaveLength(1);
@@ -135,17 +135,17 @@ function contract(name: string, make: () => DataBackend): void {
     it('sessions: validation', async () => {
       const [e1] = await b.exercises.list();
       if (!e1) throw new Error('seed expected');
-      await expect(b.sessions.create({ name: ' ', exercises: [{ exerciseId: e1.id, series: 3 }] })).rejects.toThrow('Nom de séance manquant.');
-      await expect(b.sessions.create({ name: 'A', exercises: [] })).rejects.toBeInstanceOf(ValidationError);
-      await expect(b.sessions.create({ name: 'A', exercises: [{ exerciseId: e1.id, series: 0 }] })).rejects.toBeInstanceOf(ValidationError);
-      await expect(b.sessions.create({ name: 'A', exercises: [{ exerciseId: e1.id, series: 1.5 }] })).rejects.toBeInstanceOf(ValidationError);
+      await expect(b.sessions.create({ cycle: null, name: ' ', exercises: [{ exerciseId: e1.id, series: 3 }] })).rejects.toThrow('Nom de séance manquant.');
+      await expect(b.sessions.create({ cycle: null, name: 'A', exercises: [] })).rejects.toBeInstanceOf(ValidationError);
+      await expect(b.sessions.create({ cycle: null, name: 'A', exercises: [{ exerciseId: e1.id, series: 0 }] })).rejects.toBeInstanceOf(ValidationError);
+      await expect(b.sessions.create({ cycle: null, name: 'A', exercises: [{ exerciseId: e1.id, series: 1.5 }] })).rejects.toBeInstanceOf(ValidationError);
     });
 
     it('sessions.list() ignores exercises that no longer exist (D12)', async () => {
       const e = await b.exercises.create({ name: 'Éphémère', description: '', muscleGroups: [], variants: [] });
       const [keep] = await b.exercises.list();
       if (!keep) throw new Error('seed expected');
-      const s = await b.sessions.create({ name: 'Mix', exercises: [{ exerciseId: e.id, series: 2 }, { exerciseId: keep.id, series: 3 }] });
+      const s = await b.sessions.create({ cycle: null, name: 'Mix', exercises: [{ exerciseId: e.id, series: 2 }, { exerciseId: keep.id, series: 3 }] });
       await b.exercises.remove(e.id);
       const found = (await b.sessions.list()).find((x) => x.id === s.id);
       expect(found?.exercises.map((x) => x.exerciseId)).not.toContain(e.id);

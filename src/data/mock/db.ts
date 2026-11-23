@@ -15,7 +15,7 @@ const mockDbSchema = z.object({
     id: z.string(), name: z.string(), description: z.string(), muscleGroups: z.array(z.string()),
     variants: z.array(variantSchema), isCustom: z.boolean(), createdAt: z.string(),
   })),
-  sessions: z.array(z.object({ id: z.string(), name: z.string(), createdAt: z.string() })),
+  sessions: z.array(z.object({ id: z.string(), name: z.string(), createdAt: z.string(), cycle: z.enum(['A', 'B']).nullish() })),
   sessionExercises: z.array(z.object({ sessionId: z.string(), exerciseId: z.string(), seriesCount: z.number() })),
   /** Lignes snake_case comme la table `performances` (validées à la lecture par le mapper partagé). */
   performances: z.array(z.record(z.string(), z.unknown())),

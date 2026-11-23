@@ -64,10 +64,11 @@ describe('other mappers', () => {
         { series_count: '4', exercise_id: 'e3', exercises: [{ name: 'Dips' }] },
       ],
     })).toEqual({
-      id: 's1', name: 'Push', createdAt: '2026-01-01T00:00:00Z',
+      id: 's1', name: 'Push', createdAt: '2026-01-01T00:00:00Z', cycle: null,
       exercises: [{ exerciseId: 'e1', name: 'Bench', series: 3 }, { exerciseId: 'e3', name: 'Dips', series: 4 }],
     });
     expect(mapSessionRow({ id: 's2', name: 'Vide', created_at: 'x', session_exercises: null })?.exercises).toEqual([]);
+    expect(mapSessionRow({ id: 's4', name: 'B', created_at: 'x', cycle: 'B' })?.cycle).toBe('B');
     expect(mapSessionRow({ id: 's3' })).toBeNull();
   });
 

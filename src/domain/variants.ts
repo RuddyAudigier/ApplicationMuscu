@@ -48,6 +48,11 @@ export function variantMatches(v: Variant, p: Pick<Performance, 'variantId' | 'v
   return normalizeVariantName(v.name) === normalizeVariantName(p.variantName);
 }
 
+/** Libellé affiché : la variante par défaut (`'Touch and Go'` en base) s'affiche « Classique ». */
+export function variantLabel(name: string): string {
+  return normalizeVariantName(name) === normalizeVariantName(DEFAULT_VARIANT) ? 'Classique' : name;
+}
+
 export function hasDuplicateVariantNames(list: Variant[]): boolean {
   const seen = new Set<string>();
   for (const v of list) {
