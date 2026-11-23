@@ -93,7 +93,7 @@ export default defineConfig(
   },
   {
     files: ['src/platform/**'],
-    rules: restrict(forbid('domain', 'platform'), 'platform importe uniquement domain.'),
+    rules: restrict([...forbid('domain', 'platform'), '!@capacitor/*'], 'platform importe uniquement domain.'),
   },
   ...featureBlocks(),
 );
