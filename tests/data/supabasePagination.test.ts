@@ -129,7 +129,7 @@ describe('sessions (Supabase)', () => {
   it('list() is one nested request ordered by created_at desc', async () => {
     const { client, calls } = fakeSupabase(() => ok([sessionRow('Push')]));
     const list = await createSupabaseBackend(client).sessions.list();
-    expect(list).toEqual([{ id: 's1', name: 'Push', createdAt: '2026-01-01T00:00:00Z', exercises: [{ exerciseId: 'e1', name: 'Bench', series: 3 }] }]);
+    expect(list).toEqual([{ id: 's1', name: 'Push', createdAt: '2026-01-01T00:00:00Z', cycle: null, exercises: [{ exerciseId: 'e1', name: 'Bench', series: 3 }] }]);
     expect(calls).toHaveLength(1);
     expect(op(calls[0] as FakeCall, 'select')?.[0]).toContain('session_exercises(series_count, exercise_id, exercises(name))');
     expect(op(calls[0] as FakeCall, 'order')).toEqual(['created_at', { ascending: false }]);
@@ -148,7 +148,7 @@ describe('sessions (Supabase)', () => {
       return ok(null);
     });
     const b = createSupabaseBackend(client);
-    const draft = { name: 'Push A', exercises: [{ exerciseId: 'e1', series: 3 }] };
+    const draft = { cycle: null, name: 'Push A', exercises: [{ exerciseId: 'e1', series: 3 }] };
     await expect(b.sessions.update('s1', draft)).rejects.toThrow('timeout');
     expect(calls.some((c) => isOp(c, 'update', 'sessions'))).toBe(false);
     expect((await b.sessions.update('s1', draft)).name).toBe('Push A');
@@ -164,7 +164,7 @@ describe('sessions (Supabase)', () => {
       if (c.table === 'sessions' && has(c, 'single')) return ok(sessionRow(renamed ? 'Push A' : 'Push'));
       return ok(null);
     });
-    const s = await createSupabaseBackend(client).sessions.update('s1', { name: ' Push A ', exercises: [{ exerciseId: 'e1', series: 3 }] });
+    const s = await createSupabaseBackend(client).sessions.update('s1', { cycle: null, name: ' Push A ', exercises: [{ exerciseId: 'e1', series: 3 }] });
     expect(s.name).toBe('Push A');
     const rename = calls.find((c) => c.table === 'performances');
     expect(op(rename as FakeCall, 'update')).toEqual([{ session_name: 'Push A' }]);
@@ -182,9 +182,9 @@ describe('sessions (Supabase)', () => {
       return ok(null);
     });
     const b = createSupabaseBackend(client);
-    await b.sessions.update('s1', { name: 'Push', exercises: [{ exerciseId: 'e1', series: 3 }] });
+    await b.sessions.update('s1', { cycle: null, name: 'Push', exercises: [{ exerciseId: 'e1', series: 3 }] });
     expect(calls.some((c) => c.table === 'performances')).toBe(false);
-    const created = await b.sessions.create({ name: 'Push', exercises: [{ exerciseId: 'e1', series: 3 }] });
+    const created = await b.sessions.create({ cycle: null, name: 'Push', exercises: [{ exerciseId: 'e1', series: 3 }] });
     expect(created.id).toBe('s1');
     await b.sessions.remove('s1');
     expect(calls.some((c) => isOp(c, 'delete', 'sessions'))).toBe(true);

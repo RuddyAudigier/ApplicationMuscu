@@ -9,9 +9,12 @@ export interface Exercise {
 }
 export interface ExerciseDraft { name: string; description: string; muscleGroups: string[]; variants: Variant[] }
 
+export type CycleId = 'A' | 'B';
+export interface CycleState { current: CycleId; startedOn: IsoDate; weeks: 2 | 3 }
+
 export interface SessionExercise { exerciseId: Id; name: string; series: number }
-export interface Session { id: Id; name: string; createdAt: IsoDateTime; exercises: SessionExercise[] }
-export interface SessionDraft { name: string; exercises: { exerciseId: Id; series: number }[] }
+export interface Session { id: Id; name: string; createdAt: IsoDateTime; cycle: CycleId | null; exercises: SessionExercise[] }
+export interface SessionDraft { name: string; cycle: CycleId | null; exercises: { exerciseId: Id; series: number }[] }
 
 export interface Performance {
   id: Id; exerciseId: Id | null; exerciseName: string; sessionName: string;

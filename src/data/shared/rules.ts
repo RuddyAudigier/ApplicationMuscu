@@ -127,7 +127,7 @@ export function prepareSession(d: SessionDraft): SessionDraft {
   for (const e of d.exercises) {
     if (!Number.isInteger(e.series) || e.series < 1) throw new ValidationError('Nombre de séries invalide (entier ≥ 1).');
   }
-  return { name, exercises: d.exercises.map((e) => ({ exerciseId: e.exerciseId, series: e.series })) };
+  return { name, cycle: d.cycle, exercises: d.exercises.map((e) => ({ exerciseId: e.exerciseId, series: e.series })) };
 }
 
 /** CRLF / CR → LF (INV §3.16). */

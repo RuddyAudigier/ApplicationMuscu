@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEFAULT_VARIANT, getDefaultVariant, hasDuplicateVariantNames, normalizeVariants, variantMatches,
+  DEFAULT_VARIANT, getDefaultVariant, hasDuplicateVariantNames, normalizeVariants, variantLabel, variantMatches,
 } from '@/domain/variants';
 import type { Variant } from '@/domain/model';
+
+describe('variantLabel', () => {
+  it('shows the default variant as « Classique »', () => {
+    expect(variantLabel('Touch and Go')).toBe('Classique');
+    expect(variantLabel('  touch  AND go ')).toBe('Classique');
+    expect(variantLabel('')).toBe('Classique');
+    expect(variantLabel('Pause')).toBe('Pause');
+  });
+});
 
 const v = (name: string, isDefault = false, id: string | null = null): Variant => ({ id, exerciseId: 'e1', name, isDefault });
 

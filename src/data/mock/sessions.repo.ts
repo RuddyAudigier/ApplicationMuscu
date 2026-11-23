@@ -13,7 +13,7 @@ function toSession(db: MockDb, s: MockSession): Session {
       const ex = db.exercises.find((e) => e.id === se.exerciseId);
       return ex ? [{ exerciseId: ex.id, name: ex.name, series: se.seriesCount }] : [];
     });
-  return { id: s.id, name: s.name, createdAt: s.createdAt, exercises };
+  return { id: s.id, name: s.name, createdAt: s.createdAt, cycle: s.cycle ?? null, exercises };
 }
 
 function find(db: MockDb, id: Id): MockSession {

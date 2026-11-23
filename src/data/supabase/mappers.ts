@@ -48,6 +48,8 @@ const sessionRow = z.object({
   id: z.string(),
   name: z.string(),
   created_at: z.string(),
+  /** Colonne ajoutée par la migration cycles (Task 21) : absente ou invalide → `null` (la séance reste). */
+  cycle: z.enum(['A', 'B']).nullish().catch(null),
   session_exercises: z.array(z.object({
     series_count: numeric.nullish(),
     exercise_id: z.string().nullish(),
@@ -66,7 +68,7 @@ export function mapSessionRow(raw: unknown): Session | null {
     if (!ex || !se.exercise_id) continue;
     exercises.push({ exerciseId: se.exercise_id, name: ex.name, series: toNumber(se.series_count) ?? 1 });
   }
-  return { id: r.id, name: r.name, createdAt: r.created_at, exercises };
+  return { id: r.id, name: r.name, createdAt: r.created_at, cycle: r.cycle ?? null, exercises };
 }
 
 const adviceRow = z.object({ training_notes: optText, nutrition_notes: optText, sleep_notes: optText });
