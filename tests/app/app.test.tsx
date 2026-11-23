@@ -23,14 +23,22 @@ describe('ErrorBoundary', () => {
   });
 
   it('renders children when nothing throws', () => {
-    render(<ErrorBoundary><p>ok</p></ErrorBoundary>);
+    render(
+      <ErrorBoundary>
+        <p>ok</p>
+      </ErrorBoundary>,
+    );
     expect(screen.getByText('ok')).toBeInTheDocument();
   });
 });
 
 describe('providers', () => {
   it('renders children', () => {
-    render(<Providers backend={createMockBackend(localStorage)}><p>contenu</p></Providers>);
+    render(
+      <Providers backend={createMockBackend(localStorage)}>
+        <p>contenu</p>
+      </Providers>,
+    );
     expect(screen.getByText('contenu')).toBeInTheDocument();
   });
 
@@ -63,16 +71,54 @@ describe('data errors', () => {
 describe('router placeholders', () => {
   it.each([
     ['/', 'Accueil'],
-    ['/exercises', 'Exercices'],
-    ['/sessions', 'Séances'],
+    ['/program', 'Programme'],
     ['/workout', 'Séance en cours'],
-    ['/performances', 'Performances'],
-    ['/progress', 'Progression'],
-    ['/progress/abc', 'Progression'],
+    ['/report', 'Compte rendu'],
+    ['/records', 'Records'],
+    ['/records/abc', 'Records'],
+    ['/records/add', 'Ajouter un record'],
+    ['/exercises', 'Exercices'],
+    ['/exercises/abc', 'Fiche exercice'],
     ['/settings', 'Réglages'],
-    ['/shared/xyz', 'Séance partagée'],
   ])('renders %s', (path, title) => {
     render(<RouterProvider router={createTestRouter([path])} />);
     expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
+  });
+
+  it.each(['/shared/xyz', '/sessions', '/performances', '/progress'])(
+    'no longer serves %s',
+    (path) => {
+      vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      render(<RouterProvider router={createTestRouter([path])} />);
+      expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
+    },
+  );
+});
+
+describe('layout navigation', () => {
+  it.each(['/', '/program', '/records', '/exercises', '/settings'])(
+    'shows the bottom nav on %s',
+    (path) => {
+      render(<RouterProvider router={createTestRouter([path])} />);
+      const nav = screen.getByRole('navigation', { name: 'Navigation principale' });
+      expect(nav).toBeInTheDocument();
+      expect(screen.getAllByRole('link').map((l) => l.getAttribute('aria-label'))).toEqual([
+        'Accueil',
+        'Programme',
+        'Records',
+        'Exercices',
+      ]);
+    },
+  );
+
+  it('marks the current section', () => {
+    render(<RouterProvider router={createTestRouter(['/records/abc'])} />);
+    expect(screen.getByRole('link', { name: 'Records' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it.each(['/workout', '/report'])('hides the bottom nav on %s', (path) => {
+    render(<RouterProvider router={createTestRouter([path])} />);
+    expect(screen.queryByRole('navigation')).toBeNull();
   });
 });

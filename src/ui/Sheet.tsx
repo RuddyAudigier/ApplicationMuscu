@@ -123,7 +123,7 @@ export function Sheet({
           <h2 id={titleId} className={styles.title}>
             {title}
           </h2>
-          {!hideClose && <IconButton icon="x" label="Fermer" onClick={onClose} />}
+          {!hideClose && <IconButton icon="x" label="Fermer" variant="surface" onClick={onClose} />}
         </div>
         <div className={styles.body}>{children}</div>
         {footer && <div className={styles.footer}>{footer}</div>}

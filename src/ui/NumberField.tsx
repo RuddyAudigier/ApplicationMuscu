@@ -35,7 +35,13 @@ export function NumberField({
   className,
 }: NumberFieldProps) {
   return (
-    <FieldShell label={label} hint={hint} error={error} className={className} id={id}>
+    <FieldShell
+      label={label}
+      hint={hint}
+      error={error}
+      className={cx(styles.number, className)}
+      id={id}
+    >
       {(a11y) => (
         <div className={cx(styles.affix, unit && styles.withUnit)}>
           <input

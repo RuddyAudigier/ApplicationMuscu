@@ -50,7 +50,7 @@ export function ConfirmDialog({
           <Button variant="secondary" size="lg" onClick={onCancel}>
             Annuler
           </Button>
-          <Button variant={danger ? 'danger' : 'primary'} size="lg" onClick={onConfirm}>
+          <Button variant={danger ? 'danger' : 'accent'} size="lg" onClick={onConfirm}>
             {confirmLabel}
           </Button>
         </>

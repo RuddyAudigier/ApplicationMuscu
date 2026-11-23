@@ -36,7 +36,8 @@
   color: var(--color-danger);
 }
 
+/* Badge PR de la maquette : citron plein, texte noir. */
 .pr {
-  background: var(--color-pr-soft);
-  color: var(--color-pr);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
 }

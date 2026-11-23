@@ -27,7 +27,21 @@
 }
 
 .ghost:hover:not(:disabled) {
-  background: var(--color-surface-2);
+  background: var(--color-surface);
+}
+
+.surface {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.surface:hover:not(:disabled) {
+  background: var(--color-surface-3);
+}
+
+[role='dialog'] .surface,
+[role='alertdialog'] .surface {
+  background: var(--color-surface-3);
 }
 
 .primary {

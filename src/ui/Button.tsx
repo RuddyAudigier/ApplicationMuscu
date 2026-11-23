@@ -3,7 +3,8 @@ import styles from './Button.module.css';
 import { cx } from './cx';
 import { Icon, type IconName } from './Icon';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+/** `accent` = citron (action principale) ; `primary` = pilule claire ; `outline` = contour. */
+export type ButtonVariant = 'accent' | 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;

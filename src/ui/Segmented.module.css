@@ -1,9 +1,7 @@
+/* Choix exclusif en pastilles (RPE 6–10 de la maquette) : sélection claire pleine. */
 .group {
   display: flex;
-  gap: var(--space-1);
-  padding: var(--space-1);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-2);
+  gap: 6px;
 }
 
 .option {
@@ -11,25 +9,27 @@
   min-width: var(--touch-target);
   min-height: var(--touch-target);
   padding: 0 var(--space-2);
-  border: none;
-  border-radius: calc(var(--radius-md) - 4px);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
   background: transparent;
   color: var(--color-text-muted);
-  font-size: var(--text-md);
+  font-size: 0.9375rem;
   font-weight: var(--weight-medium);
   font-variant-numeric: tabular-nums;
   transition:
     background-color var(--duration-fast) ease,
+    border-color var(--duration-fast) ease,
     color var(--duration-fast) ease;
 }
 
 .option:hover:not(.checked) {
+  border-color: var(--color-border-control);
   color: var(--color-text);
 }
 
 .checked {
-  background: var(--color-primary-solid);
-  color: var(--color-on-primary);
+  border-color: var(--color-inverse);
+  background: var(--color-inverse);
+  color: var(--color-on-inverse);
   font-weight: var(--weight-bold);
-  box-shadow: var(--shadow-sm);
 }

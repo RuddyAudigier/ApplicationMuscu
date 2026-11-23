@@ -3,12 +3,15 @@ import styles from './IconButton.module.css';
 import { cx } from './cx';
 import { Icon, type IconName } from './Icon';
 
-export interface IconButtonProps
-  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'aria-label'> {
+export interface IconButtonProps extends Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  'children' | 'aria-label'
+> {
   icon: IconName;
   /** Nom accessible (obligatoire : le bouton n'a pas de texte visible). */
   label: string;
-  variant?: 'ghost' | 'primary' | 'danger';
+  /** `surface` : rond plein (#161615 ; #262624 dans un panneau), comme « Retour » / « Fermer ». */
+  variant?: 'ghost' | 'surface' | 'primary' | 'danger';
 }
 
 export function IconButton({

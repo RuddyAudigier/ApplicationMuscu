@@ -5,6 +5,7 @@ import { Icon, type IconName } from './Icon';
 
 export interface NavItem {
   to: string;
+  /** Nom accessible (la navigation n'affiche que l'icône). */
   label: string;
   icon: IconName;
 }
@@ -13,6 +14,7 @@ export interface BottomNavProps {
   items: NavItem[];
 }
 
+/** Navigation flottante en pilule : icônes seules, item actif clair (aria-current="page"). */
 export function BottomNav({ items }: BottomNavProps) {
   return (
     <nav aria-label="Navigation principale" className={styles.nav}>
@@ -22,12 +24,11 @@ export function BottomNav({ items }: BottomNavProps) {
             <NavLink
               to={item.to}
               end={item.to === '/'}
+              aria-label={item.label}
+              title={item.label}
               className={({ isActive }) => cx(styles.link, isActive && styles.active)}
             >
-              <span className={styles.icon}>
-                <Icon name={item.icon} size={22} />
-              </span>
-              <span className={styles.label}>{item.label}</span>
+              <Icon name={item.icon} size={22} />
             </NavLink>
           </li>
         ))}

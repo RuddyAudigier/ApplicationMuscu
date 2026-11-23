@@ -1,19 +1,8 @@
 import type { ReactNode } from 'react';
 
 const paths = {
-  home: (
-    <>
-      <path d="M3 10.5 12 3l9 7.5" />
-      <path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5" />
-    </>
-  ),
-  dumbbell: (
-    <>
-      <path d="M6.5 6.5v11M17.5 6.5v11" />
-      <path d="M3.5 9v6M20.5 9v6" />
-      <path d="M6.5 12h11" />
-    </>
-  ),
+  home: <path d="M4 11l8-6 8 6v8a1 1 0 0 1-1 1h-4v-5h-6v5H5a1 1 0 0 1-1-1z" />,
+  dumbbell: <path d="M6 8v8M18 8v8M3 10.5v3M21 10.5v3M6 12h12" />,
   list: (
     <>
       <path d="M9 6h11M9 12h11M9 18h11" />
@@ -64,6 +53,24 @@ const paths = {
       <path d="M12 11v5M12 8h.01" />
     </>
   ),
+  /* Icônes de la maquette v2 */
+  trend: <path d="M4 17l5-5 4 3 7-8" />,
+  search: (
+    <>
+      <circle cx="11" cy="11" r="6" />
+      <path d="M20 20l-4.5-4.5" />
+    </>
+  ),
+  sliders: (
+    <>
+      <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+      <circle cx="16" cy="7" r="2" />
+      <circle cx="10" cy="17" r="2" />
+    </>
+  ),
+  play: <path d="M8 5.5v13l11-6.5z" fill="currentColor" />,
+  back: <path d="M15 6l-6 6 6 6" />,
+  table: <path d="M4 6h16M4 12h16M4 18h16M9 4v16" />,
   check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
   x: <path d="M6 6l12 12M18 6 6 18" />,
   chevron: <path d="m9 6 6 6-6 6" />,
