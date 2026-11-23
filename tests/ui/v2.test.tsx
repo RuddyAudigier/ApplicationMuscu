@@ -84,6 +84,8 @@ describe('BottomNav v2', () => {
 
   it('is icon-only with aria-labels', () => {
     renderAt('/');
+    // Marqueur utilisé par Toast.module.css pour placer les toasts au-dessus de la pilule.
+    expect(screen.getByRole('navigation')).toHaveAttribute('data-bottom-nav');
     const links = screen.getAllByRole('link');
     expect(links).toHaveLength(4);
     for (const link of links) {

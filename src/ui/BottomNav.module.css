@@ -54,3 +54,8 @@
   background: var(--color-inverse);
   color: var(--color-on-inverse);
 }
+
+/* Anneau citron illisible sur la pilule claire (~1.1:1) : anneau sombre à l'intérieur. */
+.active:focus-visible {
+  outline-color: var(--color-on-inverse);
+}

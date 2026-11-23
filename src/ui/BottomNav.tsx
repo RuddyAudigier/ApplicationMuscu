@@ -17,7 +17,7 @@ export interface BottomNavProps {
 /** Navigation flottante en pilule : icônes seules, item actif clair (aria-current="page"). */
 export function BottomNav({ items }: BottomNavProps) {
   return (
-    <nav aria-label="Navigation principale" className={styles.nav}>
+    <nav aria-label="Navigation principale" data-bottom-nav="" className={styles.nav}>
       <ul className={styles.list}>
         {items.map((item) => (
           <li key={item.to} className={styles.item}>

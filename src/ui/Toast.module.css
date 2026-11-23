@@ -1,7 +1,10 @@
 .viewport {
   position: fixed;
   right: 0;
-  bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + var(--space-3));
+  /* Au-dessus de la pilule flottante ; plus bas quand la navigation est masquée (règle en fin de fichier). */
+  bottom: calc(
+    var(--bottom-nav-height) + var(--bottom-nav-gap) + var(--safe-bottom) + var(--space-3)
+  );
   left: 0;
   z-index: 200;
   display: flex;
@@ -101,4 +104,9 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Navigation masquée (séance, compte rendu) : les toasts reviennent en bas d'écran. */
+:global(body:not(:has([data-bottom-nav]))) .viewport {
+  bottom: calc(var(--safe-bottom) + var(--space-4));
 }

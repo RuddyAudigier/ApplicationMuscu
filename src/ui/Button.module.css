@@ -75,7 +75,7 @@
 }
 
 .primary:hover:not(:disabled) {
-  background: #ffffff;
+  background: var(--color-text-soft);
 }
 
 .secondary {
@@ -99,7 +99,7 @@
 
 .danger {
   background: var(--color-danger-solid);
-  color: #ffffff;
+  color: var(--color-on-danger);
 }
 
 .danger:hover:not(:disabled) {
@@ -125,14 +125,4 @@
   to {
     transform: rotate(360deg);
   }
-}
-
-.outline {
-  border-color: var(--color-border-control);
-  background: transparent;
-  color: var(--color-text);
-}
-
-.outline:hover:not(:disabled) {
-  background: var(--color-surface);
 }
