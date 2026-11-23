@@ -1,4 +1,5 @@
 import js from '@eslint/js';
+import { existsSync, readdirSync } from 'node:fs';
 import globals from 'globals';
 import jsxA11yPlugin from 'eslint-plugin-jsx-a11y';
 import type { Linter } from 'eslint';
@@ -20,8 +21,33 @@ const forbid = (...allowed: (typeof layers)[number][]): string[] =>
     .flatMap((l) => [
       `@/${l}`,
       `@/${l}/*`,
-      ...['../', '../../', '../../../'].flatMap((p) => [`${p}${l}`, `${p}${l}/*`]),
+      `**/${l}`,
+      `**/${l}/*`,
     ]);
+
+// Un feature n'atteint un autre feature que par son index (pas d'import profond).
+function featureBlocks(): Linter.Config[] {
+  const dir = 'src/features';
+  const features = existsSync(dir)
+    ? readdirSync(dir, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name)
+    : [];
+  const base = forbid('domain', 'data', 'ui', 'platform', 'features');
+  return [
+    { files: ['src/features/**'], rules: restrict(base, 'features n’importe pas app.') },
+    ...features.map((f) => ({
+      files: [`src/features/${f}/**`],
+      rules: restrict(
+        [
+          ...base,
+          ...features
+            .filter((g) => g !== f)
+            .flatMap((g) => [`@/features/${g}/*`, `**/${g}/*`]),
+        ],
+        'import profond inter-features interdit : passer par l’index du feature.',
+      ),
+    })),
+  ];
+}
 
 export default defineConfig(
   {
@@ -38,7 +64,7 @@ export default defineConfig(
     languageOptions: {
       globals: { ...globals.browser },
       parserOptions: {
-        projectService: { allowDefaultProject: ['*.config.ts', 'eslint-plugins.d.ts'] },
+        projectService: { allowDefaultProject: ['*.config.ts', 'eslint-plugins.d.ts'], defaultProject: 'tsconfig.node.json' },
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -69,8 +95,5 @@ export default defineConfig(
     files: ['src/platform/**'],
     rules: restrict(forbid('domain', 'platform'), 'platform importe uniquement domain.'),
   },
-  {
-    files: ['src/features/**'],
-    rules: restrict(forbid('domain', 'data', 'ui', 'platform', 'features'), 'features n’importe pas app.'),
-  },
+  ...featureBlocks(),
 );
