@@ -63,6 +63,15 @@ const FORM_OPTIONS: SegmentedOption<Form | ''>[] = (['frais', 'fatigue'] as cons
   label: FORM_LABEL[value],
 }));
 
+/** Upsert du compte rendu dans le journal (même id) ; `false` si non synchronisé. */
+function pushReport(sync: ReturnType<typeof useJournalSync>, next: Report): Promise<boolean> {
+  const logId = next.logId ?? '';
+  return sync((j) => {
+    const existing = j.logs.find((l) => l.id === logId);
+    return upsertLog(j, existing ? applyReportEdits(existing, next) : logFromReport(next, logId));
+  });
+}
+
 function ReportView({ initial }: { initial: Report }) {
   const toast = useToast();
   const syncJournal = useJournalSync();
@@ -72,13 +81,9 @@ function ReportView({ initial }: { initial: Report }) {
   /** Garde le compte rendu local, puis le journal (même id) ; un échec du journal ne perd rien. */
   const edit = (patch: Partial<Pick<Report, 'form' | 'mood' | 'exercises'>>): void => {
     const next: Report = { ...report, ...patch, logId: report.logId ?? crypto.randomUUID() };
-    const logId = next.logId ?? '';
     setReport(next);
     saveLastReport(next);
-    void syncJournal((j) => {
-      const existing = j.logs.find((l) => l.id === logId);
-      return upsertLog(j, existing ? applyReportEdits(existing, next) : logFromReport(next, logId));
-    }).then((ok) => {
+    void pushReport(syncJournal, next).then((ok) => {
       if (!ok) toast.show(JOURNAL_NOT_SYNCED_MESSAGE, 'error');
     });
   };
@@ -87,14 +92,17 @@ function ReportView({ initial }: { initial: Report }) {
     if (mood !== report.mood) edit({ mood });
   };
   // Quitter l'écran sans quitter le champ : le texte est quand même gardé (compte rendu local).
-  const pending = useRef({ mood, report });
+  const pending = useRef({ mood, report, syncJournal });
   useEffect(() => {
-    pending.current = { mood, report };
-  });
+    pending.current = { mood, report, syncJournal };
+  }, [mood, report, syncJournal]);
   useEffect(
     () => () => {
-      const { mood: m, report: r } = pending.current;
-      if (m !== r.mood) saveLastReport({ ...r, mood: m });
+      const { mood: m, report: r, syncJournal: sync } = pending.current;
+      if (m === r.mood) return;
+      const next: Report = { ...r, mood: m, logId: r.logId ?? crypto.randomUUID() };
+      saveLastReport(next);
+      void pushReport(sync, next);
     },
     [],
   );

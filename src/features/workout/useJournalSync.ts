@@ -5,8 +5,8 @@ import { emptyJournal, type Journal } from '@/domain/journal';
 
 export const JOURNAL_NOT_SYNCED_MESSAGE = 'État non synchronisé : il reste dans ce compte rendu.';
 
-/** Au-delà, la lecture du journal est abandonnée (réseau muet) : l'appelant n'attend pas plus. */
-const READ_TIMEOUT_MS = 8000;
+/** Au-delà, la synchronisation est abandonnée (réseau muet) : l'appelant n'attend pas plus. */
+const TIMEOUT_MS = 8000;
 
 /** Écritures du journal l'une après l'autre : chacune relit le cache à jour avant d'écrire. */
 let chain: Promise<unknown> = Promise.resolve();
@@ -44,7 +44,7 @@ export function useJournalSync(): (edit: (j: Journal) => Journal) => Promise<boo
           if (!navigator.onLine) return false;
           // `null` = journal jamais enregistré ; `undefined` = pas encore lu.
           let current = client.getQueryData<Journal | null>(queryKeys.journal);
-          if (current === undefined) current = (await withTimeout(refetch(), READ_TIMEOUT_MS))?.data;
+          if (current === undefined) current = (await refetch()).data;
           if (current === undefined) return false;
           await mutateAsync(edit(current ?? emptyJournal()));
           return true;
@@ -53,7 +53,8 @@ export function useJournalSync(): (edit: (j: Journal) => Journal) => Promise<boo
           return false;
         }
       };
-      const result = chain.then(run);
+      // Lecture et écriture bornées : une écriture en pause (réseau coupé) ne bloque pas la file.
+      const result = chain.then(async () => (await withTimeout(run(), TIMEOUT_MS)) ?? false);
       chain = result;
       return result;
     },
