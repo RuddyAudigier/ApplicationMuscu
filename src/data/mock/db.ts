@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { storedCycleFields } from '../shared/cycleState';
 import { journalSchema } from '../shared/journal';
 import { weekPlanSchema } from '../shared/weekPlan';
 import type { Id } from '../../domain/model';
@@ -24,7 +25,7 @@ const mockDbSchema = z.object({
   coachNotesByExerciseId: z.record(z.string(), z.object({ notes: z.string(), updatedAt: z.string() })),
   generalAdvice: z.object({ training: z.string(), nutrition: z.string(), sleep: z.string(), updatedAt: z.string() }).nullable(),
   /** Absent des bases créées avant les cycles (Task 21) : lu comme `null`, sans réinitialiser. */
-  cycleState: z.object({ current: z.enum(['A', 'B']), startedOn: z.string(), weeks: z.union([z.literal(2), z.literal(3)]) }).nullish(),
+  cycleState: z.object({ current: z.enum(['A', 'B']), startedOn: z.string(), ...storedCycleFields }).nullish(),
   /** Absent des bases créées avant le planning : lu comme `null`, sans réinitialiser. */
   weekPlan: weekPlanSchema.nullish(),
   /** Absent des bases créées avant le journal : lu comme `null`, sans réinitialiser. */

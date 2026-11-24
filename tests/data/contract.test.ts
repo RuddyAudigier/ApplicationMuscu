@@ -203,8 +203,8 @@ function contract(name: string, make: () => DataBackend): void {
 
     it('cycles: null until saved, then the saved state', async () => {
       expect(await b.cycles.get()).toBeNull();
-      await b.cycles.save({ current: 'B', startedOn: '2026-11-16', weeks: 3 });
-      expect(await b.cycles.get()).toEqual({ current: 'B', startedOn: '2026-11-16', weeks: 3 });
+      await b.cycles.save({ current: 'B', startedOn: '2026-11-16', lengthDays: 14, extraDays: 7 });
+      expect(await b.cycles.get()).toEqual({ current: 'B', startedOn: '2026-11-16', lengthDays: 14, extraDays: 7 });
     });
 
     it('sessions: cycle is stored on create and changed on update', async () => {

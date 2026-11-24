@@ -264,7 +264,7 @@ describe('AddRecordScreen', () => {
     const backend = createMockBackend(localStorage);
     const add = vi.spyOn(backend.performances, 'add');
     const { bench, squat } = await exerciseIds(backend);
-    await backend.cycles.save({ current: 'A', startedOn: '2026-11-16', weeks: 2 });
+    await backend.cycles.save({ current: 'A', startedOn: '2026-11-16', lengthDays: 14, extraDays: 0 });
     await backend.sessions.create({ name: 'Haut A', cycle: 'A', exercises: [{ exerciseId: bench, series: 3 }] });
     await backend.performances.add([
       benchPerf(bench, { reps: 6, weight: 80, performanceDate: '2026-11-22', sessionName: 'Autre' }),

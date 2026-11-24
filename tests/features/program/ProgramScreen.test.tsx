@@ -15,8 +15,6 @@ const SEED = 'Séance test (mock)';
 /** Nom accessible = texte visible du bouton (WCAG 2.5.3) : il commence par l'action et le titre. */
 const startName = (verb: string, title: string) => new RegExp(`^${verb} ${title.replace(/[()]/g, '\\$&')}`);
 
-const daysAgo = (n: number) => todayIso(new Date(Date.now() - n * 86_400_000));
-
 const activeOf = (sessionId: string, sessionName: string) => ({
   version: 2 as const, sessionId, sessionName, cycle: 'A' as const, date: todayIso(),
   startedAt: new Date().toISOString(), form: null, mood: '', warmup: [], exercises: [],
@@ -51,24 +49,24 @@ describe('ProgramScreen', () => {
     const tabA = await screen.findByRole('tab', { name: /A En cours/ });
     expect(tabA).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: /B dans 14 j/ })).toHaveAttribute('aria-selected', 'false');
-    expect(screen.getByRole('radio', { name: '2 sem.' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('combobox', { name: 'Durée des cycles' })).toHaveValue('14');
     const row = await seedRow();
     expect(within(row).getByText('Développé couché')).toBeInTheDocument();
     expect(within(row).getAllByText('2–3 séries')).toHaveLength(2);
   });
 
-  it('prolonge le cycle en cours à 3 semaines puis revient au standard', async () => {
+  it('reporte le prochain cycle d’une semaine puis annule le report', async () => {
     const { backend, user } = setup();
     await seedRow();
-    await user.click(screen.getByRole('radio', { name: '3 sem.' }));
+    await user.click(screen.getByRole('button', { name: 'Reporter le prochain cycle d’une semaine' }));
     await waitFor(async () => {
-      expect(await backend.cycles.get()).toEqual({ current: 'A', startedOn: todayIso(), weeks: 3 });
+      expect(await backend.cycles.get()).toEqual({ current: 'A', startedOn: todayIso(), lengthDays: 14, extraDays: 7 });
     });
-    expect(await screen.findByText(/B commence dans 21 jours/)).toBeInTheDocument();
+    expect(await screen.findByText(/Prochain cycle B le .* · reporté de 1 semaine/)).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /B dans 21 j/ })).toBeInTheDocument();
-    await user.click(screen.getByRole('radio', { name: '2 sem.' }));
+    await user.click(screen.getByRole('button', { name: 'Annuler un report' }));
     await waitFor(async () => {
-      expect((await backend.cycles.get())?.weeks).toBe(2);
+      expect((await backend.cycles.get())?.extraDays).toBe(0);
     });
   });
 
@@ -76,8 +74,8 @@ describe('ProgramScreen', () => {
     const { user } = setup();
     await seedRow();
     await user.click(screen.getByRole('tab', { name: /^B/ }));
-    expect(screen.queryByRole('radiogroup', { name: /Durée/ })).toBeNull();
-    expect(screen.getByText(/Seul le cycle en cours peut être prolongé/)).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: /Durée/ })).toBeNull();
+    expect(screen.getByText(/Le report et la durée se règlent depuis le cycle en cours/)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Aucune séance dans le cycle B' })).toBeInTheDocument();
     await user.keyboard('{ArrowLeft}');
     expect(screen.getByRole('tab', { name: /^A/ })).toHaveAttribute('aria-selected', 'true');
@@ -105,23 +103,6 @@ describe('ProgramScreen', () => {
     await user.click(row);
     expect(loadActiveWorkout()).toBeNull();
     expect(screen.getByRole('button', { name: 'Recharger les exercices' })).toBeInTheDocument();
-  });
-
-  it('demande confirmation pour revenir à 2 semaines en 3e semaine', async () => {
-    const backend = createMockBackend(localStorage);
-    await backend.cycles.save({ current: 'A', startedOn: daysAgo(15), weeks: 3 });
-    const { user } = setup(backend);
-    expect(await screen.findByText(/Revenir à 2 semaines fait basculer vers B maintenant/)).toBeInTheDocument();
-    await user.click(screen.getByRole('radio', { name: '2 sem.' }));
-    let dialog = screen.getByRole('alertdialog', { name: 'Revenir à 2 semaines ?' });
-    expect(within(dialog).getByText(/Revenir à 2 semaines fait basculer vers B maintenant/)).toBeInTheDocument();
-    await user.click(within(dialog).getByRole('button', { name: 'Annuler' }));
-    expect((await backend.cycles.get())?.weeks).toBe(3);
-    await user.click(screen.getByRole('radio', { name: '2 sem.' }));
-    dialog = screen.getByRole('alertdialog', { name: 'Revenir à 2 semaines ?' });
-    await user.click(within(dialog).getByRole('button', { name: 'Basculer vers B' }));
-    expect(await screen.findByRole('tab', { name: /B En cours/ })).toBeInTheDocument();
-    expect((await backend.cycles.get())?.weeks).toBe(2);
   });
 
   it('demande confirmation avant d’abandonner une autre séance en cours', async () => {
@@ -252,28 +233,24 @@ describe('ProgramScreen', () => {
     backend.cycles.save = () => Promise.reject(new Error('réseau'));
     const { user } = setup(backend);
     await seedRow();
-    await user.click(screen.getByRole('radio', { name: '3 sem.' }));
-    expect(await screen.findByText('La durée du cycle n’a pas pu être enregistrée. Réessaie.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Reporter le prochain cycle d’une semaine' }));
+    expect(await screen.findByText('Le cycle n’a pas pu être enregistré. Réessaie.')).toBeInTheDocument();
   });
 
   it('cycle en cours de chargement : squelette, durée désactivée, pas de cycle par défaut', async () => {
     const backend = createMockBackend(localStorage);
-    await backend.cycles.save({ current: 'B', startedOn: todayIso(), weeks: 3 });
+    await backend.cycles.save({ current: 'B', startedOn: todayIso(), lengthDays: 14, extraDays: 7 });
     let release: () => void = () => undefined;
     const get = backend.cycles.get.bind(backend.cycles);
     backend.cycles.get = () => new Promise((resolve) => { release = () => { resolve(get()); }; });
     setup(backend);
     expect(screen.getByText('Chargement du cycle…')).toBeInTheDocument();
-    for (const radio of screen.getAllByRole('radio')) {
-      expect(radio).toBeDisabled();
-      expect(radio).toHaveAttribute('aria-checked', 'false');
-    }
     expect(screen.queryByRole('tab', { name: /En cours/ })).toBeNull();
     expect(screen.queryByRole('button', { name: startName('Démarrer', `Cycle A : ${SEED}`) })).toBeNull();
     release();
     expect(await screen.findByRole('tab', { name: /B En cours/ })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('radio', { name: '3 sem.' })).toHaveAttribute('aria-checked', 'true');
-    expect(screen.getByRole('radio', { name: '3 sem.' })).toBeEnabled();
+    expect(screen.getByRole('combobox', { name: 'Durée des cycles' })).toHaveValue('14');
+    expect(screen.getByRole('button', { name: 'Annuler un report' })).toBeEnabled();
   });
 
   it('cycle illisible : erreur avec Réessayer, jamais le cycle par défaut', async () => {
@@ -283,7 +260,7 @@ describe('ProgramScreen', () => {
     backend.cycles.get = () => (fail ? Promise.reject(new Error('réseau')) : get());
     const { user } = setup(backend);
     expect(await screen.findByText(/Impossible de charger ton cycle A\/B/)).toBeInTheDocument();
-    expect(screen.queryByRole('radiogroup', { name: /Durée/ })).toBeNull();
+    expect(screen.queryByRole('combobox', { name: /Durée/ })).toBeNull();
     expect(screen.queryByRole('tab', { name: /En cours/ })).toBeNull();
     expect(screen.queryByRole('button', { name: startName('Démarrer', `Cycle A : ${SEED}`) })).toBeNull();
     fail = false;

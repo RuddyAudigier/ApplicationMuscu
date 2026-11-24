@@ -119,7 +119,10 @@ create table cycle_state (
   id         int primary key default 1 check (id = 1),
   current    text not null check (current in ('A','B')),
   started_on date not null,
-  weeks      int not null check (weeks in (2,3)),
+  weeks      int not null,
+  -- Durée générale d'un bloc (jours) et report du bloc en cours (jours).
+  length_days int not null default 14 check (length_days between 7 and 28),
+  extra_days  int not null default 0 check (extra_days >= 0),
   updated_at timestamptz default now()
 );
 
@@ -186,7 +189,7 @@ insert into week_plan (id) values (1);
 insert into journal (id) values (1);
 
 -- Cycle en cours : A, démarré aujourd'hui, 2 semaines (modifiable dans Réglages).
-insert into cycle_state (id, current, started_on, weeks) values (1, 'A', current_date, 2);
+insert into cycle_state (id, current, started_on, weeks, length_days, extra_days) values (1, 'A', current_date, 2, 14, 0);
 
 -- Exercices et muscles (noms du catalogue de l'app).
 create temp table _ex (name text, muscles text[]) on commit drop;

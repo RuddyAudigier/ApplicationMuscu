@@ -1,4 +1,4 @@
-import { cycleStatus, extendCycle } from '@/domain/cycles';
+import { cycleStatus, daysForWeeks, nextBlockStart, postponedDays, weeksForDays } from '@/domain/cycles';
 import type { CycleId, CycleState, Id, IsoDate, Performance, Session } from '@/domain/model';
 import { normalizeSearch } from '@/domain/names';
 
@@ -19,18 +19,6 @@ export { sessionCode, sessionsOfCycle } from '@/domain/sessions';
 export function isDuplicateName(sessions: Session[], name: string, cycle: CycleId | null, selfId: Id | null): boolean {
   const key = normalizeSearch(name);
   return sessions.some((s) => s.id !== selfId && s.cycle === cycle && normalizeSearch(s.name) === key);
-}
-
-/** Revenir à 2 semaines alors que le bloc prolongé est en 3e semaine fait basculer tout de suite. */
-export function revertSwitchesNow(state: CycleState, today: IsoDate): boolean {
-  const status = cycleStatus(state, today);
-  return status.weeks === 3 && status.week === 3;
-}
-
-/** Durée du bloc en cours : 3 semaines = prolongé, 2 = standard (même date de début). */
-export function withCycleWeeks(state: CycleState, today: IsoDate, weeks: 2 | 3): CycleState {
-  const extended = extendCycle(state, today);
-  return weeks === 3 ? extended : { ...extended, weeks: 2 };
 }
 
 const DAY_MS = 86_400_000;
@@ -65,22 +53,34 @@ export function tabCaption(state: CycleState, today: IsoDate, cycle: CycleId): s
   return status.current === cycle ? 'En cours' : `dans ${String(status.daysLeft)} j`;
 }
 
-/** Texte d'aide sous le réglage de durée (maquette Seances). */
-export function durationHint(state: CycleState, today: IsoDate): string {
+/** Durées proposées : 1 à 4 semaines par pas de 0,5 (en jours : 7, 11, 14, 18, 21, 25, 28). */
+export const LENGTH_OPTIONS = [1, 1.5, 2, 2.5, 3, 3.5, 4].map((w) => ({
+  value: String(daysForWeeks(w)),
+  label: `${String(w).replace('.', ',')} semaine${w > 1 ? 's' : ''}`,
+}));
+
+const plural = (n: number, word: string): string => `${String(n)} ${word}${n > 1 ? 's' : ''}`;
+
+/** « 2 semaines », « 1,5 semaine » : durée d'un bloc en jours, au demi-semaine près. */
+function lengthLabel(days: number): string {
+  const w = Math.round(days / 3.5) / 2;
+  return `${String(w).replace('.', ',')} semaine${w > 1 ? 's' : ''}`;
+}
+
+/** « Prochain cycle B le jeudi 12 déc. » (+ « · reporté de N semaine(s) »). */
+export function nextCycleLine(state: CycleState, today: IsoDate): string {
   const status = cycleStatus(state, today);
-  const days = status.daysLeft === 1 ? '1 jour' : `${String(status.daysLeft)} jours`;
-  if (status.weeks === 3 && status.week === 3) {
-    return `Dernière semaine du cycle ${status.current} prolongé : ${status.next} commence dans ${days}. Revenir à 2 semaines fait basculer vers ${status.next} maintenant.`;
-  }
-  if (status.weeks === 3) {
-    return `Semaine manquée : ${status.current} est prolongé d’une semaine. ${status.next} commence dans ${days}, puis l’alternance reprend à 2 semaines.`;
-  }
-  return `Mêmes muscles que ${status.next}, autres mouvements. Une semaine manquée ? Passe à 3 semaines, la bascule vers ${status.next} sera décalée.`;
+  const [y = 0, m = 1, d = 1] = nextBlockStart(state, today).split('-').map(Number);
+  const date = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' })
+    .format(new Date(y, m - 1, d));
+  const extra = postponedDays(state, today);
+  const postponed = extra > 0 ? ` · reporté de ${plural(weeksForDays(extra), 'semaine')}` : '';
+  return `Prochain cycle ${status.next} le ${date}${postponed}`;
 }
 
 /** Aide quand l'onglet affiché n'est pas le cycle en cours. */
 export function upcomingHint(state: CycleState, today: IsoDate, cycle: CycleId): string {
   const status = cycleStatus(state, today);
   const days = status.daysLeft === 1 ? '1 jour' : `${String(status.daysLeft)} jours`;
-  return `${cycle} commence dans ${days}, pour 2 semaines. Seul le cycle en cours peut être prolongé.`;
+  return `${cycle} commence dans ${days}, pour ${lengthLabel(state.lengthDays)}. Le report et la durée se règlent depuis le cycle en cours.`;
 }

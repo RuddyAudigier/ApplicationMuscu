@@ -69,7 +69,7 @@ describe('HomeScreen', () => {
   });
 
   it('affiche la marque, les réglages et le cycle en cours', async () => {
-    renderHome(backendWith({ cycle: { current: 'A', startedOn: '2026-11-16', weeks: 2 } }));
+    renderHome(backendWith({ cycle: { current: 'A', startedOn: '2026-11-16', lengthDays: 14, extraDays: 0 } }));
     expect(screen.getByRole('heading', { level: 1, name: 'Accueil' })).toBeInTheDocument();
     expect(screen.getByText('mymuscle')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Réglages' })).toHaveAttribute('href', '/settings');
@@ -88,7 +88,7 @@ describe('HomeScreen', () => {
   });
 
   it('prolongé à 3 semaines : 3 segments en cours et un jour au singulier', async () => {
-    renderHome(backendWith({ cycle: { current: 'B', startedOn: '2026-11-06', weeks: 3 } }));
+    renderHome(backendWith({ cycle: { current: 'B', startedOn: '2026-11-06', lengthDays: 14, extraDays: 7 } }));
     expect(await screen.findByText('Semaine 3 sur 3')).toBeInTheDocument();
     expect(screen.getByText('dans 1 jour')).toBeInTheDocument();
   });
@@ -166,7 +166,7 @@ describe('HomeScreen', () => {
     const backend = backendWith({ sessions: [A1] });
     const get = vi.fn<DataBackend['cycles']['get']>()
       .mockRejectedValueOnce(new Error('réseau'))
-      .mockResolvedValue({ current: 'B', startedOn: '2026-11-23', weeks: 2 });
+      .mockResolvedValue({ current: 'B', startedOn: '2026-11-23', lengthDays: 14, extraDays: 0 });
     backend.cycles.get = get;
     const user = userEvent.setup({ advanceTimers: () => undefined });
     renderHome(backend);

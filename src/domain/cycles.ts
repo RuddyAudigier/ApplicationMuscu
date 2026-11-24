@@ -1,7 +1,6 @@
 import type { CycleId, CycleState, IsoDate } from './model';
 
 const DAY_MS = 86_400_000;
-const STANDARD_WEEKS = 2;
 
 /** Jours calendaires (UTC des composantes : insensible aux changements d'heure). */
 const dayNumber = (iso: IsoDate): number => {
@@ -13,22 +12,43 @@ const fromDayNumber = (n: number): IsoDate => new Date(n * DAY_MS).toISOString()
 
 const other = (c: CycleId): CycleId => (c === 'A' ? 'B' : 'A');
 
-interface Block { cycle: CycleId; start: number; weeks: number }
+export const MIN_LENGTH_DAYS = 7;
+export const MAX_LENGTH_DAYS = 28;
+const STANDARD_DAYS = 14;
 
-/** Bloc qui contient `today` : avance de blocs de 2 semaines en alternant si la période est dépassée. */
+/** Jours d'une durée en semaines (demi-semaine arrondie au-dessus : 1,5 → 11, 2,5 → 18, 3,5 → 25). */
+export const daysForWeeks = (weeks: number): number => Math.ceil(weeks * 7);
+
+/** Nombre de semaines (entamées) d'un bloc de `days` jours. */
+export const weeksForDays = (days: number): number => Math.ceil(days / 7);
+
+interface Block { cycle: CycleId; start: number; days: number; extra: number }
+
+/** Bloc qui contient `today` : le bloc stocké (durée + report), puis des blocs de la durée générale en alternant. */
 function resolveBlock(state: CycleState, today: IsoDate): Block & { day: number } {
   const now = dayNumber(today);
-  let block: Block = { cycle: state.current, start: dayNumber(state.startedOn), weeks: state.weeks };
-  while (now - block.start >= block.weeks * 7) {
-    block = { cycle: other(block.cycle), start: block.start + block.weeks * 7, weeks: STANDARD_WEEKS };
+  let block: Block = {
+    cycle: state.current,
+    start: dayNumber(state.startedOn),
+    days: state.lengthDays + state.extraDays,
+    extra: state.extraDays,
+  };
+  while (now - block.start >= block.days) {
+    block = { cycle: other(block.cycle), start: block.start + block.days, days: state.lengthDays, extra: 0 };
   }
   return { ...block, day: now - block.start };
 }
 
+const toState = (b: Block, lengthDays: number): CycleState => ({
+  current: b.cycle,
+  startedOn: fromDayNumber(b.start),
+  lengthDays,
+  extraDays: b.extra,
+});
+
 /** Bloc réel contenant `today` (un état stocké périmé est résolu), au format `CycleState`. */
 export function currentBlock(state: CycleState, today: IsoDate): CycleState {
-  const b = resolveBlock(state, today);
-  return { current: b.cycle, startedOn: fromDayNumber(b.start), weeks: b.weeks === 3 ? 3 : 2 };
+  return toState(resolveBlock(state, today), state.lengthDays);
 }
 
 export function cycleStatus(
@@ -39,33 +59,67 @@ export function cycleStatus(
   return {
     current: b.cycle,
     week: Math.max(1, Math.floor(b.day / 7) + 1),
-    weeks: b.weeks,
-    daysLeft: b.weeks * 7 - b.day,
+    weeks: weeksForDays(b.days),
+    daysLeft: b.days - b.day,
     next: other(b.cycle),
   };
 }
 
+/** Date de début du prochain bloc (lendemain du dernier jour du bloc en cours). */
+export function nextBlockStart(state: CycleState, today: IsoDate): IsoDate {
+  const b = resolveBlock(state, today);
+  return fromDayNumber(b.start + b.days);
+}
+
+/** Jours de report du bloc en cours à `today`. */
+export function postponedDays(state: CycleState, today: IsoDate): number {
+  return resolveBlock(state, today).extra;
+}
+
 /**
- * Cycle actif le jour `day`, passé compris : avant `startedOn`, on remonte par blocs standard
- * de 2 semaines en alternant (même hypothèse que la frise).
+ * Cycle actif le jour `day`, passé compris : avant `startedOn`, on remonte par blocs de la durée
+ * générale en alternant (même hypothèse que la frise).
  */
 export function cycleOn(state: CycleState, day: IsoDate): CycleId {
   const back = dayNumber(state.startedOn) - dayNumber(day);
   if (back <= 0) return resolveBlock(state, day).cycle;
-  const blocks = Math.ceil(back / (STANDARD_WEEKS * 7));
+  const blocks = Math.ceil(back / state.lengthDays);
   return blocks % 2 === 1 ? other(state.current) : state.current;
 }
 
-/** Prolonge à 3 semaines le bloc en cours à `today` (résolu, pas le bloc stocké périmé). */
-export function extendCycle(state: CycleState, today: IsoDate): CycleState {
+/** Reporte le prochain cycle d'une semaine : +7 jours sur le bloc en cours à `today` (sans limite). */
+export function postponeCycle(state: CycleState, today: IsoDate): CycleState {
   const b = resolveBlock(state, today);
-  return { current: b.cycle, startedOn: fromDayNumber(b.start), weeks: 3 };
+  return toState({ ...b, extra: b.extra + 7 }, state.lengthDays);
 }
 
-/** Passe manuellement à l'autre cycle à partir d'aujourd'hui, pour 2 semaines. */
+/** Un report peut être annulé s'il en reste un et que le bloc ne finirait pas avant aujourd'hui. */
+export function canCancelPostpone(state: CycleState, today: IsoDate): boolean {
+  const b = resolveBlock(state, today);
+  return b.extra >= 7 && b.days - 7 > b.day;
+}
+
+/** Annule un report (−7 jours) si possible ; sinon renvoie le bloc en cours inchangé. */
+export function cancelPostpone(state: CycleState, today: IsoDate): CycleState {
+  const b = resolveBlock(state, today);
+  if (!canCancelPostpone(state, today)) return toState(b, state.lengthDays);
+  return toState({ ...b, extra: b.extra - 7 }, state.lengthDays);
+}
+
+/**
+ * Change la durée générale. Le bloc en cours devient durée + report, sans finir avant aujourd'hui :
+ * le cycle du jour ne recule jamais (le surplus éventuel est ajouté au report).
+ */
+export function setCycleLength(state: CycleState, today: IsoDate, lengthDays: number): CycleState {
+  const b = resolveBlock(state, today);
+  const minExtra = Math.max(0, b.day + 1 - lengthDays);
+  return toState({ ...b, extra: Math.max(b.extra, minExtra) }, lengthDays);
+}
+
+/** Passe manuellement à l'autre cycle à partir d'aujourd'hui, pour la durée générale. */
 export function switchCycle(state: CycleState, today: IsoDate): CycleState {
   const { current } = cycleStatus(state, today);
-  return { current: other(current), startedOn: fromDayNumber(dayNumber(today)), weeks: STANDARD_WEEKS };
+  return { current: other(current), startedOn: fromDayNumber(dayNumber(today)), lengthDays: state.lengthDays, extraDays: 0 };
 }
 
 interface TimelineBlock { cycle: CycleId; status: 'past' | 'current' | 'future'; progress: number }
@@ -79,7 +133,7 @@ export function timeline(state: CycleState, today: IsoDate, blocks = 6): Timelin
   for (let i = pastCount; i >= 1; i -= 1) {
     out.push({ cycle: i % 2 === 0 ? b.cycle : other(b.cycle), status: 'past', progress: 1 });
   }
-  out.push({ cycle: b.cycle, status: 'current', progress: Math.max(0, b.day) / (b.weeks * 7) });
+  out.push({ cycle: b.cycle, status: 'current', progress: Math.max(0, b.day) / b.days });
   for (let i = 1; i <= futureCount; i += 1) {
     out.push({ cycle: i % 2 === 0 ? b.cycle : other(b.cycle), status: 'future', progress: 0 });
   }
@@ -90,5 +144,6 @@ export function timeline(state: CycleState, today: IsoDate, blocks = 6): Timelin
 export const defaultCycleState = (today: IsoDate): CycleState => ({
   current: 'A',
   startedOn: today,
-  weeks: STANDARD_WEEKS,
+  lengthDays: STANDARD_DAYS,
+  extraDays: 0,
 });

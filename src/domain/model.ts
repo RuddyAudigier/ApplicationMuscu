@@ -10,7 +10,11 @@ export interface Exercise {
 export interface ExerciseDraft { name: string; description: string; muscleGroups: string[]; variants: Variant[] }
 
 export type CycleId = 'A' | 'B';
-export interface CycleState { current: CycleId; startedOn: IsoDate; weeks: 2 | 3 }
+/**
+ * `lengthDays` : durée générale d'un bloc ; `extraDays` : jours de report ajoutés au seul bloc en cours
+ * (bloc en cours = lengthDays + extraDays).
+ */
+export interface CycleState { current: CycleId; startedOn: IsoDate; lengthDays: number; extraDays: number }
 
 /**
  * Semaine type, une par cycle : `days.A[0]` = lundi … `days.A[6]` = dimanche pendant les semaines A ;

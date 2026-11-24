@@ -373,7 +373,7 @@ describe('server rejections carry the HTTP status (offline-queue triage)', () =>
   it('advice, coach notes, cycles, exercises and sessions forward the status', async () => {
     const b = createSupabaseBackend(fakeSupabase(() => denied).client, new MemoryStorage());
     const calls: Promise<unknown>[] = [
-      b.advice.get(), b.coachNotes.listAll(), b.cycles.get(), b.cycles.save({ current: 'A', startedOn: '2026-11-24', weeks: 2 }),
+      b.advice.get(), b.coachNotes.listAll(), b.cycles.get(), b.cycles.save({ current: 'A', startedOn: '2026-11-24', lengthDays: 14, extraDays: 0 }),
       b.exercises.list(), b.sessions.list(),
     ];
     for (const call of calls) expect(status(await call.catch((e: unknown) => e))).toBe(403);

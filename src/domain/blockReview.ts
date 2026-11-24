@@ -8,22 +8,21 @@ import { latestPrs, type RecentPr } from './records';
 /** Bloc de cycle : `end` inclus. */
 export interface BlockRange { cycle: CycleId; start: IsoDate; end: IsoDate }
 
-const STANDARD_DAYS = 14;
 const other = (c: CycleId): CycleId => (c === 'A' ? 'B' : 'A');
 
 /**
  * Bloc en cours puis blocs précédents, `count` au total. Les blocs passés sont reconstitués en
- * reculant de 14 jours en alternant le cycle : l'historique des prolongations n'est pas stocké (approximation).
+ * reculant de la durée générale en alternant le cycle : l'historique des reports n'est pas stocké (approximation).
  */
 export function recentBlocks(state: CycleState, today: IsoDate, count = 6): BlockRange[] {
   const cur = currentBlock(state, today);
-  const out: BlockRange[] = [{ cycle: cur.current, start: cur.startedOn, end: addDays(cur.startedOn, cur.weeks * 7 - 1) }];
+  const out: BlockRange[] = [{ cycle: cur.current, start: cur.startedOn, end: addDays(cur.startedOn, cur.lengthDays + cur.extraDays - 1) }];
   let cycle = cur.current;
   let start = cur.startedOn;
   while (out.length < count) {
     cycle = other(cycle);
-    start = addDays(start, -STANDARD_DAYS);
-    out.push({ cycle, start, end: addDays(start, STANDARD_DAYS - 1) });
+    start = addDays(start, -cur.lengthDays);
+    out.push({ cycle, start, end: addDays(start, cur.lengthDays - 1) });
   }
   return out;
 }

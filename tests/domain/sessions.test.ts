@@ -27,7 +27,7 @@ describe('sessionsOfCycle / sessionCode', () => {
 });
 
 describe('cycleOn', () => {
-  const state: CycleState = { current: 'A', startedOn: '2026-11-16', weeks: 2 };
+  const state: CycleState = { current: 'A', startedOn: '2026-11-16', lengthDays: 14, extraDays: 0 };
   it('résout le bloc en cours et les blocs futurs', () => {
     expect(cycleOn(state, '2026-11-16')).toBe('A');
     expect(cycleOn(state, '2026-11-29')).toBe('A');
@@ -43,7 +43,7 @@ describe('cycleOn', () => {
 describe('sessionNameForDay', () => {
   const plan = {
     sessions: [session('1', 'Haut A', 'A'), session('2', 'Bas B', 'B')],
-    cycleState: { current: 'A', startedOn: '2026-11-16', weeks: 2 } as CycleState,
+    cycleState: { current: 'A', startedOn: '2026-11-16', lengthDays: 14, extraDays: 0 } as CycleState,
   };
   const p = (sessionName: string, performanceDate = '2026-11-20') => ({ sessionName, performanceDate });
 

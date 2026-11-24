@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { normalizeMuscleGroups } from '../../domain/muscles';
 import { toNumber } from '../../domain/numbers';
 import { normalizeVariants } from '../../domain/variants';
+import { cycleLengths } from '../shared/cycleState';
 import type { CycleState, Exercise, GeneralAdvice, Session, SessionExercise, Variant } from '../../domain/model';
 
 /* Lignes snake_case (validées par Zod) → modèle (INV §2.2). Performances : voir `../shared/rules`. */
@@ -93,7 +94,9 @@ export function mapAdviceRow(raw: unknown): GeneralAdvice | null {
 const cycleStateRow = z.object({
   current: z.enum(['A', 'B']),
   started_on: z.string().regex(/^\d{4}-\d{2}-\d{2}/),
-  weeks: z.union([z.literal(2), z.literal(3)]),
+  weeks: z.number().int().nullish(),
+  length_days: z.number().int().min(7).max(28).nullish(),
+  extra_days: z.number().int().min(0).nullish(),
 });
 
 /** `started_on` (type `date`) → `IsoDate` ; ligne invalide → `null`. */
@@ -101,5 +104,9 @@ export function mapCycleStateRow(raw: unknown): CycleState | null {
   const parsed = cycleStateRow.safeParse(raw);
   if (!parsed.success) return null;
   const r = parsed.data;
-  return { current: r.current, startedOn: r.started_on.slice(0, 10), weeks: r.weeks };
+  return {
+    current: r.current,
+    startedOn: r.started_on.slice(0, 10),
+    ...cycleLengths({ weeks: r.weeks, lengthDays: r.length_days, extraDays: r.extra_days }),
+  };
 }

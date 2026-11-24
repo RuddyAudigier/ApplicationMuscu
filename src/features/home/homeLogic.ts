@@ -1,4 +1,4 @@
-import { cycleStatus } from '@/domain/cycles';
+import { cycleStatus, weeksForDays } from '@/domain/cycles';
 import { parseDateToIso, todayIso } from '@/domain/dates';
 import type { CycleId, CycleState, IsoDate, Performance, Session } from '@/domain/model';
 import type { PrKind } from '@/domain/records';
@@ -6,7 +6,6 @@ import { sessionCode, sessionsOfCycle } from '@/domain/sessions';
 
 const DAY_MS = 86_400_000;
 /** Durée supposée des blocs passés / futurs (la prolongation ne concerne que le bloc en cours). */
-const STANDARD_WEEKS = 2;
 
 const localDate = (iso: IsoDate): Date => {
   const [y = 0, m = 1, d = 1] = iso.split('-').map(Number);
@@ -56,7 +55,7 @@ export interface WeekSegment {
 
 /**
  * Frise semaine par semaine, à partir de la semaine en cours (surlignée) : semaines restantes du
- * bloc en cours, puis les blocs suivants (2 semaines, en alternant), `total` segments en tout.
+ * bloc en cours, puis les blocs suivants (durée générale, en alternant), `total` segments en tout.
  */
 export function weekSegments(state: CycleState, today: IsoDate, total = 6): WeekSegment[] {
   const status = cycleStatus(state, today);
@@ -64,9 +63,10 @@ export function weekSegments(state: CycleState, today: IsoDate, total = 6): Week
   for (let i = status.week; i < status.weeks && out.length < total; i += 1) {
     out.push({ cycle: status.current, status: 'future', fill: 0 });
   }
+  const nextWeeks = weeksForDays(state.lengthDays);
   let cycle = status.next;
   while (out.length < total) {
-    for (let i = 0; i < STANDARD_WEEKS && out.length < total; i += 1) out.push({ cycle, status: 'future', fill: 0 });
+    for (let i = 0; i < nextWeeks && out.length < total; i += 1) out.push({ cycle, status: 'future', fill: 0 });
     cycle = cycle === 'A' ? 'B' : 'A';
   }
   return out;

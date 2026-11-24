@@ -1,19 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { CycleState, Performance, Session } from '@/domain/model';
 import {
-  durationHint,
   isDuplicateName,
   lastDoneLabel,
   lastDoneOn,
-  revertSwitchesNow,
   seriesLabel,
   sessionsOfCycle,
   tabCaption,
   upcomingHint,
-  withCycleWeeks,
 } from '@/features/program/programModel';
 
-const state: CycleState = { current: 'A', startedOn: '2026-11-20', weeks: 2 };
+const state: CycleState = { current: 'A', startedOn: '2026-11-20', lengthDays: 14, extraDays: 0 };
 const today = '2026-11-23';
 
 const session = (id: string, cycle: Session['cycle'], createdAt: string): Session => ({
@@ -46,18 +43,6 @@ describe('programModel', () => {
     expect(isDuplicateName([{ ...session('3', 'A', '2026-01'), name: 'Épaules' }], 'epaules', 'A', null)).toBe(true);
   });
 
-  it('revertSwitchesNow seulement en 3e semaine d’un bloc prolongé', () => {
-    expect(revertSwitchesNow({ current: 'A', startedOn: '2026-11-09', weeks: 3 }, today)).toBe(true);
-    expect(revertSwitchesNow({ current: 'A', startedOn: '2026-11-16', weeks: 3 }, today)).toBe(false);
-    expect(revertSwitchesNow(state, today)).toBe(false);
-  });
-
-  it('withCycleWeeks prolonge puis revient au standard', () => {
-    const extended = withCycleWeeks(state, today, 3);
-    expect(extended).toEqual({ current: 'A', startedOn: '2026-11-20', weeks: 3 });
-    expect(withCycleWeeks(extended, today, 2)).toEqual(state);
-  });
-
   it('lastDoneOn / lastDoneLabel', () => {
     const perfs = [
       { sessionName: 'S', performanceDate: '2026-11-20' },
@@ -77,19 +62,8 @@ describe('programModel', () => {
     expect(tabCaption(state, today, 'B')).toBe('dans 11 j');
   });
 
-  it('durationHint selon la durée', () => {
-    expect(durationHint(state, today)).toContain('Mêmes muscles que B');
-    expect(durationHint({ ...state, weeks: 3 }, today)).toBe(
-      'Semaine manquée : A est prolongé d’une semaine. B commence dans 18 jours, puis l’alternance reprend à 2 semaines.',
-    );
-    expect(durationHint({ current: 'A', startedOn: '2026-11-03', weeks: 3 }, today)).toContain('dans 1 jour.');
-    expect(durationHint({ current: 'A', startedOn: '2026-11-09', weeks: 3 }, today)).toBe(
-      'Dernière semaine du cycle A prolongé : B commence dans 7 jours. Revenir à 2 semaines fait basculer vers B maintenant.',
-    );
-  });
-
   it('upcomingHint pour l’autre cycle', () => {
-    expect(upcomingHint(state, today, 'B')).toBe('B commence dans 11 jours, pour 2 semaines. Seul le cycle en cours peut être prolongé.');
-    expect(upcomingHint({ current: 'A', startedOn: '2026-11-10', weeks: 2 }, today, 'B')).toContain('dans 1 jour,');
+    expect(upcomingHint(state, today, 'B')).toBe('B commence dans 11 jours, pour 2 semaines. Le report et la durée se règlent depuis le cycle en cours.');
+    expect(upcomingHint({ current: 'A', startedOn: '2026-11-10', lengthDays: 14, extraDays: 0 }, today, 'B')).toContain('dans 1 jour,');
   });
 });

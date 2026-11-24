@@ -60,21 +60,21 @@ describe('nextPlannedSession', () => {
 
 describe('weekSegments', () => {
   it('part de la semaine en cours : 1re semaine de A → A A B B A A', () => {
-    const segs = weekSegments({ current: 'A', startedOn: '2026-11-23', weeks: 2 }, '2026-11-26');
+    const segs = weekSegments({ current: 'A', startedOn: '2026-11-23', lengthDays: 14, extraDays: 0 }, '2026-11-26');
     expect(segs.map((s) => `${s.cycle}:${s.status}`)).toEqual([
       'A:current', 'A:future', 'B:future', 'B:future', 'A:future', 'A:future',
     ]);
   });
 
   it('2e semaine de A → un seul A, surligné', () => {
-    const segs = weekSegments({ current: 'A', startedOn: '2026-11-16', weeks: 2 }, '2026-11-26');
+    const segs = weekSegments({ current: 'A', startedOn: '2026-11-16', lengthDays: 14, extraDays: 0 }, '2026-11-26');
     expect(segs.map((s) => `${s.cycle}:${s.status}`)).toEqual([
       'A:current', 'B:future', 'B:future', 'A:future', 'A:future', 'B:future',
     ]);
   });
 
   it('cycle prolongé à 3 semaines : 3 A en 1re semaine', () => {
-    const segs = weekSegments({ current: 'B', startedOn: '2026-11-23', weeks: 3 }, '2026-11-23');
+    const segs = weekSegments({ current: 'B', startedOn: '2026-11-23', lengthDays: 14, extraDays: 7 }, '2026-11-23');
     expect(segs.filter((s) => s.cycle === 'B').slice(0, 3).map((s) => s.status)).toEqual(['current', 'future', 'future']);
   });
 });

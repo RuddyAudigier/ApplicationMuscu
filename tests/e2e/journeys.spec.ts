@@ -68,16 +68,15 @@ test('2. PR hors séance daté d’hier : visible dans le tableau Records', asyn
 
 test('3. cycle prolongé à 3 semaines : bascule annoncée dans 11 jours', async ({ freshPage: page }) => {
   // Horloge figée au 24/11/2026 (fixture) ; cycle A commencé il y a 10 jours (2 semaines) : bascule dans 4 jours.
-  await seedMockDb(page, { cycleState: { current: 'A', startedOn: '2026-11-14', weeks: 2 } });
+  await seedMockDb(page, { cycleState: { current: 'A', startedOn: '2026-11-14', lengthDays: 14, extraDays: 0 } });
   const cycle = page.getByRole('region', { name: 'Cycle en cours' });
   await expect(cycle).toContainText('Bascule vers B');
   await expect(cycle).toContainText('dans 4 jours');
 
   await page.getByRole('link', { name: 'Programme' }).click();
   await expect(page.getByRole('heading', { name: 'Programme', level: 1 })).toBeVisible();
-  const weeks = page.getByRole('radiogroup', { name: 'Durée du cycle A' });
-  await weeks.getByRole('radio', { name: '3 sem.' }).click();
-  await expect(weeks.getByRole('radio', { name: '3 sem.' })).toHaveAttribute('aria-checked', 'true');
+  await page.getByRole('button', { name: 'Reporter le prochain cycle d’une semaine' }).click();
+  await expect(page.getByText(/reporté de 1 semaine/)).toBeVisible();
 
   await page.getByRole('link', { name: 'Accueil' }).click();
   await expect(cycle).toContainText('Semaine 2 sur 3');

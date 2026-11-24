@@ -69,14 +69,14 @@ describe('SettingsScreen', () => {
     fireEvent.change(screen.getByLabelText('Début du cycle'), { target: { value: daysAgo(3) } });
     await user.click(screen.getByRole('button', { name: 'Enregistrer le cycle' }));
     await waitFor(async () => {
-      expect(await backend.cycles.get()).toEqual({ current: 'B', startedOn: daysAgo(3), weeks: 2 });
+      expect(await backend.cycles.get()).toEqual({ current: 'B', startedOn: daysAgo(3), lengthDays: 14, extraDays: 0 });
     });
     expect(await screen.findByText('Cycle enregistré.')).toBeInTheDocument();
   });
 
   it('conserve la durée prolongée et refuse une date vide ou future', async () => {
     const backend = createMockBackend(localStorage);
-    await backend.cycles.save({ current: 'A', startedOn: daysAgo(5), weeks: 3 });
+    await backend.cycles.save({ current: 'A', startedOn: daysAgo(5), lengthDays: 14, extraDays: 7 });
     const { user } = setup(backend);
     const date = await screen.findByLabelText('Début du cycle');
     expect(date).toHaveValue(daysAgo(5));
@@ -90,21 +90,21 @@ describe('SettingsScreen', () => {
     fireEvent.change(date, { target: { value: daysAgo(1) } });
     await submit();
     await waitFor(async () => {
-      expect(await backend.cycles.get()).toEqual({ current: 'A', startedOn: daysAgo(1), weeks: 3 });
+      expect(await backend.cycles.get()).toEqual({ current: 'A', startedOn: daysAgo(1), lengthDays: 14, extraDays: 7 });
     });
     expect(screen.queryByText('La date de début ne peut pas être dans le futur.')).toBeNull();
   });
 
   it('état périmé : préremplit le bloc qui contient aujourd’hui et l’enregistre tel quel', async () => {
     const backend = createMockBackend(localStorage);
-    await backend.cycles.save({ current: 'A', startedOn: daysAgo(20), weeks: 2 });
+    await backend.cycles.save({ current: 'A', startedOn: daysAgo(20), lengthDays: 14, extraDays: 0 });
     const { user } = setup(backend);
     const cycle = await screen.findByRole('radiogroup', { name: 'Cycle courant' });
     expect(within(cycle).getByRole('radio', { name: 'Cycle B' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByLabelText('Début du cycle')).toHaveValue(daysAgo(6));
     await user.click(screen.getByRole('button', { name: 'Enregistrer le cycle' }));
     await waitFor(async () => {
-      expect(await backend.cycles.get()).toEqual({ current: 'B', startedOn: daysAgo(6), weeks: 2 });
+      expect(await backend.cycles.get()).toEqual({ current: 'B', startedOn: daysAgo(6), lengthDays: 14, extraDays: 0 });
     });
   });
 

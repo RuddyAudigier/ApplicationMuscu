@@ -75,8 +75,8 @@ describe('queries', () => {
     const { wrapper, invalidated } = setup();
     const { result } = renderHook(() => ({ c: useCycleState(), save: useSaveCycleState() }), { wrapper });
     await waitFor(() => { expect(result.current.c.isSuccess).toBe(true); });
-    await act(() => result.current.save.mutateAsync({ current: 'B', startedOn: '2026-11-16', weeks: 3 }));
-    await waitFor(() => { expect(result.current.c.data).toEqual({ current: 'B', startedOn: '2026-11-16', weeks: 3 }); });
+    await act(() => result.current.save.mutateAsync({ current: 'B', startedOn: '2026-11-16', lengthDays: 14, extraDays: 7 }));
+    await waitFor(() => { expect(result.current.c.data).toEqual({ current: 'B', startedOn: '2026-11-16', lengthDays: 14, extraDays: 7 }); });
     expect(invalidated()).toContain('cycleState');
   });
 });
@@ -216,7 +216,7 @@ describe('non-performance mutations while the browser is offline (no silent paus
     ['delete exercise', (h) => h.deleteEx.mutateAsync('e1')],
     ['save session', (h) => h.saveSession.mutateAsync({ draft: { name: 'S', cycle: null, exercises: [] } })],
     ['delete session', (h) => h.deleteSession.mutateAsync('s1')],
-    ['save cycle', (h) => h.saveCycle.mutateAsync({ current: 'A', startedOn: '2026-11-01', weeks: 2 } as never)],
+    ['save cycle', (h) => h.saveCycle.mutateAsync({ current: 'A', startedOn: '2026-11-01', lengthDays: 14, extraDays: 0 } as never)],
     ['save advice', (h) => h.saveAdvice.mutateAsync({ training: '', nutrition: '', sleep: '' })],
     ['save coach notes', (h) => h.saveNotes.mutateAsync({ exerciseId: 'e1', notes: 'n' })],
   ])('%s rejects at once with a NetworkError', async (_label, run) => {

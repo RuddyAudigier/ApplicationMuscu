@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { CycleId, CycleState, Id } from '../../domain/model';
+import { cycleLengths, storedCycleFields } from '../shared/cycleState';
 import { appendToArchive } from '../shared/storage';
 
 /** Repli local tant que `scripts/sql/2026-11-23_cycles.sql` n'est pas joué (Task 21). */
@@ -12,7 +13,7 @@ const cycleId = z.enum(['A', 'B']);
 const stateSchema = z.object({
   current: cycleId,
   startedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  weeks: z.union([z.literal(2), z.literal(3)]),
+  ...storedCycleFields,
 });
 const fileSchema = z.object({
   sessions: z.record(z.string(), z.unknown()).catch({}),
@@ -47,7 +48,11 @@ function parse(raw: string | null): FallbackFile | null {
     const c = cycleId.safeParse(value);
     if (c.success) sessions[id] = c.data;
   }
-  return { sessions, state: parsed.data.state };
+  const st = parsed.data.state;
+  return {
+    sessions,
+    state: st ? { current: st.current, startedOn: st.startedOn, ...cycleLengths(st) } : null,
+  };
 }
 
 export function createCycleFallback(storage: Storage): CycleFallback {
@@ -82,7 +87,7 @@ export function createCycleFallback(storage: Storage): CycleFallback {
       if (warned) return;
       warned = true;
       console.warn(
-        '[data] Migration cycles absente (scripts/sql/2026-11-23_cycles.sql non jouée) : '
+        '[data] Migration cycles absente (scripts/sql/2026-11-23_cycles.sql ou 2026-11-25_cycle_length.sql non jouée) : '
         + 'les cycles sont enregistrés sur cet appareil uniquement.',
       );
     },
@@ -100,7 +105,7 @@ export function createCycleFallback(storage: Storage): CycleFallback {
     state: () => read().state,
     setState(s) {
       write((f) => {
-        f.state = { current: s.current, startedOn: s.startedOn, weeks: s.weeks };
+        f.state = { current: s.current, startedOn: s.startedOn, lengthDays: s.lengthDays, extraDays: s.extraDays };
       });
     },
   };

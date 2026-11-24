@@ -1,9 +1,9 @@
 import { useId, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { useCycleState, useExercises, useJournal, usePerformances, useSaveCycleState, useSessions } from '@/data/queries';
-import { cycleStatus, defaultCycleState } from '@/domain/cycles';
+import { cancelPostpone, canCancelPostpone, cycleStatus, defaultCycleState, postponeCycle, setCycleLength } from '@/domain/cycles';
 import { todayIso } from '@/domain/dates';
-import type { CycleId, Session } from '@/domain/model';
+import type { CycleId, CycleState, Session } from '@/domain/model';
 import { warmupsForSession, type Form } from '@/domain/journal';
 import { startWorkout } from '@/domain/workout';
 import {
@@ -14,18 +14,17 @@ import {
   saveLastReport,
   usePendingReportSync,
 } from '@/features/workout';
-import { Button, ConfirmDialog, EmptyState, IconButton, Segmented, Skeleton, useToast } from '@/ui';
+import { Button, ConfirmDialog, EmptyState, Field, IconButton, Skeleton, useToast } from '@/ui';
 import {
-  durationHint,
+  LENGTH_OPTIONS,
   lastDoneLabel,
   lastDoneOn,
-  revertSwitchesNow,
+  nextCycleLine,
   seriesLabel,
   sessionCode,
   sessionsOfCycle,
   tabCaption,
   upcomingHint,
-  withCycleWeeks,
 } from './programModel';
 import styles from './ProgramScreen.module.css';
 import { SessionBuilder } from './SessionBuilder';
@@ -34,10 +33,6 @@ import { WeekPlanSection } from './WeekPlanSection';
 
 const CYCLES: CycleId[] = ['A', 'B'];
 const VISIBLE_EXERCISES = 3;
-const WEEK_OPTIONS = [
-  { value: '2', label: '2 sem.' },
-  { value: '3', label: '3 sem.' },
-];
 
 type BuilderState = { session: Session | null } | null;
 
@@ -62,30 +57,25 @@ export function ProgramScreen() {
   const cycleUnknown = tab === null && status === null;
   const [builder, setBuilder] = useState<BuilderState>(null);
   const [pendingStart, setPendingStart] = useState<Session | null>(null);
-  const [confirmRevert, setConfirmRevert] = useState(false);
 
   const sessions = sessionsQuery.data ?? [];
   const list = sessionsOfCycle(sessions, shownCycle);
   const unassigned = sessionsOfCycle(sessions, null);
   const active = loadActiveWorkout();
 
-  const saveWeeks = (weeks: 2 | 3) => {
-    if (!cycleState) return;
-    saveCycle.mutate(withCycleWeeks(cycleState, today, weeks), {
+  const saveState = (next: CycleState) => {
+    saveCycle.mutate(next, {
       onError: () => {
-        toast.show('La durée du cycle n’a pas pu être enregistrée. Réessaie.', 'error');
+        toast.show('Le cycle n’a pas pu être enregistré. Réessaie.', 'error');
       },
     });
   };
 
-  const setWeeks = (value: string) => {
-    const weeks = value === '3' ? 3 : 2;
-    if (!cycleState || !status || weeks === status.weeks) return;
-    if (weeks === 2 && revertSwitchesNow(cycleState, today)) {
-      setConfirmRevert(true);
-      return;
-    }
-    saveWeeks(weeks);
+  const setLength = (value: string) => {
+    if (!cycleState) return;
+    const days = Number(value);
+    if (days === cycleState.lengthDays) return;
+    saveState(setCycleLength(cycleState, today, days));
   };
 
   /** Démarrage seulement avec la bibliothèque chargée (variantes par défaut correctes). */
@@ -187,34 +177,40 @@ export function ProgramScreen() {
       </div>
     ) : (
       <div className={styles.loading} aria-busy="true">
-        <div className={styles.durationRow}>
-          <span className={styles.durationLabel}>Durée du cycle</span>
-          <Segmented
-            label="Durée du cycle"
-            options={WEEK_OPTIONS}
-            value=""
-            disabled
-            onChange={setWeeks}
-            className={styles.weeks}
-          />
-        </div>
         <span className="visually-hidden">Chargement du cycle…</span>
         <Skeleton height={18} />
       </div>
     )
   ) : isCurrentTab ? (
     <>
-      <div className={styles.durationRow}>
-        <span className={styles.durationLabel}>Durée du cycle {shownCycle}</span>
-        <Segmented
-          label={`Durée du cycle ${shownCycle}`}
-          options={WEEK_OPTIONS}
-          value={String(status.weeks)}
-          onChange={setWeeks}
-          className={styles.weeks}
-        />
+      <Field
+        as="select"
+        label="Durée des cycles"
+        value={String(cycleState.lengthDays)}
+        disabled={saveCycle.isPending}
+        onChange={(e) => { setLength(e.target.value); }}
+      >
+        {LENGTH_OPTIONS.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </Field>
+      <p className={styles.hint}>{nextCycleLine(cycleState, today)}</p>
+      <div className={styles.postpone}>
+        <Button
+          variant="secondary"
+          disabled={saveCycle.isPending}
+          onClick={() => { saveState(postponeCycle(cycleState, today)); }}
+        >
+          Reporter le prochain cycle d’une semaine
+        </Button>
+        <Button
+          variant="secondary"
+          disabled={saveCycle.isPending || !canCancelPostpone(cycleState, today)}
+          onClick={() => { saveState(cancelPostpone(cycleState, today)); }}
+        >
+          Annuler un report
+        </Button>
       </div>
-      <p className={styles.hint}>{durationHint(cycleState, today)}</p>
     </>
   ) : (
     <p className={styles.hint}>{upcomingHint(cycleState, today, shownCycle)}</p>
@@ -343,18 +339,6 @@ export function ProgramScreen() {
           if (session) setFormFor(session);
         }}
         onCancel={() => { setPendingStart(null); }}
-      />
-
-      <ConfirmDialog
-        open={confirmRevert}
-        title="Revenir à 2 semaines ?"
-        message={`Revenir à 2 semaines fait basculer vers ${status?.next ?? ''} maintenant : le cycle ${status?.current ?? ''} a déjà duré 2 semaines.`}
-        confirmLabel={`Basculer vers ${status?.next ?? ''}`}
-        onConfirm={() => {
-          setConfirmRevert(false);
-          saveWeeks(2);
-        }}
-        onCancel={() => { setConfirmRevert(false); }}
       />
     </div>
   );

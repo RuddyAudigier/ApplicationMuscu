@@ -74,7 +74,7 @@ describe('sessions cycle column (Supabase)', () => {
     // Une fois l'absence détectée, la colonne n'est plus demandée.
     const selects = calls.filter((c) => c.table === 'sessions' && has(c, 'select') && !has(c, 'insert'));
     expect(selects.filter((c) => /\bcycle\b/.test(selectOf(c)))).toHaveLength(0);
-    await b.cycles.save({ current: 'A', startedOn: '2026-11-23', weeks: 2 });
+    await b.cycles.save({ current: 'A', startedOn: '2026-11-23', lengthDays: 14, extraDays: 0 });
     expect(warn).toHaveBeenCalledTimes(1);
     expect(String(warn.mock.calls[0]?.[0])).toContain('2026-11-23_cycles.sql');
 
@@ -183,9 +183,9 @@ describe('cycles repo (Supabase)', () => {
     storage.setItem(FALLBACK_KEY, '{oops');
     storage.setItem(`${FALLBACK_KEY}_corrupt`, JSON.stringify(['{older']));
     const b = createSupabaseBackend(fakeSupabase(() => missingTable).client, storage);
-    await b.cycles.save({ current: 'B', startedOn: '2026-11-16', weeks: 2 });
+    await b.cycles.save({ current: 'B', startedOn: '2026-11-16', lengthDays: 14, extraDays: 0 });
     expect(JSON.parse(storage.getItem(`${FALLBACK_KEY}_corrupt`) ?? '[]')).toEqual(['{older', '{oops']);
-    expect(await b.cycles.get()).toEqual({ current: 'B', startedOn: '2026-11-16', weeks: 2 });
+    expect(await b.cycles.get()).toEqual({ current: 'B', startedOn: '2026-11-16', lengthDays: 14, extraDays: 0 });
   });
 
   it('refuses to overwrite an unreadable fallback file it cannot archive', async () => {
@@ -198,17 +198,17 @@ describe('cycles repo (Supabase)', () => {
       set(k, v);
     });
     const b = createSupabaseBackend(fakeSupabase(() => missingTable).client, storage);
-    await expect(b.cycles.save({ current: 'B', startedOn: '2026-11-16', weeks: 2 })).rejects.toThrow('full');
+    await expect(b.cycles.save({ current: 'B', startedOn: '2026-11-16', lengthDays: 14, extraDays: 0 })).rejects.toThrow('full');
     expect(storage.getItem(FALLBACK_KEY)).toBe('{oops');
   });
 
   it('get() maps the singleton row; save() upserts id 1', async () => {
     const { client, calls } = fakeSupabase((c) => (has(c, 'single') ? ok({ current: 'B', started_on: '2026-11-09', weeks: 3 }) : ok(null)));
     const b = createSupabaseBackend(client, new MemoryStorage());
-    expect(await b.cycles.get()).toEqual({ current: 'B', startedOn: '2026-11-09', weeks: 3 });
+    expect(await b.cycles.get()).toEqual({ current: 'B', startedOn: '2026-11-09', lengthDays: 14, extraDays: 7 });
     expect(calls[0]?.table).toBe('cycle_state');
     expect(op(calls[0] as FakeCall, 'eq')).toEqual(['id', 1]);
-    await b.cycles.save({ current: 'A', startedOn: '2026-11-23', weeks: 2 });
+    await b.cycles.save({ current: 'A', startedOn: '2026-11-23', lengthDays: 14, extraDays: 0 });
     const [rows, opts] = op(calls[1] as FakeCall, 'upsert') ?? [];
     expect((rows as Record<string, unknown>[])[0]).toMatchObject({ id: 1, current: 'A', started_on: '2026-11-23', weeks: 2 });
     expect(opts).toEqual({ onConflict: 'id' });
@@ -223,9 +223,9 @@ describe('cycles repo (Supabase)', () => {
 
   it('get() without a row returns a state saved locally before the migration', async () => {
     const storage = new MemoryStorage();
-    storage.setItem(FALLBACK_KEY, JSON.stringify({ sessions: {}, state: { current: 'B', startedOn: '2026-11-02', weeks: 2 } }));
+    storage.setItem(FALLBACK_KEY, JSON.stringify({ sessions: {}, state: { current: 'B', startedOn: '2026-11-02', lengthDays: 14, extraDays: 0 } }));
     const none = fakeSupabase(() => ({ data: null, error: { code: 'PGRST116', message: '0 rows' } }));
-    expect(await createSupabaseBackend(none.client, storage).cycles.get()).toEqual({ current: 'B', startedOn: '2026-11-02', weeks: 2 });
+    expect(await createSupabaseBackend(none.client, storage).cycles.get()).toEqual({ current: 'B', startedOn: '2026-11-02', lengthDays: 14, extraDays: 0 });
   });
 
   it.each([['PGRST205', missingTable], ['42P01', { data: null, error: { code: '42P01', message: 'relation "cycle_state" does not exist' } }]])(
@@ -236,9 +236,9 @@ describe('cycles repo (Supabase)', () => {
       const { client } = fakeSupabase(() => missing);
       const b = createSupabaseBackend(client, storage);
       expect(await b.cycles.get()).toBeNull();
-      await b.cycles.save({ current: 'B', startedOn: '2026-11-16', weeks: 3 });
-      expect(await b.cycles.get()).toEqual({ current: 'B', startedOn: '2026-11-16', weeks: 3 });
-      expect(stored(storage)).toMatchObject({ state: { current: 'B', startedOn: '2026-11-16', weeks: 3 } });
+      await b.cycles.save({ current: 'B', startedOn: '2026-11-16', lengthDays: 14, extraDays: 7 });
+      expect(await b.cycles.get()).toEqual({ current: 'B', startedOn: '2026-11-16', lengthDays: 14, extraDays: 7 });
+      expect(stored(storage)).toMatchObject({ state: { current: 'B', startedOn: '2026-11-16', lengthDays: 14, extraDays: 7 } });
       expect(warn).toHaveBeenCalledTimes(1);
     },
   );
@@ -247,7 +247,7 @@ describe('cycles repo (Supabase)', () => {
     const pg = fakeSupabase(() => ({ data: null, error: { code: '42501', message: 'permission denied' } }));
     const b = createSupabaseBackend(pg.client, new MemoryStorage());
     await expect(b.cycles.get()).rejects.toThrow('permission denied');
-    await expect(b.cycles.save({ current: 'A', startedOn: '2026-11-23', weeks: 2 })).rejects.toThrow('permission denied');
+    await expect(b.cycles.save({ current: 'A', startedOn: '2026-11-23', lengthDays: 14, extraDays: 0 })).rejects.toThrow('permission denied');
     const net = fakeSupabase(() => Promise.reject(new TypeError('Failed to fetch')));
     await expect(createSupabaseBackend(net.client, new MemoryStorage()).cycles.get()).rejects.toBeInstanceOf(NetworkError);
   });
@@ -259,11 +259,11 @@ describe('cycles repo (Supabase)', () => {
     vi.spyOn(storage, 'setItem').mockImplementation(() => { throw new Error('QuotaExceededError'); });
     const { client } = fakeSupabase(() => missingTable);
     const b = createSupabaseBackend(client, storage);
-    await expect(b.cycles.save({ current: 'A', startedOn: '2026-11-23', weeks: 2 })).rejects.toThrow('denied');
+    await expect(b.cycles.save({ current: 'A', startedOn: '2026-11-23', lengthDays: 14, extraDays: 0 })).rejects.toThrow('denied');
     expect(await b.cycles.get()).toBeNull();
     const full = new MemoryStorage();
     vi.spyOn(full, 'setItem').mockImplementation(() => { throw new Error('QuotaExceededError'); });
     const b2 = createSupabaseBackend(fakeSupabase(() => missingTable).client, full);
-    await expect(b2.cycles.save({ current: 'A', startedOn: '2026-11-23', weeks: 2 })).rejects.toThrow('QuotaExceededError');
+    await expect(b2.cycles.save({ current: 'A', startedOn: '2026-11-23', lengthDays: 14, extraDays: 0 })).rejects.toThrow('QuotaExceededError');
   });
 });

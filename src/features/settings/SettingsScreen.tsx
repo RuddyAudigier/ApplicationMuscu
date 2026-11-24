@@ -81,7 +81,7 @@ function CycleForm({ initial }: { initial: CycleState }) {
   return (
     <form className={styles.stack} onSubmit={submit} noValidate>
       <p className={styles.text}>
-        Corrige ici le cycle en cours si l’appli s’est trompée. La durée ({String(initial.weeks)} semaines) se règle dans
+        Corrige ici le cycle en cours si l’appli s’est trompée. La durée générale ({String(initial.lengthDays)} jours) se règle dans
         Programme.
       </p>
       <Segmented label="Cycle courant" options={CYCLE_OPTIONS} value={current} onChange={setCurrent} className={styles.segmented} />

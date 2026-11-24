@@ -246,12 +246,16 @@ npm run dev:mock   # mode démo : données locales, aucune base nécessaire
 Exécuter `scripts/sql/2026-11-23_cycles.sql` dans l’éditeur SQL de Supabase. Ce script est **additif et idempotent** : il peut être rejoué sans risque et ne modifie aucune donnée existante. Il ajoute :
 
 - `sessions.cycle` : cycle (A ou B) de la séance ;
-- la table `cycle_state` : cycle en cours, date de début, durée (2 ou 3 semaines) ;
+- la table `cycle_state` : cycle en cours, date de début, durée ;
 - `session_exercises.position` : ordre des exercices dans la séance.
 
 Tant que ce script n’est pas joué, l’application enregistre le cycle **dans le stockage local de l’appareil** (clé `mymuscle_cycles_v1`) : rien n’est synchronisé entre appareils.
 
 Si la RLS est activée sur `cycle_state`, ajouter des politiques de lecture, d’insertion et de mise à jour, sinon l’application recevra une erreur `42501`.
+
+### Migration de la durée des cycles
+
+Exécuter `scripts/sql/2026-11-25_cycle_length.sql` (additif, idempotent) : colonnes `cycle_state.length_days` (durée générale d’un cycle, 7 à 28 jours) et `extra_days` (report du cycle en cours), et la contrainte `weeks in (2,3)` est retirée. Les anciennes lignes sont converties (3 semaines → 14 jours + 7 jours de report). Sans elle, l’état du cycle est gardé sur l’appareil (clé `mymuscle_cycles_v1`). Le script `reset_complet.sql` l’inclut déjà.
 
 ### Migration du planning
 
