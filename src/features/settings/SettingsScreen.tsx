@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useId, useState, type ReactNode, type SyntheticEvent } from 'react';
+import { useEffect, useId, useState, type ReactNode, type SyntheticEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import {
   archiveCount,
@@ -18,6 +18,8 @@ import { compareIso, todayIso } from '@/domain/dates';
 import type { CycleId, CycleState } from '@/domain/model';
 import {
   loadReminderPrefs,
+  onAppResume,
+  reminderPermissionGranted,
   remindersAvailable,
   requestReminderPermission,
   saveReminderPrefs,
@@ -263,6 +265,15 @@ function ReminderSection() {
   const toast = useToast();
   const switchId = useId();
   const [prefs, setPrefs] = useState<ReminderPrefs>(() => loadReminderPrefs());
+  const [blocked, setBlocked] = useState(false);
+
+  useEffect(() => {
+    const check = () => {
+      reminderPermissionGranted().then((ok) => { setBlocked(!ok); }, () => { setBlocked(false); });
+    };
+    check();
+    return onAppResume(check);
+  }, [prefs.enabled]);
 
   const update = (next: ReminderPrefs) => {
     setPrefs(next);
@@ -304,6 +315,11 @@ function ReminderSection() {
             <span className={styles.knob} aria-hidden="true" />
           </button>
         </div>
+        {prefs.enabled && blocked && remindersAvailable() && (
+          <p className={styles.text} role="alert">
+            Notifications bloquées dans les paramètres Android : aucun rappel ne sera envoyé.
+          </p>
+        )}
         <Field
           label="Heure du rappel"
           type="time"

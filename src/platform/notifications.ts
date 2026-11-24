@@ -1,3 +1,4 @@
+import { App } from '@capacitor/app';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { useEffect, useRef } from 'react';
 import type { Reminder } from '../domain/reminders';
@@ -19,6 +20,7 @@ const SESSION_CHANNEL = 'seances';
 const SWITCH_CHANNEL = 'cycles';
 const SESSION_ACTION_TYPE = 'session';
 const START_ACTION = 'start';
+const GROUP = 'mymuscle';
 const SMALL_ICON = 'ic_stat_mymuscle';
 const ICON_COLOR = '#d4f53c';
 
@@ -57,6 +59,23 @@ export async function requestReminderPermission(): Promise<boolean> {
   if (current.display === 'granted') return true;
   const asked = await LocalNotifications.requestPermissions();
   return asked.display === 'granted';
+}
+
+/** Vrai si l'autorisation d'afficher des notifications est accordée (natif uniquement). */
+export async function reminderPermissionGranted(): Promise<boolean> {
+  if (!isNative()) return false;
+  return (await LocalNotifications.checkPermissions()).display === 'granted';
+}
+
+/** Appelle `cb` à chaque retour de l'appli au premier plan (natif uniquement). Retourne le désabonnement. */
+export function onAppResume(cb: () => void): () => void {
+  if (!isNative()) return () => undefined;
+  const handle = App.addListener('appStateChange', ({ isActive }) => {
+    if (isActive) cb();
+  });
+  return () => {
+    void handle.then((h) => h.remove());
+  };
 }
 
 let setupDone = false;
@@ -103,8 +122,19 @@ async function doSync(reminders: Reminder[], time: string): Promise<void> {
   if (notifications.length > 0) await LocalNotifications.cancel({ notifications });
 
   const permission = await LocalNotifications.checkPermissions();
-  if (permission.display !== 'granted' || reminders.length === 0) return;
+  if (permission.display !== 'granted') return;
 
+  // Retire du tiroir les rappels déjà affichés qui ne sont plus d'actualité (séance faite depuis).
+  try {
+    const keep = new Set(reminders.map((r) => r.id));
+    const { notifications: shown } = await LocalNotifications.getDeliveredNotifications();
+    const stale = shown.filter((n) => !keep.has(n.id));
+    if (stale.length > 0) await LocalNotifications.removeDeliveredNotifications({ notifications: stale });
+  } catch (e) {
+    console.warn('[rappels] Nettoyage des notifications affichées impossible :', e);
+  }
+
+  if (reminders.length === 0) return;
   await setup();
   await LocalNotifications.schedule({
     notifications: reminders.map((r) => ({
@@ -112,10 +142,10 @@ async function doSync(reminders: Reminder[], time: string): Promise<void> {
       title: r.title,
       body: r.body,
       largeBody: r.largeBody,
-      schedule: { at: fireDate(r.date, time), allowWhileIdle: true },
+      schedule: { at: fireDate(r.date, time), allowWhileIdle: true, isExactNotification: false },
       smallIcon: SMALL_ICON,
       iconColor: ICON_COLOR,
-      group: r.kind === 'session' ? SESSION_CHANNEL : SWITCH_CHANNEL,
+      group: GROUP,
       channelId: r.kind === 'session' ? SESSION_CHANNEL : SWITCH_CHANNEL,
       ...(r.kind === 'session' ? { actionTypeId: SESSION_ACTION_TYPE } : {}),
     })),

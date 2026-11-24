@@ -56,25 +56,37 @@ export function planReminders(input: {
     }
   }
 
-  const status = cycleStatus(cycleState, today);
-  const switchDate = addDays(today, status.daysLeft - 1);
-  if (inWindow(switchDate)) {
-    const from = currentBlock(cycleState, today).startedOn;
-    const done = new Set<string>();
-    for (const p of perfs) {
-      const d = parseDateToIso(p.performanceDate);
-      if (d !== null && d >= from && d <= today) done.add(`${d}|${p.sessionName}`);
+  // Une bascule par bloc dont la veille tombe dans la fenêtre (le bloc suivant démarre le lendemain).
+  let blockStart = currentBlock(cycleState, today).startedOn;
+  let probe = today;
+  for (let guard = 0; guard < 60; guard++) {
+    const status = cycleStatus(cycleState, probe);
+    const switchDate = addDays(probe, status.daysLeft - 1);
+    if (switchDate >= end) break;
+    if (inWindow(switchDate)) {
+      let body = `Bloc ${status.current} terminé`;
+      if (blockStart <= today) {
+        const last = switchDate < today ? switchDate : today;
+        const done = new Set<string>();
+        for (const p of perfs) {
+          const d = parseDateToIso(p.performanceDate);
+          if (d !== null && d >= blockStart && d <= last) done.add(`${d}|${p.sessionName}`);
+        }
+        const prs = latestPrs(perfs, Infinity).filter((pr) => pr.date >= blockStart && pr.date <= last).length;
+        body += ` · ${plural(done.size, 'séance', 'séances')} · ${String(prs)} PR`;
+      }
+      out.push({
+        id: idOf(switchDate, 9),
+        kind: 'switch',
+        date: switchDate,
+        title: `Demain : début du cycle ${status.next}`,
+        body,
+        largeBody: `${body}
+Prépare ton bilan pour le coach.`,
+      });
     }
-    const prs = latestPrs(perfs, Infinity).filter((pr) => pr.date >= from && pr.date <= today).length;
-    const body = `Bloc ${status.current} terminé · ${plural(done.size, 'séance', 'séances')} · ${String(prs)} PR`;
-    out.push({
-      id: idOf(switchDate, 9),
-      kind: 'switch',
-      date: switchDate,
-      title: `Demain : début du cycle ${status.next}`,
-      body,
-      largeBody: `${body}\nPrépare ton bilan pour le coach.`,
-    });
+    blockStart = addDays(switchDate, 1);
+    probe = blockStart;
   }
 
   return out.sort((a, b) => a.id - b.id);

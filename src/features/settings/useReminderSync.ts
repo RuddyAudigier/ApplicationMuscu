@@ -6,6 +6,7 @@ import { emptyWeekPlan } from '@/domain/planning';
 import { planReminders } from '@/domain/reminders';
 import {
   loadReminderPrefs,
+  onAppResume,
   REMINDER_PREFS_EVENT,
   remindersAvailable,
   syncReminders,
@@ -33,11 +34,7 @@ export function useReminderSync(): void {
 
   useEffect(() => {
     if (!available) return;
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') setResumeTick((n) => n + 1);
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => { document.removeEventListener('visibilitychange', onVisible); };
+    return onAppResume(() => { setResumeTick((n) => n + 1); });
   }, [available]);
 
   const planData = plan.data;
