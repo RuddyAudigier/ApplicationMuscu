@@ -88,6 +88,19 @@ describe('SettingsScreen', () => {
     expect(screen.queryByText('La date de début ne peut pas être dans le futur.')).toBeNull();
   });
 
+  it('état périmé : préremplit le bloc qui contient aujourd’hui et l’enregistre tel quel', async () => {
+    const backend = createMockBackend(localStorage);
+    await backend.cycles.save({ current: 'A', startedOn: daysAgo(20), weeks: 2 });
+    const { user } = setup(backend);
+    const cycle = await screen.findByRole('radiogroup', { name: 'Cycle courant' });
+    expect(within(cycle).getByRole('radio', { name: 'Cycle B' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByLabelText('Début du cycle')).toHaveValue(daysAgo(6));
+    await user.click(screen.getByRole('button', { name: 'Enregistrer le cycle' }));
+    await waitFor(async () => {
+      expect(await backend.cycles.get()).toEqual({ current: 'B', startedOn: daysAgo(6), weeks: 2 });
+    });
+  });
+
   it('signale un échec d’enregistrement du cycle', async () => {
     const backend = createMockBackend(localStorage);
     vi.spyOn(backend.cycles, 'save').mockRejectedValue(new Error('boom'));
@@ -136,25 +149,27 @@ describe('SettingsScreen', () => {
     const { user } = setup();
     await user.click(screen.getByRole('button', { name: 'Synchroniser' }));
     expect(await screen.findByText(/1 lot refusé/)).toBeInTheDocument();
-    expect(screen.getByText(/n’ont pas pu être enregistrées/)).toBeInTheDocument();
+    expect(screen.getByText(/1 élément archivé à vérifier \(refusés, incertains ou bloqués\)/)).toBeInTheDocument();
   });
 
-  it('hors-ligne : échec de stockage pendant la synchro', async () => {
+  it('hors-ligne : synchro interrompue (stockage) sans prétendre que tout est conservé', async () => {
     localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify([batch]));
     const { user } = setup();
     const spy = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => { throw new Error('quota'); });
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     await user.click(screen.getByRole('button', { name: 'Synchroniser' }));
-    expect(await screen.findByText(/La synchronisation a échoué/)).toBeInTheDocument();
+    expect(await screen.findByText(/Une partie a pu être envoyée ; le reste est conservé/)).toBeInTheDocument();
+    expect(screen.queryByText(/sont conservées\./)).toBeNull();
     spy.mockRestore();
   });
 
-  it('hors-ligne : explique honnêtement les lots en échec et la file illisible, sans rien supprimer', () => {
+  it('hors-ligne : explique honnêtement les archives et la file illisible, sans rien supprimer', () => {
     localStorage.setItem(OFFLINE_QUEUE_KEY, '{illisible');
-    localStorage.setItem(OFFLINE_QUEUE_FAILED_KEY, JSON.stringify([{ ...batch, reason: 'rejected' }]));
+    localStorage.setItem(OFFLINE_QUEUE_FAILED_KEY, JSON.stringify([{ ...batch, reason: 'rejected' }, { ...batch, reason: 'stuck' }]));
     localStorage.setItem(OFFLINE_QUEUE_CORRUPT_KEY, JSON.stringify(['{old']));
     setup();
-    expect(screen.getByText(/2 envois en échec/)).toBeInTheDocument();
+    expect(screen.getByText(/2 éléments archivés à vérifier \(refusés, incertains ou bloqués\)/)).toBeInTheDocument();
+    expect(screen.getByText(/1 sauvegarde illisible/)).toBeInTheDocument();
     expect(screen.getByText(/La file d’attente est illisible/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Supprimer|Vider/ })).toBeNull();
     expect(localStorage.getItem(OFFLINE_QUEUE_FAILED_KEY)).not.toBeNull();
@@ -175,19 +190,24 @@ describe('SettingsScreen', () => {
     expect(document.documentElement).not.toHaveAttribute('data-reduce-motion');
   });
 
-  it('données (mock) : réinitialise après confirmation', async () => {
+  it('données (mock) : réinitialise après confirmation, file hors-ligne comprise', async () => {
+    localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify([batch]));
+    localStorage.setItem(OFFLINE_QUEUE_FAILED_KEY, JSON.stringify([{ ...batch, reason: 'rejected' }]));
     const backend = createMockBackend(localStorage);
     const reset = vi.spyOn(backend, 'reset');
     const { user } = setup(backend);
     expect(screen.getByText(/Mode démo/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Réinitialiser les données de démo' }));
     const dialog = screen.getByRole('alertdialog', { name: 'Réinitialiser les données de démo ?' });
+    expect(within(dialog).getByText(/file hors-ligne/)).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Annuler' }));
     expect(reset).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: 'Réinitialiser les données de démo' }));
     await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Réinitialiser' }));
     await waitFor(() => { expect(reset).toHaveBeenCalledTimes(1); });
     expect(await screen.findByText('Données de démo réinitialisées.')).toBeInTheDocument();
+    expect(screen.getByText('Aucune donnée en attente.')).toBeInTheDocument();
+    expect(screen.queryByText(/archivé/)).toBeNull();
   });
 
   it('données (mock) : échec de réinitialisation', async () => {

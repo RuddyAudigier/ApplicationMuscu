@@ -32,6 +32,22 @@ describe('préférences d’affichage', () => {
     expect(savePreferences({ reduceMotion: true, fontScale: '110' }, broken)).toBe(false);
   });
 
+  it('localStorage bloqué (SecurityError à l’accès) : défauts, aucune exception', () => {
+    const desc = Object.getOwnPropertyDescriptor(window, 'localStorage');
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      get: () => { throw new DOMException('blocked', 'SecurityError'); },
+    });
+    try {
+      expect(loadPreferences()).toEqual({ reduceMotion: false, fontScale: '100' });
+      expect(savePreferences({ reduceMotion: true, fontScale: '110' })).toBe(false);
+      expect(() => { applyStoredPreferences(); }).not.toThrow();
+    } finally {
+      if (desc) Object.defineProperty(window, 'localStorage', desc);
+      else Reflect.deleteProperty(window, 'localStorage');
+    }
+  });
+
   it('applique les attributs sur la racine (et les retire)', () => {
     applyPreferences({ reduceMotion: true, fontScale: '110' });
     expect(root()).toHaveAttribute('data-reduce-motion');

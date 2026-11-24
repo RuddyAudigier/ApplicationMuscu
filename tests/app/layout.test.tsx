@@ -1,5 +1,7 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
+import { useState } from 'react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
+import { Sheet } from '../../src/ui';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Layout } from '../../src/app/Layout';
 import { Providers } from '../../src/app/providers';
@@ -16,6 +18,15 @@ const batch = {
     variantId: null, variantName: '', serieNumber: 1, performanceDate: '2026-11-20',
   }],
 };
+
+function SheetPage() {
+  const [open, setOpen] = useState(true);
+  return (
+    <Sheet open={open} title="Modale" onClose={() => { setOpen(false); }}>
+      <p>contenu</p>
+    </Sheet>
+  );
+}
 
 function renderLayout() {
   const router = createMemoryRouter(
@@ -42,6 +53,34 @@ describe('Layout', () => {
     expect(screen.getByRole('heading', { name: 'Réglages' })).toBeInTheDocument();
     await waitFor(() => { expect(localStorage.getItem(OFFLINE_QUEUE_KEY)).toBeNull(); });
     expect((await backend.performances.list()).some((p) => p.exerciseName === 'Squat')).toBe(true);
+  });
+
+  it('bouton retour Android : ferme la modale ouverte au lieu de naviguer', () => {
+    const router = createMemoryRouter(
+      [{
+        element: <Layout />,
+        children: [
+          { path: '/', element: <h1>Accueil</h1> },
+          { path: '/settings', element: <SheetPage /> },
+        ],
+      }],
+      { initialEntries: ['/', '/settings'], initialIndex: 1 },
+    );
+    render(
+      <Providers backend={createMockBackend(localStorage)}>
+        <RouterProvider router={router} />
+      </Providers>,
+    );
+    expect(screen.getByRole('dialog', { name: 'Modale' })).toBeInTheDocument();
+    const intercept = vi.mocked(useAndroidBackButton).mock.calls.at(-1)?.[1];
+    let handled = false;
+    act(() => { handled = intercept?.() ?? false; });
+    expect(handled).toBe(true);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(router.state.location.pathname).toBe('/settings');
+    let again = true;
+    act(() => { again = intercept?.() ?? true; });
+    expect(again).toBe(false);
   });
 
   it('branche le bouton retour Android sur la navigation', async () => {

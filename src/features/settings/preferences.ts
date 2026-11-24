@@ -15,9 +15,10 @@ const DEFAULTS: DisplayPreferences = { reduceMotion: false, fontScale: '100' };
 const isScale = (v: unknown): v is FontScale => typeof v === 'string' && SCALES.includes(v);
 
 /** Lecture tolérante : stockage indisponible ou contenu illisible → défauts. */
-export function loadPreferences(storage: Storage = localStorage): DisplayPreferences {
+export function loadPreferences(storage?: Storage): DisplayPreferences {
   try {
-    const parsed: unknown = JSON.parse(storage.getItem(DISPLAY_PREFS_KEY) ?? 'null');
+    // `localStorage` résolu dans le try : son simple accès peut lever (SecurityError, stockage bloqué).
+    const parsed: unknown = JSON.parse((storage ?? localStorage).getItem(DISPLAY_PREFS_KEY) ?? 'null');
     if (typeof parsed !== 'object' || parsed === null) return { ...DEFAULTS };
     const { reduceMotion, fontScale } = parsed as Record<string, unknown>;
     return {
@@ -30,9 +31,9 @@ export function loadPreferences(storage: Storage = localStorage): DisplayPrefere
 }
 
 /** `false` si le stockage refuse l'écriture (le réglage reste appliqué pour la session). */
-export function savePreferences(prefs: DisplayPreferences, storage: Storage = localStorage): boolean {
+export function savePreferences(prefs: DisplayPreferences, storage?: Storage): boolean {
   try {
-    storage.setItem(DISPLAY_PREFS_KEY, JSON.stringify(prefs));
+    (storage ?? localStorage).setItem(DISPLAY_PREFS_KEY, JSON.stringify(prefs));
     return true;
   } catch {
     return false;

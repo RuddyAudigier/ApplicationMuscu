@@ -1,3 +1,4 @@
+import { OFFLINE_QUEUE_CORRUPT_KEY, OFFLINE_QUEUE_FAILED_KEY, OFFLINE_QUEUE_KEY } from '../offlineQueue';
 import type { DataBackend } from '../ports';
 import { createMockAdviceRepo } from './advice.repo';
 import { createMockCoachNotesRepo } from './coachNotes.repo';
@@ -18,8 +19,10 @@ export function createMockBackend(storage: Storage = localStorage, opts: MockOpt
     coachNotes: createMockCoachNotesRepo(ctx),
     advice: createMockAdviceRepo(ctx),
     cycles: createMockCyclesRepo(ctx),
+    /** Remet le seed ET vide la file hors-ligne et ses archives : en démo, rien de réel n'y est perdu. */
     reset: () => task(() => {
       ctx.reset();
+      for (const key of [OFFLINE_QUEUE_KEY, OFFLINE_QUEUE_FAILED_KEY, OFFLINE_QUEUE_CORRUPT_KEY]) storage.removeItem(key);
     }),
   };
 }

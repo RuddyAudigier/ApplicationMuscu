@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import type { CycleState } from '@/domain/model';
-import { cycleStatus, defaultCycleState, extendCycle, switchCycle, timeline } from '@/domain/cycles';
+import { currentBlock, cycleStatus, defaultCycleState, extendCycle, switchCycle, timeline } from '@/domain/cycles';
+
+describe('currentBlock', () => {
+  it('returns the stored block when today is inside it', () => {
+    expect(currentBlock({ current: 'A', startedOn: '2026-11-02', weeks: 3 }, '2026-11-20')).toEqual({ current: 'A', startedOn: '2026-11-02', weeks: 3 });
+  });
+
+  it('resolves a stale state to the block containing today', () => {
+    const a: CycleState = { current: 'A', startedOn: '2026-11-02', weeks: 2 };
+    expect(currentBlock(a, '2026-11-22')).toEqual({ current: 'B', startedOn: '2026-11-16', weeks: 2 });
+    expect(currentBlock(a, '2026-12-01')).toEqual({ current: 'A', startedOn: '2026-11-30', weeks: 2 });
+  });
+});
 
 const A2: CycleState = { current: 'A', startedOn: '2026-11-02', weeks: 2 };
 

@@ -25,6 +25,12 @@ function resolveBlock(state: CycleState, today: IsoDate): Block & { day: number 
   return { ...block, day: now - block.start };
 }
 
+/** Bloc réel contenant `today` (un état stocké périmé est résolu), au format `CycleState`. */
+export function currentBlock(state: CycleState, today: IsoDate): CycleState {
+  const b = resolveBlock(state, today);
+  return { current: b.cycle, startedOn: fromDayNumber(b.start), weeks: b.weeks === 3 ? 3 : 2 };
+}
+
 export function cycleStatus(
   state: CycleState,
   today: IsoDate,

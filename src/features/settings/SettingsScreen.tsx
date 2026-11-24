@@ -1,8 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useId, useState, type ReactNode, type SyntheticEvent } from 'react';
 import { useNavigate } from 'react-router';
-import { flush, type FlushResult } from '@/data/offlineQueue';
 import {
+  archiveCount,
+  flush,
+  OFFLINE_QUEUE_CORRUPT_KEY,
+  OFFLINE_QUEUE_FAILED_KEY,
   queryKeys,
   useBackend,
   useCycleState,
@@ -10,11 +13,12 @@ import {
   useResetBackend,
   useSaveCycleState,
 } from '@/data/queries';
-import { defaultCycleState } from '@/domain/cycles';
+import { currentBlock, defaultCycleState } from '@/domain/cycles';
 import { compareIso, todayIso } from '@/domain/dates';
 import type { CycleId, CycleState } from '@/domain/model';
-import { Button, Field, IconButton, Segmented, Sheet, Skeleton, useToast, type ToastKind } from '@/ui';
+import { Button, Field, IconButton, Segmented, Sheet, Skeleton, useToast } from '@/ui';
 import { applyPreferences, loadPreferences, savePreferences, type DisplayPreferences, type FontScale } from './preferences';
+import { plural, safeStorage, syncMessage } from './settingsModel';
 import styles from './SettingsScreen.module.css';
 
 const CYCLE_OPTIONS: { value: CycleId; label: string }[] = [
@@ -27,8 +31,6 @@ const SCALE_OPTIONS: { value: FontScale; label: string }[] = [
   { value: '110', label: 'Grand' },
   { value: '120', label: 'Très grand' },
 ];
-
-const plural = (n: number, one: string, many: string): string => `${String(n)} ${n > 1 ? many : one}`;
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   const id = useId();
@@ -96,25 +98,15 @@ function CycleSection() {
   else if (query.isError) {
     // Pas de formulaire sur des valeurs par défaut : il écraserait l'état réel (durée prolongée…).
     body = <p className={styles.warning}>Le cycle n’a pas pu être chargé. Vérifie ta connexion puis rouvre cet écran.</p>;
-  } else body = <CycleForm initial={query.data ?? defaultCycleState(todayIso())} />;
+  } else {
+    // Bloc réel d'aujourd'hui : un état stocké périmé (bascule automatique passée) n'est pas reproposé tel quel.
+    const today = todayIso();
+    body = <CycleForm initial={currentBlock(query.data ?? defaultCycleState(today), today)} />;
+  }
   return <Section title="Cycle en cours">{body}</Section>;
 }
 
 /* ---------- Hors-ligne ---------- */
-
-function syncMessage(r: FlushResult): { text: string; kind: ToastKind } {
-  if (r.corrupt) return { text: 'File d’attente illisible : rien n’a été envoyé.', kind: 'error' };
-  const parts: string[] = [];
-  if (r.sent > 0) parts.push(`${plural(r.sent, 'lot envoyé', 'lots envoyés')}.`);
-  if (r.failed > 0) parts.push(`${plural(r.failed, 'lot refusé', 'lots refusés')} : conservé sur l’appareil.`);
-  if (r.remaining > 0) {
-    parts.push(r.sent === 0 && r.failed === 0
-      ? 'Rien n’a pu être envoyé : connexion ou serveur indisponible. Les données restent en attente sur cet appareil.'
-      : `${plural(r.remaining, 'lot', 'lots')} encore en attente.`);
-  }
-  if (parts.length === 0) return { text: 'Rien à envoyer.', kind: 'info' };
-  return { text: parts.join(' '), kind: r.failed > 0 || r.sent === 0 ? 'error' : 'success' };
-}
 
 function OfflineSection() {
   const { performances } = useBackend();
@@ -122,18 +114,26 @@ function OfflineSection() {
   const toast = useToast();
   const status = useOfflineQueueStatus();
   const [syncing, setSyncing] = useState(false);
+  // Détail des archives (le statut les additionne) ; relu à chaque rendu, donc à chaque changement de statut.
+  const storage = safeStorage();
+  const archived = storage ? archiveCount(storage, OFFLINE_QUEUE_FAILED_KEY) : 0;
+  const corruptArchived = storage ? archiveCount(storage, OFFLINE_QUEUE_CORRUPT_KEY) : 0;
 
   const sync = async () => {
     setSyncing(true);
     try {
-      const result = await flush(performances);
-      if (result.sent > 0) void client.invalidateQueries({ queryKey: queryKeys.performances });
-      const { text, kind } = syncMessage(result);
+      const { text, kind } = syncMessage(await flush(performances));
       toast.show(text, kind);
     } catch (e) {
       console.error('[offline] Synchronisation manuelle impossible :', e);
-      toast.show('La synchronisation a échoué (stockage de l’appareil). Les données en attente sont conservées.', 'error');
+      // Le flush a pu s'arrêter après des envois réussis : on ne connaît pas le décompte exact.
+      toast.show(
+        'La synchronisation s’est interrompue (stockage de l’appareil). Une partie a pu être envoyée ; le reste est conservé.',
+        'error',
+      );
     } finally {
+      // Toujours recharger : même un flush interrompu peut avoir écrit côté serveur.
+      void client.invalidateQueries({ queryKey: queryKeys.performances });
       setSyncing(false);
     }
   };
@@ -157,11 +157,17 @@ function OfflineSection() {
             contient ne peuvent pas être récupérées automatiquement.
           </p>
         )}
-        {status.failed > 0 && (
+        {archived > 0 && (
           <p className={styles.warning}>
-            {plural(status.failed, 'envoi', 'envois')} en échec. Ces séries n’ont pas pu être enregistrées sur le serveur
-            (refus définitif, ou envoi incertain non rejoué pour éviter un doublon). Elles sont conservées sur cet
-            appareil et ne sont pas renvoyées automatiquement : vérifie tes records et ressaisis celles qui manquent.
+            {plural(archived, 'élément archivé', 'éléments archivés')} à vérifier (refusés, incertains ou bloqués). Ils
+            sont conservés sur cet appareil et ne sont pas renvoyés automatiquement : un envoi incertain a pu être
+            enregistré malgré tout. Vérifie tes records et ressaisis ce qui manque.
+          </p>
+        )}
+        {corruptArchived > 0 && (
+          <p className={styles.warning}>
+            {plural(corruptArchived, 'sauvegarde illisible', 'sauvegardes illisibles')} de l’ancienne file, conservée
+            telle quelle : son contenu ne peut pas être relu automatiquement.
           </p>
         )}
         <Button
@@ -235,7 +241,11 @@ function DataSection() {
   const confirm = () => {
     setConfirming(false);
     reset.mutate(undefined, {
-      onSuccess: () => { toast.show('Données de démo réinitialisées.', 'success'); },
+      onSuccess: () => {
+        // La file hors-ligne vient d'être vidée par le reset : relance la lecture du statut (même onglet).
+        window.dispatchEvent(new StorageEvent('storage'));
+        toast.show('Données de démo réinitialisées.', 'success');
+      },
       onError: () => { toast.show('La réinitialisation a échoué. Les données n’ont pas changé.', 'error'); },
     });
   };
@@ -271,8 +281,8 @@ function DataSection() {
         }
       >
         <p id={descId} className={styles.text}>
-          Séances, exercices et performances de démo reviennent à leur état initial. Ce que tu as saisi en mode démo
-          sera perdu.
+          Séances, exercices et performances de démo reviennent à leur état initial, et la file hors-ligne (lots en
+          attente et archives) est vidée. Ce que tu as saisi en mode démo sera perdu.
         </p>
       </Sheet>
     </Section>

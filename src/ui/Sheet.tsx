@@ -27,7 +27,15 @@ const FOCUSABLE = [
 ].join(',');
 
 /** Pile des modales ouvertes : seule la plus haute réagit au clavier. */
-const openStack: object[] = [];
+const openStack: { close: () => void }[] = [];
+
+/** Ferme la modale la plus haute (bouton retour Android) ; `false` si aucune n'est ouverte. */
+export function closeTopSheet(): boolean {
+  const top = openStack[openStack.length - 1];
+  if (!top) return false;
+  top.close();
+  return true;
+}
 /** overflow du body avant l'ouverture de la première modale de la pile. */
 let savedOverflow = '';
 
@@ -58,7 +66,11 @@ export function Sheet({
     if (!open) return undefined;
     const panel = panelRef.current;
     if (!panel) return undefined;
-    const token = {};
+    const token = {
+      close: () => {
+        onCloseRef.current();
+      },
+    };
     if (openStack.length === 0) savedOverflow = document.body.style.overflow;
     openStack.push(token);
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;

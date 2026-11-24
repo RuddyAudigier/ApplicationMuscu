@@ -58,6 +58,27 @@ describe('platform misc', () => {
     expect(remove).toHaveBeenCalled();
   });
 
+  it('back button: an intercept that handles the press skips navigation and exit', async () => {
+    mocks.isNative.mockReturnValue(true);
+    mocks.exitApp.mockClear();
+    let handler: () => void = () => undefined;
+    mocks.addListener.mockImplementation((_e: string, h: () => void) => {
+      handler = h;
+      return Promise.resolve({ remove: vi.fn().mockResolvedValue(undefined) });
+    });
+    const navigate = vi.fn();
+    const intercept = vi.fn(() => true);
+    renderHook(() => {
+      useAndroidBackButton(navigate, intercept);
+    });
+    await Promise.resolve();
+    window.history.pushState({}, '', '/');
+    handler();
+    expect(intercept).toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+    expect(mocks.exitApp).not.toHaveBeenCalled();
+  });
+
   it('sw unregisters on native', async () => {
     mocks.isNative.mockReturnValue(true);
     const unregister = vi.fn();
