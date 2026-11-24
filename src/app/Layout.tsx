@@ -1,7 +1,9 @@
 import { useCallback } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { useOfflineQueueSync } from '../data/queries';
+import { useReminderSync } from '../features/settings';
 import { useAndroidBackButton } from '../platform/backButton';
+import { useReminderTap } from '../platform/notifications';
 import { BottomNav, type NavItem } from '../ui';
 import { closeTopSheet } from '../ui/Sheet';
 
@@ -25,6 +27,12 @@ export function Layout() {
   const goBack = useCallback((delta: number) => {
     void navigate(delta);
   }, [navigate]);
+  // Rappels locaux : reprogrammés quand les données ou les préférences changent ; un tap ouvre l'accueil.
+  useReminderSync();
+  const openHome = useCallback(() => {
+    void navigate('/');
+  }, [navigate]);
+  useReminderTap(openHome);
   // Rejoue la file hors-ligne au montage et à chaque retour en ligne.
   useOfflineQueueSync();
   // Bouton retour Android (sans effet hors application native).

@@ -89,6 +89,7 @@ Résumé de la séance (exercices, séries, PR obtenus), exportable en PDF et pa
 - **Cycle en cours** : corriger manuellement le cycle (A/B) et sa date de début si l’application s’est trompée.
 - **Hors-ligne** : nombre de séries en attente, état de l’envoi, boutons **Synchroniser** et **Renvoyer les éléments archivés**.
 - **Affichage** : réduire les animations, taille du texte (Normal, Grand, Très grand).
+- **Rappels** (APK uniquement) : rappel de séance à l’heure choisie et veille de bascule de cycle, d’après ta semaine type.
 - **Données** : source utilisée (Supabase ou démo) ; en mode démo, réinitialisation des données de démonstration.
 
 ---
@@ -279,6 +280,8 @@ npm run android:open   # ouvre Android Studio
 ```
 
 Dans Android Studio : lancer sur un appareil, ou **Build > Generate Signed Bundle / APK** pour une version installable.
+
+Les rappels utilisent `@capacitor/local-notifications` : `npx cap sync android` a été exécuté pour l’ajouter, l’APK doit donc être reconstruit.
 
 ---
 

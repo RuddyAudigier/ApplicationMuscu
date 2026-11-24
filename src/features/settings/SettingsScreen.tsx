@@ -16,6 +16,13 @@ import {
 import { currentBlock, defaultCycleState } from '@/domain/cycles';
 import { compareIso, todayIso } from '@/domain/dates';
 import type { CycleId, CycleState } from '@/domain/model';
+import {
+  loadReminderPrefs,
+  remindersAvailable,
+  requestReminderPermission,
+  saveReminderPrefs,
+  type ReminderPrefs,
+} from '@/platform/notifications';
 import { Button, Field, IconButton, Segmented, Sheet, Skeleton, useToast } from '@/ui';
 import { applyPreferences, loadPreferences, savePreferences, type DisplayPreferences, type FontScale } from './preferences';
 import { plural, safeStorage, syncMessage } from './settingsModel';
@@ -250,6 +257,66 @@ function DisplaySection() {
   );
 }
 
+/* ---------- Rappels ---------- */
+
+function ReminderSection() {
+  const toast = useToast();
+  const switchId = useId();
+  const [prefs, setPrefs] = useState<ReminderPrefs>(() => loadReminderPrefs());
+
+  const update = (next: ReminderPrefs) => {
+    setPrefs(next);
+    saveReminderPrefs(next);
+  };
+
+  const toggle = async () => {
+    if (prefs.enabled) {
+      update({ ...prefs, enabled: false });
+      return;
+    }
+    let granted = false;
+    try {
+      granted = await requestReminderPermission();
+    } catch (e) {
+      console.warn('[rappels] Permission impossible à demander :', e);
+    }
+    if (!granted) {
+      toast.show('Notifications refusées : autorise-les dans les paramètres Android.', 'error');
+      return;
+    }
+    update({ ...prefs, enabled: true });
+  };
+
+  return (
+    <Section title="Rappels">
+      <div className={styles.stack}>
+        <p className={styles.text}>Rappel de séance et veille de bascule, d’après ta semaine type.</p>
+        <div className={styles.row}>
+          <span className={styles.label} id={switchId}>Rappel de séance</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={prefs.enabled}
+            aria-labelledby={switchId}
+            className={styles.switch}
+            onClick={() => { void toggle(); }}
+          >
+            <span className={styles.knob} aria-hidden="true" />
+          </button>
+        </div>
+        <Field
+          label="Heure du rappel"
+          type="time"
+          value={prefs.time}
+          onChange={(e) => {
+            if (e.target.value) update({ ...prefs, time: e.target.value });
+          }}
+        />
+      </div>
+    </Section>
+  );
+}
+
 /* ---------- Données ---------- */
 
 function DataSection() {
@@ -330,6 +397,7 @@ export function SettingsScreen() {
       <CycleSection />
       <OfflineSection />
       <DisplaySection />
+      {remindersAvailable() && <ReminderSection />}
       <DataSection />
       <Section title="À propos">
         <p className={styles.text}>

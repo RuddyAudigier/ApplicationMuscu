@@ -1,4 +1,5 @@
 export { SettingsScreen } from './SettingsScreen';
+export { useReminderSync } from './useReminderSync';
 export {
   applyPreferences,
   applyStoredPreferences,
