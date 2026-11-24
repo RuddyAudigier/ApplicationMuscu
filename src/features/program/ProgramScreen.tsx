@@ -5,12 +5,13 @@ import { cycleStatus, defaultCycleState } from '@/domain/cycles';
 import { todayIso } from '@/domain/dates';
 import type { CycleId, Session } from '@/domain/model';
 import { startWorkout } from '@/domain/workout';
-import { loadActiveWorkout, saveActiveWorkout } from '@/features/workout';
+import { loadActiveWorkout, saveActiveWorkout, saveLastReport } from '@/features/workout';
 import { Button, ConfirmDialog, EmptyState, IconButton, Segmented, Skeleton, useToast } from '@/ui';
 import {
   durationHint,
   lastDoneLabel,
   lastDoneOn,
+  revertSwitchesNow,
   seriesLabel,
   sessionsOfCycle,
   tabCaption,
@@ -46,24 +47,39 @@ export function ProgramScreen() {
   const shownCycle = tab ?? status.current;
   const [builder, setBuilder] = useState<BuilderState>(null);
   const [pendingStart, setPendingStart] = useState<Session | null>(null);
+  const [confirmRevert, setConfirmRevert] = useState(false);
 
   const sessions = sessionsQuery.data ?? [];
   const list = sessionsOfCycle(sessions, shownCycle);
   const unassigned = sessionsOfCycle(sessions, null);
   const active = loadActiveWorkout();
 
-  const setWeeks = (value: string) => {
-    const weeks = value === '3' ? 3 : 2;
-    if (weeks === status.weeks) return;
+  const saveWeeks = (weeks: 2 | 3) => {
     saveCycle.mutate(withCycleWeeks(cycleState, today, weeks), {
       onError: () => {
-        toast.show("La durée du cycle n'a pas pu être enregistrée. Réessaie.", 'error');
+        toast.show('La durée du cycle n’a pas pu être enregistrée. Réessaie.', 'error');
       },
     });
   };
 
+  const setWeeks = (value: string) => {
+    const weeks = value === '3' ? 3 : 2;
+    if (weeks === status.weeks) return;
+    if (weeks === 2 && revertSwitchesNow(cycleState, today)) {
+      setConfirmRevert(true);
+      return;
+    }
+    saveWeeks(weeks);
+  };
+
+  /** Démarrage seulement avec la bibliothèque chargée (variantes par défaut correctes). */
+  const canStart = exercisesQuery.isSuccess;
+
   const launch = (session: Session) => {
-    saveActiveWorkout(startWorkout(session, exercisesQuery.data ?? [], new Date()));
+    if (!exercisesQuery.isSuccess) return;
+    saveActiveWorkout(startWorkout(session, exercisesQuery.data, new Date()));
+    // Le dernier compte rendu reste visible jusqu'au démarrage de la séance suivante.
+    saveLastReport(null);
     void navigate('/workout');
   };
 
@@ -98,7 +114,7 @@ export function ProgramScreen() {
           type="button"
           className={styles.sessionMain}
           aria-label={`${isActive ? 'Reprendre' : 'Démarrer'} ${title}`}
-          disabled={session.exercises.length === 0}
+          disabled={session.exercises.length === 0 || (!canStart && !isActive)}
           onClick={() => { onStart(session); }}
         >
           <span className={styles.sessionHead}>
@@ -108,7 +124,7 @@ export function ProgramScreen() {
             {isActive ? (
               <span className={styles.badge}>En cours</span>
             ) : (
-              last && <span className={last === "Aujourd'hui" ? styles.badge : styles.when}>{last}</span>
+              last && <span className={last.isToday ? styles.badge : styles.when}>{last.label}</span>
             )}
           </span>
           <span className={styles.exercises}>
@@ -191,8 +207,18 @@ export function ProgramScreen() {
           )}
         </div>
 
+        {exercisesQuery.isError && (
+          <div className={styles.errorBox} role="alert">
+            <p>Impossible de charger les exercices : le démarrage d’une séance est indisponible.</p>
+            <Button variant="secondary" onClick={() => { void exercisesQuery.refetch(); }}>
+              Recharger les exercices
+            </Button>
+          </div>
+        )}
+
         {sessionsQuery.isPending ? (
-          <div className={styles.loading} aria-busy="true" aria-label="Chargement des séances">
+          <div className={styles.loading} role="status" aria-busy="true">
+            <span className="visually-hidden">Chargement des séances…</span>
             <Skeleton height={96} />
             <Skeleton height={96} />
           </div>
@@ -251,6 +277,18 @@ export function ProgramScreen() {
           if (session) launch(session);
         }}
         onCancel={() => { setPendingStart(null); }}
+      />
+
+      <ConfirmDialog
+        open={confirmRevert}
+        title="Revenir à 2 semaines ?"
+        message={`Revenir à 2 semaines fait basculer vers ${status.next} maintenant : le cycle ${status.current} a déjà duré 2 semaines.`}
+        confirmLabel={`Basculer vers ${status.next}`}
+        onConfirm={() => {
+          setConfirmRevert(false);
+          saveWeeks(2);
+        }}
+        onCancel={() => { setConfirmRevert(false); }}
       />
     </div>
   );

@@ -1,9 +1,10 @@
 import { useId, useMemo, useState } from 'react';
-import { useDeleteSession, useExercises, useSaveSession } from '@/data/queries';
+import { useDeleteSession, useExercises, useSaveSession, useSessions } from '@/data/queries';
 import type { CycleId, Exercise, Id, Session } from '@/domain/model';
 import { normalizeSearch } from '@/domain/names';
 import { Button, ConfirmDialog, Field, Icon, IconButton, Segmented, Sheet, useToast } from '@/ui';
-import { DEFAULT_SERIES, MAX_SERIES, MIN_SERIES } from './programModel';
+import { loadActiveWorkout, saveActiveWorkout } from '@/features/workout';
+import { DEFAULT_SERIES, MAX_SERIES, MIN_SERIES, isDuplicateName } from './programModel';
 import styles from './SessionBuilder.module.css';
 
 interface Item { exerciseId: Id; name: string; series: number }
@@ -38,6 +39,7 @@ const matches = (exercise: Exercise, query: string): boolean => {
 export function SessionBuilder({ session, defaultCycle, onClose }: SessionBuilderProps) {
   const toast = useToast();
   const exercisesQuery = useExercises();
+  const sessionsQuery = useSessions();
   const save = useSaveSession();
   const remove = useDeleteSession();
   const [name, setName] = useState(session?.name ?? '');
@@ -52,7 +54,16 @@ export function SessionBuilder({ session, defaultCycle, onClose }: SessionBuilde
 
   const library = exercisesQuery.data;
   const results = useMemo(() => (library ?? []).filter((e) => matches(e, query)), [library, query]);
-  const nameError = submitted && !name.trim() ? 'Donne un nom à la séance.' : undefined;
+  const duplicate = isDuplicateName(sessionsQuery.data ?? [], name, cycle, session?.id ?? null);
+  const nameError = !submitted
+    ? undefined
+    : !name.trim()
+      ? 'Donne un nom à la séance.'
+      : duplicate
+        ? `Une séance du cycle ${cycle} porte déjà ce nom.`
+        : undefined;
+  const renamed = session !== null && name.trim() !== '' && name.trim() !== session.name;
+  const isActive = session !== null && loadActiveWorkout()?.sessionId === session.id;
   const itemsError = submitted && items.length === 0 ? 'Ajoute au moins un exercice.' : undefined;
 
   const toggle = (exercise: Exercise) => {
@@ -86,7 +97,7 @@ export function SessionBuilder({ session, defaultCycle, onClose }: SessionBuilde
 
   const onSave = () => {
     setSubmitted(true);
-    if (!name.trim() || items.length === 0) return;
+    if (!name.trim() || duplicate || items.length === 0) return;
     save.mutate(
       {
         id: session?.id ?? null,
@@ -98,7 +109,7 @@ export function SessionBuilder({ session, defaultCycle, onClose }: SessionBuilde
           onClose();
         },
         onError: () => {
-          toast.show("La séance n'a pas pu être enregistrée. Vérifie ta connexion et réessaie.", 'error');
+          toast.show('La séance n’a pas pu être enregistrée. Vérifie ta connexion et réessaie.', 'error');
         },
       },
     );
@@ -109,12 +120,13 @@ export function SessionBuilder({ session, defaultCycle, onClose }: SessionBuilde
     remove.mutate(session.id, {
       onSuccess: () => {
         setConfirmDelete(false);
+        if (isActive) saveActiveWorkout(null);
         toast.show('Séance supprimée.', 'success');
         onClose();
       },
       onError: () => {
         setConfirmDelete(false);
-        toast.show("La séance n'a pas pu être supprimée. Vérifie ta connexion et réessaie.", 'error');
+        toast.show('La séance n’a pas pu être supprimée. Vérifie ta connexion et réessaie.', 'error');
       },
     });
   };
@@ -145,6 +157,7 @@ export function SessionBuilder({ session, defaultCycle, onClose }: SessionBuilde
             value={name}
             maxLength={80}
             error={nameError}
+            hint={renamed ? 'Les performances déjà enregistrées sous l’ancien nom seront renommées aussi.' : undefined}
             onChange={(e) => { setName(e.target.value); }}
           />
 
@@ -241,7 +254,7 @@ export function SessionBuilder({ session, defaultCycle, onClose }: SessionBuilde
       <ConfirmDialog
         open={confirmDelete}
         title="Supprimer la séance ?"
-        message={`« ${session?.name ?? ''} » sera retirée du programme. Les performances déjà enregistrées sont conservées.`}
+        message={`« ${session?.name ?? ''} » sera retirée du programme. Les performances déjà enregistrées sont conservées.${isActive ? ' Cette séance est en cours : elle sera abandonnée et ses séries non enregistrées perdues.' : ''}`}
         confirmLabel="Supprimer"
         danger
         onConfirm={onDelete}

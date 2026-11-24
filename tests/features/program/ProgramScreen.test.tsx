@@ -9,9 +9,16 @@ import { createMockBackend } from '@/data/mock';
 import type { DataBackend } from '@/data/ports';
 import { todayIso } from '@/domain/dates';
 import { ProgramScreen } from '@/features/program';
-import { loadActiveWorkout, saveActiveWorkout } from '@/features/workout';
+import { loadActiveWorkout, loadLastReport, saveActiveWorkout, saveLastReport } from '@/features/workout';
 
 const SEED = 'Séance test (mock)';
+
+const daysAgo = (n: number) => todayIso(new Date(Date.now() - n * 86_400_000));
+
+const activeOf = (sessionId: string, sessionName: string) => ({
+  version: 2 as const, sessionId, sessionName, cycle: 'A' as const, date: todayIso(),
+  startedAt: new Date().toISOString(), exercises: [],
+});
 
 function setup(backend: DataBackend = createMockBackend(localStorage)) {
   const router = createMemoryRouter(
@@ -75,12 +82,43 @@ describe('ProgramScreen', () => {
   });
 
   it('démarre une séance : état persisté puis navigation vers /workout', async () => {
+    saveLastReport({ exercises: [] } as never);
     const { user } = setup();
     await user.click(await seedRow());
     expect(await screen.findByRole('heading', { name: 'Séance en cours' })).toBeInTheDocument();
     const state = loadActiveWorkout();
     expect(state?.sessionName).toBe(SEED);
     expect(state?.exercises.map((e) => e.plannedSeries)).toEqual([3, 3]);
+    expect(loadLastReport()).toBeNull();
+  });
+
+  it('empêche le démarrage tant que les exercices ne sont pas chargés', async () => {
+    const backend = createMockBackend(localStorage);
+    backend.exercises.list = () => Promise.reject(new Error('réseau'));
+    const { user } = setup(backend);
+    expect(await screen.findByText(/Impossible de charger les exercices/)).toBeInTheDocument();
+    const row = await seedRow();
+    expect(row).toBeDisabled();
+    await user.click(row);
+    expect(loadActiveWorkout()).toBeNull();
+    expect(screen.getByRole('button', { name: 'Recharger les exercices' })).toBeInTheDocument();
+  });
+
+  it('demande confirmation pour revenir à 2 semaines en 3e semaine', async () => {
+    const backend = createMockBackend(localStorage);
+    await backend.cycles.save({ current: 'A', startedOn: daysAgo(15), weeks: 3 });
+    const { user } = setup(backend);
+    expect(await screen.findByText(/Revenir à 2 semaines fait basculer vers B maintenant/)).toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: '2 sem.' }));
+    let dialog = screen.getByRole('alertdialog', { name: 'Revenir à 2 semaines ?' });
+    expect(within(dialog).getByText(/Revenir à 2 semaines fait basculer vers B maintenant/)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Annuler' }));
+    expect((await backend.cycles.get())?.weeks).toBe(3);
+    await user.click(screen.getByRole('radio', { name: '2 sem.' }));
+    dialog = screen.getByRole('alertdialog', { name: 'Revenir à 2 semaines ?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Basculer vers B' }));
+    expect(await screen.findByRole('tab', { name: /B En cours/ })).toBeInTheDocument();
+    expect((await backend.cycles.get())?.weeks).toBe(2);
   });
 
   it('demande confirmation avant d’abandonner une autre séance en cours', async () => {
@@ -138,8 +176,36 @@ describe('ProgramScreen', () => {
     const created = (await backend.sessions.list()).find((s) => s.name === 'Bas du corps');
     expect(created?.cycle).toBe('B');
     expect(created?.exercises.map((e) => [e.name, e.series])).toEqual([['Développé couché', 3], ['Squat', 5]]);
+    expect(screen.queryByText(/porte déjà ce nom/)).toBeNull();
     await user.click(screen.getByRole('tab', { name: /^B/ }));
     expect(await screen.findByRole('button', { name: 'Démarrer B1 Bas du corps' })).toBeInTheDocument();
+  });
+
+  it('refuse un nom déjà pris dans le même cycle', async () => {
+    const { backend, user } = setup();
+    await seedRow();
+    await user.click(screen.getByRole('button', { name: 'Ajouter une séance' }));
+    const dialog = screen.getByRole('dialog', { name: 'Nouvelle séance' });
+    await user.type(within(dialog).getByLabelText('Nom de la séance'), '  séance TEST (mock) ');
+    await user.click(within(dialog).getByRole('button', { name: /Squat/ }));
+    await user.click(within(dialog).getByRole('button', { name: 'Enregistrer' }));
+    expect(within(dialog).getByText('Une séance du cycle A porte déjà ce nom.')).toBeInTheDocument();
+    expect(await backend.sessions.list()).toHaveLength(1);
+    await user.click(within(dialog).getByRole('radio', { name: 'Cycle B' }));
+    expect(within(dialog).queryByText(/porte déjà ce nom/)).toBeNull();
+  });
+
+  it('supprime la séance en cours en l’abandonnant', async () => {
+    const backend = createMockBackend(localStorage);
+    const [session] = await backend.sessions.list();
+    saveActiveWorkout(activeOf(session?.id ?? '', SEED));
+    const { user } = setup(backend);
+    await user.click(await screen.findByRole('button', { name: `Modifier A1 ${SEED}` }));
+    await user.click(screen.getByRole('button', { name: 'Supprimer' }));
+    const confirm = screen.getByRole('alertdialog', { name: 'Supprimer la séance ?' });
+    expect(within(confirm).getByText(/Cette séance est en cours/)).toBeInTheDocument();
+    await user.click(within(confirm).getByRole('button', { name: 'Supprimer' }));
+    await waitFor(() => { expect(loadActiveWorkout()).toBeNull(); });
   });
 
   it('modifie puis supprime une séance après confirmation', async () => {
@@ -147,7 +213,13 @@ describe('ProgramScreen', () => {
     await seedRow();
     await user.click(screen.getByRole('button', { name: `Modifier A1 ${SEED}` }));
     const dialog = screen.getByRole('dialog', { name: 'Modifier la séance' });
-    expect(within(dialog).getByLabelText('Nom de la séance')).toHaveValue(SEED);
+    const nameInput = within(dialog).getByLabelText('Nom de la séance');
+    expect(nameInput).toHaveValue(SEED);
+    expect(within(dialog).queryByText(/seront renommées aussi/)).toBeNull();
+    await user.type(nameInput, ' bis');
+    expect(within(dialog).getByText(/seront renommées aussi/)).toBeInTheDocument();
+    await user.clear(nameInput);
+    await user.type(nameInput, SEED);
     await user.click(within(dialog).getByRole('button', { name: 'Retirer Squat' }));
     await user.click(within(dialog).getByRole('button', { name: 'Enregistrer' }));
     await waitFor(() => { expect(screen.queryByRole('dialog')).toBeNull(); });
@@ -177,7 +249,7 @@ describe('ProgramScreen', () => {
     const { user } = setup(backend);
     await seedRow();
     await user.click(screen.getByRole('radio', { name: '3 sem.' }));
-    expect(await screen.findByText("La durée du cycle n'a pas pu être enregistrée. Réessaie.")).toBeInTheDocument();
+    expect(await screen.findByText('La durée du cycle n’a pas pu être enregistrée. Réessaie.')).toBeInTheDocument();
   });
 
   it('affiche une erreur de chargement avec Réessayer', async () => {

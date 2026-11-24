@@ -1,5 +1,6 @@
 import { cycleStatus, extendCycle } from '@/domain/cycles';
-import type { CycleId, CycleState, IsoDate, Performance, Session } from '@/domain/model';
+import type { CycleId, CycleState, Id, IsoDate, Performance, Session } from '@/domain/model';
+import { normalizeSearch } from '@/domain/names';
 
 export const MIN_SERIES = 1;
 export const MAX_SERIES = 6;
@@ -11,11 +12,23 @@ export function seriesLabel(series: number): string {
   return `${String(series - 1)}–${String(series)} séries`;
 }
 
-/** Séances d'un cycle, de la plus ancienne à la plus récente (A1, A2…). */
+/** Séances d'un cycle, de la plus ancienne à la plus récente (A1, A2…) ; égalité départagée par id. */
 export function sessionsOfCycle(sessions: Session[], cycle: CycleId | null): Session[] {
   return sessions
     .filter((s) => s.cycle === cycle)
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
+}
+
+/** Une autre séance du même cycle porte déjà ce nom (trimé, sans casse ni accents). */
+export function isDuplicateName(sessions: Session[], name: string, cycle: CycleId | null, selfId: Id | null): boolean {
+  const key = normalizeSearch(name);
+  return sessions.some((s) => s.id !== selfId && s.cycle === cycle && normalizeSearch(s.name) === key);
+}
+
+/** Revenir à 2 semaines alors que le bloc prolongé est en 3e semaine fait basculer tout de suite. */
+export function revertSwitchesNow(state: CycleState, today: IsoDate): boolean {
+  const status = cycleStatus(state, today);
+  return status.weeks === 3 && status.week === 3;
 }
 
 /** Durée du bloc en cours : 3 semaines = prolongé, 2 = standard (même date de début). */
@@ -39,13 +52,15 @@ export function lastDoneOn(perfs: Performance[], sessionName: string): IsoDate |
   return last;
 }
 
-/** « Aujourd'hui », « Hier », « il y a N j » ; `null` si jamais faite. */
-export function lastDoneLabel(date: IsoDate | null, today: IsoDate): string | null {
+export interface LastDone { isToday: boolean; label: string }
+
+/** « Aujourd’hui », « Hier », « il y a N j » ; `null` si jamais faite. */
+export function lastDoneLabel(date: IsoDate | null, today: IsoDate): LastDone | null {
   if (date === null) return null;
   const days = dayNumber(today) - dayNumber(date);
-  if (days <= 0) return "Aujourd'hui";
-  if (days === 1) return 'Hier';
-  return `il y a ${String(days)} j`;
+  if (days <= 0) return { isToday: true, label: 'Aujourd’hui' };
+  if (days === 1) return { isToday: false, label: 'Hier' };
+  return { isToday: false, label: `il y a ${String(days)} j` };
 }
 
 /** Libellé de l'onglet : « En cours » pour le cycle courant, sinon « dans N j ». */
@@ -58,6 +73,9 @@ export function tabCaption(state: CycleState, today: IsoDate, cycle: CycleId): s
 export function durationHint(state: CycleState, today: IsoDate): string {
   const status = cycleStatus(state, today);
   const days = status.daysLeft === 1 ? '1 jour' : `${String(status.daysLeft)} jours`;
+  if (status.weeks === 3 && status.week === 3) {
+    return `Dernière semaine du cycle ${status.current} prolongé : ${status.next} commence dans ${days}. Revenir à 2 semaines fait basculer vers ${status.next} maintenant.`;
+  }
   if (status.weeks === 3) {
     return `Semaine manquée : ${status.current} est prolongé d’une semaine. ${status.next} commence dans ${days}, puis l’alternance reprend à 2 semaines.`;
   }
