@@ -8,10 +8,10 @@ export function createCoachNotesRepo(db: Db): CoachNotesRepo {
     /** Une seule requête pour toutes les notes (pas de N+1). */
     async listAll() {
       const ctx = 'Lecture des remarques';
-      const { data, error } = await run(db.from('coach_notes').select('exercise_id, notes'), ctx);
+      const { data, error, status } = await run(db.from('coach_notes').select('exercise_id, notes'), ctx);
       if (error) {
         if (isSchemaGap(error)) return {};
-        fail(error, ctx);
+        fail(error, ctx, status);
       }
       const out: Record<Id, string> = {};
       if (Array.isArray(data)) {

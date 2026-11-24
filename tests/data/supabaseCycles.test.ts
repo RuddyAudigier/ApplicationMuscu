@@ -114,7 +114,7 @@ describe('sessions cycle column (Supabase)', () => {
     expect(setItem).not.toHaveBeenCalled();
   });
 
-  it('rejects a session write when the fallback storage refuses it', async () => {
+  it('fallback storage refusal: create resolves without cycle, update rejects', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const storage = new MemoryStorage();
     vi.spyOn(storage, 'setItem').mockImplementation(() => { throw new Error('QuotaExceededError'); });
@@ -125,7 +125,7 @@ describe('sessions cycle column (Supabase)', () => {
       return ok(null);
     });
     const b = createSupabaseBackend(client, storage);
-    await expect(b.sessions.create(draft('B'))).rejects.toThrow('QuotaExceededError');
+    expect((await b.sessions.create(draft('B'))).cycle).toBeNull();
     await expect(b.sessions.update('s1', draft('A'))).rejects.toThrow('QuotaExceededError');
   });
 
@@ -144,9 +144,14 @@ describe('sessions cycle column (Supabase)', () => {
       if (c.table === 'sessions' && has(c, 'select')) return /\bcycle\b/.test(selectOf(c)) ? missingColumn : ok(sessionRow());
       return ok(null);
     });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const b = createSupabaseBackend(client, storage);
-    await expect(b.sessions.create(draft('B'))).rejects.toThrow('QuotaExceededError');
+    // Séance validée en base : on résout (pas de nouvel essai qui la dupliquerait), cycle non mémorisé.
+    const created = await b.sessions.create(draft('B'));
+    expect(created.id).toBe('s1');
+    expect(created.cycle).toBeNull();
     expect(order).toEqual(['links', 'local']);
+    expect(warn.mock.calls.some((call) => String(call[0]).includes('séance créée ; seul son cycle'))).toBe(true);
     order.length = 0;
     await expect(b.sessions.update('s1', draft('A'))).rejects.toThrow('QuotaExceededError');
     expect(order).toEqual(['unlink', 'links', 'local']);

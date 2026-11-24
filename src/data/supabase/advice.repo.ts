@@ -8,11 +8,11 @@ export function createAdviceRepo(db: Db): AdviceRepo {
   return {
     async get() {
       const ctx = 'Lecture des conseils';
-      const { data, error } = await run(
+      const { data, error, status } = await run(
         db.from('general_advice').select('training_notes, nutrition_notes, sleep_notes').eq('id', SINGLETON_ID).single(), ctx);
       if (error) {
         if (error.code === NO_ROWS || isSchemaGap(error)) return null;
-        fail(error, ctx);
+        fail(error, ctx, status);
       }
       return mapAdviceRow(data);
     },

@@ -17,11 +17,11 @@ export function createExercisesRepo(db: Db, coachNotes: CoachNotesRepo): Exercis
     const byId = new Map<Id, Variant[]>();
     if (ids.length === 0) return byId;
     const ctx = 'Lecture des variantes';
-    const { data, error } = await run(
+    const { data, error, status } = await run(
       db.from('exercise_variants').select(VARIANT_COLS).in('exercise_id', ids).order('created_at', { ascending: true }), ctx);
     if (error) {
       if (isSchemaGap(error, 'exercise_variants')) return byId;
-      fail(error, ctx);
+      fail(error, ctx, status);
     }
     for (const v of parseRows(data, mapVariantRow, 'exercise_variants')) {
       const key = v.exerciseId ?? '';
@@ -47,13 +47,13 @@ export function createExercisesRepo(db: Db, coachNotes: CoachNotesRepo): Exercis
   /** Synchro des variantes (supprime les absentes, met à jour, insère). Non transactionnel, comme l'existant. */
   async function syncVariants(id: Id, variants: Variant[]): Promise<void> {
     const ctx = 'Synchronisation des variantes';
-    const { data, error } = await run(db.from('exercise_variants').select('id').eq('exercise_id', id), ctx);
+    const { data, error, status } = await run(db.from('exercise_variants').select('id').eq('exercise_id', id), ctx);
     if (error) {
       if (isSchemaGap(error, 'exercise_variants')) {
         console.warn('Sync variantes ignorée (migration SQL manquante).');
         return;
       }
-      fail(error, ctx);
+      fail(error, ctx, status);
     }
     const existing = parseRows(data, idOf, 'exercise_variants');
     const kept = new Set(variants.map((v) => v.id).filter((v): v is string => v !== null));
@@ -90,9 +90,9 @@ export function createExercisesRepo(db: Db, coachNotes: CoachNotesRepo): Exercis
       const id = idOf(row);
       if (id === null) throw new Error(`${ctx} : id manquant.`);
       await writeMuscles(id, p, ctx);
-      const { error } = await run(
+      const { error, status } = await run(
         db.from('exercise_variants').insert(p.variants.map((v) => ({ exercise_id: id, name: v.name, is_default: v.isDefault }))), ctx);
-      if (error && !isSchemaGap(error, 'exercise_variants')) fail(error, ctx);
+      if (error && !isSchemaGap(error, 'exercise_variants')) fail(error, ctx, status);
       return readOne(id);
     },
 
@@ -100,10 +100,10 @@ export function createExercisesRepo(db: Db, coachNotes: CoachNotesRepo): Exercis
       const ctx = "Mise à jour de l'exercice";
       const p = prepareExercise(draft, id);
       const base = { name: p.name, description: p.description };
-      const { error } = await run(db.from('exercises').update({ ...base, updated_at: new Date().toISOString() }).eq('id', id), ctx);
+      const { error, status } = await run(db.from('exercises').update({ ...base, updated_at: new Date().toISOString() }).eq('id', id), ctx);
       if (error) {
         // Anciennes bases sans colonne `updated_at`.
-        if (!isSchemaGap(error, 'updated_at')) fail(error, ctx);
+        if (!isSchemaGap(error, 'updated_at')) fail(error, ctx, status);
         await must(db.from('exercises').update(base).eq('id', id), ctx);
       }
       await must(db.from('muscle_groups').delete().eq('exercise_id', id), ctx);

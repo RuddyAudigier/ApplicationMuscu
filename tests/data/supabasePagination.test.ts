@@ -1,7 +1,7 @@
 import { createSupabaseBackend } from '../../src/data/supabase';
 import { BackendError, NetworkError, ValidationError } from '../../src/data/ports';
 import type { PerformanceInput } from '../../src/domain/model';
-import { fakeSupabase, has, ok, op, type FakeCall, type FakeResult } from './helpers';
+import { fakeSupabase, has, MemoryStorage, ok, op, type FakeCall, type FakeResult } from './helpers';
 
 const perfRow = (i: number) => ({
   id: `p${String(i)}`, exercise_id: 'e1', exercise_name: 'Bench', session_name: 'S', reps: 5, weight: 100, rpe: 9,
@@ -291,6 +291,28 @@ describe('exercises (Supabase)', () => {
     const { client, calls } = backend();
     await createSupabaseBackend(client).exercises.remove('e1');
     expect(op(calls[0] as FakeCall, 'eq')).toEqual(['id', 'e1']);
+  });
+});
+
+describe('server rejections carry the HTTP status (offline-queue triage)', () => {
+  const denied = { data: null, error: { code: '42501', message: 'permission denied' }, status: 403 };
+  const status = (e: unknown) => (e instanceof BackendError ? e.status : 'not a BackendError');
+  it('advice, coach notes, cycles, exercises and sessions forward the status', async () => {
+    const b = createSupabaseBackend(fakeSupabase(() => denied).client, new MemoryStorage());
+    const calls: Promise<unknown>[] = [
+      b.advice.get(), b.coachNotes.listAll(), b.cycles.get(), b.cycles.save({ current: 'A', startedOn: '2026-11-24', weeks: 2 }),
+      b.exercises.list(), b.sessions.list(),
+    ];
+    for (const call of calls) expect(status(await call.catch((e: unknown) => e))).toBe(403);
+  });
+
+  it('exercise update forwards the status of the variants sync and updated_at retry', async () => {
+    const view = { id: 'e1', name: 'Bench', description: '', muscle_groups: [], is_custom: true, created_at: 'x' };
+    const draftEx = { name: 'Bench', description: '', muscleGroups: [], variants: [] };
+    const syncFails = fakeSupabase((c) => (c.table === 'exercise_variants' ? denied : ok(c.table === 'exercises_with_muscles' ? view : null)));
+    expect(status(await createSupabaseBackend(syncFails.client).exercises.update('e1', draftEx).catch((e: unknown) => e))).toBe(403);
+    const updFails = fakeSupabase((c) => (c.table === 'exercises' && has(c, 'update') ? denied : ok(null)));
+    expect(status(await createSupabaseBackend(updFails.client).exercises.update('e1', draftEx).catch((e: unknown) => e))).toBe(403);
   });
 });
 

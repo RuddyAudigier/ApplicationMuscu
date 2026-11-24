@@ -55,7 +55,7 @@ describe('offline queue', () => {
     expect(r.add.mock.calls.map((c) => c[0][0]?.serieNumber)).toEqual([1, 2, 3]);
     expect(storage.getItem(OFFLINE_QUEUE_KEY)).toBeNull();
     const failed = JSON.parse(storage.getItem(OFFLINE_QUEUE_FAILED_KEY) ?? '[]') as (Batch & { error: string })[];
-    expect(failed).toEqual([expect.objectContaining({ payload: [perf(2)], error: 'bad' })]);
+    expect(failed).toEqual([expect.objectContaining({ payload: [perf(2)], error: 'bad', reason: 'rejected' })]);
     expect(failedCount(storage)).toBe(1);
 
     // Ajout en fin, jamais d'écrasement.
@@ -79,8 +79,6 @@ describe('offline queue', () => {
   it.each<[string, Error]>([
     ['NetworkError', new NetworkError('offline')],
     ['5xx', new BackendError('boom', { status: 500 })],
-    ['uncertain 504', new BackendError('maybe', { status: 504 })],
-    ['uncertain 502', new BackendError('maybe', { status: 502 })],
     ['429', new BackendError('slow down', { status: 429 })],
     ['401', new BackendError('jwt', { status: 401 })],
     ['403', new BackendError('rls', { status: 403, code: '42501' })],
@@ -112,6 +110,52 @@ describe('offline queue', () => {
     const r = repo((inputs) => (inputs[0]?.serieNumber === 1 ? Promise.reject(err) : Promise.resolve({ written: 1 })));
     expect(await flush(r, storage)).toEqual({ sent: 1, remaining: 0, failed: 1, corrupt: false });
     expect(failedCount(storage)).toBe(1);
+  });
+
+  it.each([502, 504])('uncertain replay (%i): archived as uncertain, never retried, flush continues', async (status) => {
+    const storage = new MemoryStorage();
+    enqueue([perf(1)], storage);
+    enqueue([perf(2)], storage);
+    const r = repo((inputs) => (inputs[0]?.serieNumber === 1
+      ? Promise.reject(new BackendError('maybe', { status }))
+      : Promise.resolve({ written: 1 })));
+    expect(await flush(r, storage)).toEqual({ sent: 1, remaining: 0, failed: 1, corrupt: false });
+    expect(JSON.parse(storage.getItem(OFFLINE_QUEUE_FAILED_KEY) ?? '[]')).toEqual([
+      expect.objectContaining({ payload: [perf(1)], reason: 'uncertain' }),
+    ]);
+  });
+
+  it('poison pill: a batch failing transiently 5 times is archived as stuck; later batches unblock in order', async () => {
+    const storage = new MemoryStorage();
+    enqueue([perf(1)], storage);
+    enqueue([perf(2)], storage);
+    enqueue([perf(3)], storage);
+    const r = repo((inputs) => (inputs[0]?.serieNumber === 1
+      ? Promise.reject(new BackendError('boom', { status: 500 }))
+      : Promise.resolve({ written: 1 })));
+    for (let i = 1; i <= 4; i += 1) {
+      expect(await flush(r, storage)).toEqual({ sent: 0, remaining: 3, failed: 0, corrupt: false });
+      expect(JSON.parse(storage.getItem(OFFLINE_QUEUE_KEY) ?? '[]')).toEqual([
+        expect.objectContaining({ payload: [perf(1)], attempts: i }),
+        expect.objectContaining({ payload: [perf(2)] }),
+        expect.objectContaining({ payload: [perf(3)] }),
+      ]);
+    }
+    expect(await flush(r, storage)).toEqual({ sent: 2, remaining: 0, failed: 1, corrupt: false });
+    expect(r.add.mock.calls.slice(-3).map((c) => c[0][0]?.serieNumber)).toEqual([1, 2, 3]);
+    expect(JSON.parse(storage.getItem(OFFLINE_QUEUE_FAILED_KEY) ?? '[]')).toEqual([
+      expect.objectContaining({ payload: [perf(1)], reason: 'stuck', attempts: 5, error: 'boom' }),
+    ]);
+  });
+
+  it('network errors do not count as attempts (offline for a long time is not a poison pill)', async () => {
+    const storage = new MemoryStorage();
+    enqueue([perf(1)], storage);
+    const r = repo(() => Promise.reject(new NetworkError('offline')));
+    for (let i = 0; i < 8; i += 1) await flush(r, storage);
+    expect(queued(storage)).toHaveLength(1);
+    expect(queued(storage)[0]).not.toHaveProperty('attempts');
+    expect(failedCount(storage)).toBe(0);
   });
 
   it('stops at the first network error and keeps the rest', async () => {

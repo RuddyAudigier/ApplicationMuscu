@@ -25,9 +25,9 @@ export function createSessionsRepo(db: Db, fallback: CycleFallback): SessionsRep
   /** Tente avec la colonne ; sur schéma incomplet, bascule en repli puis tente sans. */
   async function withCycle(withCol: () => PromiseLike<PgResult>, without: () => PromiseLike<PgResult>, ctx: string): Promise<unknown> {
     if (hasCycleColumn) {
-      const { data, error } = await run(withCol(), ctx);
+      const { data, error, status } = await run(withCol(), ctx);
       if (!error) return data;
-      if (!isSchemaGap(error)) fail(error, ctx);
+      if (!isSchemaGap(error)) fail(error, ctx, status);
       hasCycleColumn = false;
       fallback.warn();
     }
@@ -67,7 +67,16 @@ export function createSessionsRepo(db: Db, fallback: CycleFallback): SessionsRep
       if (typeof id !== 'string') throw new Error(`${ctx} : id manquant.`);
       await must(db.from('session_exercises').insert(links(id, d)), ctx);
       // Cycle local écrit en DERNIER : un échec de stockage ne laisse pas de séance sans exercices.
-      rememberCycle(id, d.cycle);
+      // La séance est déjà validée en base : rejeter inviterait à recréer (doublon). Choix : on
+      // résout avec la séance relue (`cycle: null`, signal visible) et on avertit en console.
+      try {
+        rememberCycle(id, d.cycle);
+      } catch (e) {
+        console.warn(
+          `${ctx} : séance créée ; seul son cycle n'a pas pu être enregistré sur l'appareil `
+          + `(${e instanceof Error ? e.message : String(e)}). Modifiez la séance pour le régler.`,
+        );
+      }
       return readOne(id);
     },
 
