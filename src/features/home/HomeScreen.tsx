@@ -11,7 +11,15 @@ import { warmupsForSession, type Form } from '@/domain/journal';
 import { startWorkout, type WorkoutState } from '@/domain/workout';
 import { hasSchedule } from '@/domain/planning';
 import { useCycleState, useExercises, useJournal, usePerformances, useSessions, useWeekPlan } from '@/data/queries';
-import { FormSheet, loadActiveWorkout, loadLastReport, saveActiveWorkout, saveLastReport } from '@/features/workout';
+import {
+  FormSheet,
+  isJournalSettled,
+  loadActiveWorkout,
+  loadLastReport,
+  saveActiveWorkout,
+  saveLastReport,
+  usePendingReportSync,
+} from '@/features/workout';
 import { Button, Icon, Skeleton } from '@/ui';
 import { nextPlannedSession, PR_LABEL, relativeDay, weekSegments, type WeekSegment } from './homeLogic';
 import styles from './HomeScreen.module.css';
@@ -231,6 +239,8 @@ export function HomeScreen() {
   // Lus une seule fois par affichage de l'écran.
   const [active] = useState(loadActiveWorkout);
   const [lastReport] = useState(loadLastReport);
+  // Séance terminée hors ligne : rejoint le journal dès qu'il est lisible (silencieux).
+  const pushPendingReport = usePendingReportSync(true);
 
   // Défaut seulement si la requête a réussi sans état enregistré ; jamais en cas d'erreur (D8).
   const state = cycleQuery.isSuccess ? (cycleQuery.data ?? defaultCycleState(today)) : null;
@@ -250,7 +260,8 @@ export function HomeScreen() {
       startWorkout(pending.session, pending.exercises, new Date(), form, warmupsForSession(journalQuery.data, pending.session.id)),
     );
     setPending(null);
-    // Le dernier compte rendu reste visible jusqu'à la séance suivante.
+    // Le dernier compte rendu reste visible jusqu'à la séance suivante : on le rattrape d'abord.
+    pushPendingReport();
     saveLastReport(null);
     void navigate('/workout');
   };
@@ -292,7 +303,9 @@ export function HomeScreen() {
                 <span className={styles.switchDays}>dans {plural(status.daysLeft, 'jour', 'jours')}</span>
               </p>
             </div>
-            <Timeline segments={segments} />
+            <Link to="/bilan" className={styles.timelineLink}>
+              <Timeline segments={segments} />
+            </Link>
           </>
         )}
       </section>
@@ -306,7 +319,8 @@ export function HomeScreen() {
           plan={planQuery.isPending ? undefined : (planQuery.data ?? null)}
           sessionsQuery={sessionsQuery}
           perfsQuery={perfsQuery}
-          exercisesQuery={exercisesQuery}
+          // Démarrage seulement journal fixé : sinon les échauffements seraient perdus en silence.
+          exercisesQuery={{ ...exercisesQuery, isSuccess: exercisesQuery.isSuccess && isJournalSettled(journalQuery) }}
           today={today}
           onStart={start}
         />
@@ -331,7 +345,7 @@ export function HomeScreen() {
         <Link to="/bilan" className={[styles.review, status.daysLeft <= 3 && styles.reviewAccent].filter(Boolean).join(' ')}>
           <span className={styles.reportTitles}>
             <span className={styles.reportKicker}>
-              {status.daysLeft <= 3 ? `Fin du bloc dans ${plural(status.daysLeft, 'jour', 'jours')}` : 'Cycle ' + status.current}
+              {status.daysLeft <= 1 ? 'Dernier jour du bloc' : status.daysLeft <= 3 ? `Fin du bloc dans ${plural(status.daysLeft, 'jour', 'jours')}` : 'Cycle ' + status.current}
             </span>
             <span className={styles.reportName}>Bilan du bloc</span>
           </span>

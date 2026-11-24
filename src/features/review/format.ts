@@ -47,10 +47,11 @@ export function reviewPdfModel(
   add('États généraux', '', r.moods.map((m) => [`${isoToShortFr(m.date)} · ${m.sessionName}`, m.mood]));
   if (note.trim() !== '') add('Ressenti du bloc', '', [[note.trim(), '']]);
   const skipped = r.sessionsSkipped;
+  const missed = r.sessionsMissed;
   return {
     title: `Bilan du bloc · Cycle ${block.cycle}`,
     meta: [`Du ${isoToFr(block.start)} au ${isoToFr(block.end)}`],
-    summary: `${String(r.sessionsDone)}/${String(r.sessionsPlanned)} séances · ${String(skipped)} sautée${skipped > 1 ? 's' : ''} · ${String(r.prs.length)} PR`,
+    summary: `${String(r.sessionsDone)}/${String(r.sessionsPlanned)} séances · ${String(skipped)} sautée${skipped > 1 ? 's' : ''} · ${String(missed)} manquée${missed > 1 ? 's' : ''} · ${String(r.prs.length)} PR`,
     columns: ['Élément', 'Détail'],
     widths: [45, 55],
     sections,

@@ -6,7 +6,14 @@ import { todayIso } from '@/domain/dates';
 import type { CycleId, Session } from '@/domain/model';
 import { warmupsForSession, type Form } from '@/domain/journal';
 import { startWorkout } from '@/domain/workout';
-import { FormSheet, loadActiveWorkout, saveActiveWorkout, saveLastReport } from '@/features/workout';
+import {
+  FormSheet,
+  isJournalSettled,
+  loadActiveWorkout,
+  saveActiveWorkout,
+  saveLastReport,
+  usePendingReportSync,
+} from '@/features/workout';
 import { Button, ConfirmDialog, EmptyState, IconButton, Segmented, Skeleton, useToast } from '@/ui';
 import {
   durationHint,
@@ -82,17 +89,19 @@ export function ProgramScreen() {
   };
 
   /** Démarrage seulement avec la bibliothèque chargée (variantes par défaut correctes). */
-  const canStart = exercisesQuery.isSuccess;
+  const canStart = exercisesQuery.isSuccess && isJournalSettled(journalQuery);
+  const pushPendingReport = usePendingReportSync();
 
   // Séance en attente du choix de la forme du jour.
   const [formFor, setFormFor] = useState<Session | null>(null);
 
   const launch = (session: Session, form: Form) => {
-    if (!exercisesQuery.isSuccess) return;
+    if (!exercisesQuery.isSuccess || !canStart) return;
     saveActiveWorkout(
       startWorkout(session, exercisesQuery.data, new Date(), form, warmupsForSession(journalQuery.data, session.id)),
     );
-    // Le dernier compte rendu reste visible jusqu'au démarrage de la séance suivante.
+    // Le dernier compte rendu reste visible jusqu'au démarrage de la séance suivante : on le rattrape d'abord.
+    pushPendingReport();
     saveLastReport(null);
     void navigate('/workout');
   };

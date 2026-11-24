@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { applyReportEdits, logFromReport, upsertLog, type Feeling, type Form } from '@/domain/journal';
+import type { Feeling, Form } from '@/domain/journal';
 import { formatDecimal } from '@/domain/numbers';
 import type { Report } from '@/domain/report';
 import { buildPdf, preloadPdf } from '@/platform/pdf';
@@ -10,8 +10,10 @@ import {
   FeelingChips,
   JOURNAL_NOT_SYNCED_MESSAGE,
   loadLastReport,
+  pushReport,
   saveLastReport,
   useJournalSync,
+  usePendingReportSync,
 } from '@/features/workout';
 import styles from './ReportScreen.module.css';
 import {
@@ -65,18 +67,11 @@ const FORM_OPTIONS: SegmentedOption<Form | ''>[] = (['frais', 'fatigue'] as cons
   label: FORM_LABEL[value],
 }));
 
-/** Upsert du compte rendu dans le journal (même id) ; `false` si non synchronisé. */
-function pushReport(sync: ReturnType<typeof useJournalSync>, next: Report): Promise<boolean> {
-  const logId = next.logId ?? '';
-  return sync((j) => {
-    const existing = j.logs.find((l) => l.id === logId);
-    return upsertLog(j, existing ? applyReportEdits(existing, next) : logFromReport(next, logId));
-  });
-}
-
 function ReportView({ initial }: { initial: Report }) {
   const toast = useToast();
   const syncJournal = useJournalSync();
+  // Séance terminée hors ligne : le compte rendu rejoint le journal dès qu'il est lisible.
+  usePendingReportSync(true);
   const [report, setReport] = useState(initial);
   const [mood, setMood] = useState(initial.mood);
 

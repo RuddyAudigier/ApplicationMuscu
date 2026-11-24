@@ -29,7 +29,9 @@ export function recentBlocks(state: CycleState, today: IsoDate, count = 6): Bloc
 }
 
 export interface BlockReview {
-  sessionsDone: number; sessionsPlanned: number; sessionsSkipped: number;
+  sessionsDone: number; sessionsPlanned: number;
+  /** Sautées volontairement (`skipped`) ; les séances oubliées sont comptées à part (`missed`). */
+  sessionsSkipped: number; sessionsMissed: number;
   prs: RecentPr[]; exercisesWithoutPr: string[];
   forms: Record<Form, number>; feelings: { exercise: string; counts: Partial<Record<Feeling, number>> }[];
   moods: { date: IsoDate; sessionName: string; mood: string }[];
@@ -51,16 +53,20 @@ export function blockReview(input: {
   let planned = 0;
   let done = 0;
   let skipped = 0;
+  let missed = 0;
   if (plan) {
     for (let monday = mondayOf(block.start); monday <= block.end; monday = addDays(monday, 7)) {
       // Semaine à venir : prévues seulement (rien n'est fait ni manqué).
       const sunday = addDays(monday, 6);
       const ref = today < monday ? monday : today < sunday ? today : sunday;
+      const weekOver = today > sunday;
       for (const o of weekOccurrences(plan, sessions, cycleState, perfs, ref)) {
         if (!inBlock(o.date)) continue;
         planned += 1;
         if (o.status === 'done') done += 1;
         else if (o.status === 'skipped') skipped += 1;
+        // Semaine passée : évaluée au dimanche, où « aujourd'hui » vaut encore ; non fait = manqué.
+        else if (o.status === 'missed' || (weekOver && o.status === 'today')) missed += 1;
       }
     }
   }
@@ -96,7 +102,7 @@ export function blockReview(input: {
     .map((l) => ({ date: l.date, sessionName: l.sessionName, mood: l.mood.trim() }))
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 
-  return { sessionsDone: done, sessionsPlanned: planned, sessionsSkipped: skipped, prs, exercisesWithoutPr, forms, feelings, moods };
+  return { sessionsDone: done, sessionsPlanned: planned, sessionsSkipped: skipped, sessionsMissed: missed, prs, exercisesWithoutPr, forms, feelings, moods };
 }
 
 /** Ressentis comptés, dans l'ordre fixe de `FEELINGS` (« Fatigué ×2, Motivé ×1 »). */

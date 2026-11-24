@@ -51,6 +51,8 @@ export function SessionBuilder({ session, defaultCycle, onClose }: SessionBuilde
   );
   const [query, setQuery] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  /** Vrai jusqu'à la fin de la synchronisation de l'échauffement : pas de double envoi. */
+  const [syncing, setSyncing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const ids = useId();
 
@@ -121,6 +123,7 @@ export function SessionBuilder({ session, defaultCycle, onClose }: SessionBuilde
   };
 
   const onSave = () => {
+    if (syncing || save.isPending) return;
     setSubmitted(true);
     if (!name.trim() || duplicate || items.length === 0) return;
     save.mutate(
@@ -139,10 +142,12 @@ export function SessionBuilder({ session, defaultCycle, onClose }: SessionBuilde
             finish();
             return;
           }
+          setSyncing(true);
           void syncJournal((j) => ({
             ...j,
             warmups: { ...j.warmups, bySession: { ...j.warmups.bySession, [saved.id]: pickedWarmup } },
           })).then((ok) => {
+            setSyncing(false);
             if (ok) finish();
             else {
               toast.show('Séance enregistrée, mais pas son échauffement. Modifie la séance pour réessayer.', 'error');
@@ -186,7 +191,7 @@ export function SessionBuilder({ session, defaultCycle, onClose }: SessionBuilde
                 Supprimer
               </Button>
             )}
-            <Button variant="accent" size="lg" loading={save.isPending} onClick={onSave}>
+            <Button variant="accent" size="lg" loading={save.isPending || syncing} disabled={syncing} onClick={onSave}>
               Enregistrer
             </Button>
           </>

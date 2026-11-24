@@ -77,13 +77,13 @@ export function removeWarmupItem(j: Journal, id: Id): Journal {
   return { ...j, warmups: { catalog: j.warmups.catalog.filter((w) => w.id !== id), bySession } };
 }
 
-/** Compte rendu du journal tiré d'une séance terminée (exercices avec séries validées ou ressenti). */
+/** Compte rendu du journal tiré d'une séance terminée (exercices avec séries validées, chauffe valide ou ressenti). */
 export function logFromWorkout(state: WorkoutState, id: Id): SessionLog {
   return {
     id, date: state.date, sessionId: state.sessionId, sessionName: state.sessionName, cycle: state.cycle,
     form: state.form, mood: state.mood,
     exercises: state.exercises
-      .filter((e) => e.feeling !== null || e.series.some((s) => s.validated))
+      .filter((e) => e.feeling !== null || e.series.some((s) => s.validated) || toWarmupSets(e.warmupSets).length > 0)
       .map((e) => ({ exerciseId: e.exerciseId, name: e.name, feeling: e.feeling, warmupSets: toWarmupSets(e.warmupSets) })),
     warmupDone: state.warmup.filter((w) => w.done).map((w) => ({ name: w.name, detail: w.detail })),
   };

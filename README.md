@@ -72,7 +72,7 @@ Résumé de la séance (exercices, séries, PR obtenus), exportable en PDF et pa
 
 ### Bilan du bloc
 
-Synthèse d’un bloc de cycle (le bloc en cours ou l’un des précédents) : séances faites, prévues et sautées, PR obtenus, exercices sans PR, forme du jour, états par exercice et états généraux notés. Une zone « Ressenti du bloc » se saisit et s’enregistre dans le journal ; le bilan s’exporte en PDF pour le coach. Les blocs passés sont reconstitués par tranches de 14 jours (les prolongations passées ne sont pas mémorisées). Accessible depuis l’accueil, mise en avant dans les 3 derniers jours du bloc.
+Synthèse d’un bloc de cycle (le bloc en cours ou l’un des précédents) : séances faites, prévues, sautées et manquées, PR obtenus, exercices sans PR, forme du jour, états par exercice et états généraux notés. Une zone « Ressenti du bloc » se saisit et s’enregistre dans le journal ; le bilan s’exporte en PDF pour le coach. Les blocs passés sont reconstitués par tranches de 14 jours (les prolongations passées ne sont pas mémorisées). Accessible depuis l’accueil, mise en avant dans les 3 derniers jours du bloc.
 
 ### Records
 
@@ -260,6 +260,8 @@ Exécuter `scripts/sql/2026-11-24_week_plan.sql` (additif, idempotent) : table `
 ### Migration du journal
 
 Exécuter `scripts/sql/2026-11-25_journal.sql` (additif, idempotent) : table `journal` (comptes rendus de séance avec état et échauffements, notes de bloc, catalogue d’échauffements). Sans elle, le journal est gardé sur l’appareil (clé `mymuscle_journal_v1`). Le script `reset_complet.sql` l’inclut déjà.
+
+Jouer la migration avant la première utilisation : sinon le journal reste sur l'appareil.
 
 ### Attention
 

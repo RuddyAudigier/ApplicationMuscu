@@ -10,6 +10,8 @@ const TIMEOUT_MS = 8000;
 
 /** Écritures du journal l'une après l'autre : chacune relit le cache à jour avant d'écrire. */
 let chain: Promise<unknown> = Promise.resolve();
+/** Une écriture a expiré : elle peut encore aboutir plus tard, le cache n'est plus fiable avant relecture. */
+let stale = false;
 
 const withTimeout = <T>(p: Promise<T>, ms: number): Promise<T | undefined> =>
   new Promise((resolve, reject) => {
@@ -54,7 +56,23 @@ export function useJournalSync(): (edit: (j: Journal) => Journal) => Promise<boo
         }
       };
       // Lecture et écriture bornées : une écriture en pause (réseau coupé) ne bloque pas la file.
-      const result = chain.then(async () => (await withTimeout(run(), TIMEOUT_MS)) ?? false);
+      const result = chain.then(async () => {
+        if (stale) {
+          // Après un délai dépassé : relire le serveur avant d'écrire, pour construire sur la vérité serveur.
+          const fresh = await withTimeout(client.refetchQueries({ queryKey: queryKeys.journal }), TIMEOUT_MS).catch(
+            () => undefined,
+          );
+          const state = client.getQueryState(queryKeys.journal);
+          if (fresh === undefined || state?.status === 'error' || state?.fetchStatus === 'fetching') return false;
+          stale = false;
+        }
+        const done = await withTimeout(run(), TIMEOUT_MS);
+        if (done === undefined) {
+          stale = true;
+          return false;
+        }
+        return done;
+      });
       chain = result;
       return result;
     },

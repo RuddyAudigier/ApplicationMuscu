@@ -116,10 +116,12 @@ export function buildReport(state: WorkoutState, history: Performance[], exercis
 
   const reportExercises: ReportExercise[] = [];
   state.exercises.forEach((we, exIndex) => {
-    const series = byExercise.get(exIndex);
-    if (!series) return;
+    const series = byExercise.get(exIndex) ?? [];
+    const warmupSets = toWarmupSets(we.warmupSets);
+    // Même règle que `logFromWorkout` : séries validées, chauffe valide ou ressenti (échauffement seul : « 0 série »).
+    if (series.length === 0 && warmupSets.length === 0 && we.feeling === null) return;
     const name = exercises.find((e) => e.id === we.exerciseId)?.name ?? we.name;
-    reportExercises.push({ exerciseId: we.exerciseId, name, seriesLabel: seriesLabel(series.length, we.stoppedEarly), feeling: we.feeling, series: series.sort((x, y) => x.n - y.n), warmupSets: toWarmupSets(we.warmupSets) });
+    reportExercises.push({ exerciseId: we.exerciseId, name, seriesLabel: seriesLabel(series.length, we.stoppedEarly), feeling: we.feeling, series: series.sort((x, y) => x.n - y.n), warmupSets });
   });
 
   return {

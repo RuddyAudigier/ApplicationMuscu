@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCycleState, useJournal, usePerformances, useSessions, useWeekPlan } from '@/data/queries';
 import { blockReview, feelingCountsLabel, recentBlocks, type BlockRange, type BlockReview } from '@/domain/blockReview';
 import { defaultCycleState } from '@/domain/cycles';
@@ -19,6 +19,18 @@ function BlockNote({ block, journal, onNote }: { block: BlockRange; journal: Jou
   const syncJournal = useJournalSync();
   const saved = journal?.blockNotes[block.start] ?? '';
   const [text, setText] = useState(saved);
+  // Quitter l'écran sans quitter le champ : le ressenti est quand même enregistré.
+  const pending = useRef({ text, saved, start: block.start, syncJournal });
+  useEffect(() => {
+    pending.current = { text, saved, start: block.start, syncJournal };
+  }, [text, saved, block.start, syncJournal]);
+  useEffect(
+    () => () => {
+      const { text: t, saved: s, start, syncJournal: sync } = pending.current;
+      if (t !== s) void sync((j) => setBlockNote(j, start, t));
+    },
+    [],
+  );
   return (
     <section className={styles.section} aria-labelledby="review-note">
       <h2 id="review-note" className={styles.sectionTitle}>Ressenti du bloc</h2>
@@ -155,7 +167,7 @@ export function ReviewScreen() {
     preloadPdf().catch(() => undefined);
   }, []);
 
-  const failed = [cycleQuery, sessionsQuery, perfsQuery, journalQuery].filter((q) => q.isError);
+  const failed = [cycleQuery, sessionsQuery, perfsQuery, journalQuery, planQuery].filter((q) => q.isError);
   const loading = !failed.length && (!block || !review || planQuery.isPending);
 
   const send = async (): Promise<void> => {
@@ -238,6 +250,7 @@ export function ReviewScreen() {
               label="séances faites"
             />
             <StatTile value={review.sessionsSkipped} label={review.sessionsSkipped > 1 ? 'sautées' : 'sautée'} />
+            <StatTile value={review.sessionsMissed} label={review.sessionsMissed > 1 ? 'manquées' : 'manquée'} />
             <StatTile value={review.prs.length} label="PR" />
           </div>
 

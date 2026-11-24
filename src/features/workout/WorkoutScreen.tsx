@@ -71,6 +71,8 @@ function WorkoutView() {
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [moodOpen, setMoodOpen] = useState(false);
+  /** Choix explicite de l'utilisateur ; `null` = automatique (ouvert sur le premier exercice tant que tout n'est pas coché). */
+  const [warmupChoice, setWarmupChoice] = useState<boolean | null>(null);
   const syncJournal = useJournalSync();
 
   const exercises = exercisesQuery.data ?? NO_EXERCISES;
@@ -260,28 +262,66 @@ function WorkoutView() {
     </section>
   );
 
+  const warmupDone = state.warmup.filter((w) => w.done).length;
+  const warmupAllDone = state.warmup.length > 0 && warmupDone === state.warmup.length;
+  const warmupOpen = warmupChoice ?? (current === 0 && !warmupAllDone);
   const warmupSection = state.warmup.length > 0 && (
     <section className={styles.warmup} aria-labelledby="warmup-title">
-      <h2 id="warmup-title" className={styles.warmupTitle}>Échauffement</h2>
-      <ul className={styles.warmupList}>
-        {state.warmup.map((w, i) => (
-          <li key={i}>
-            <label className={styles.warmupItem}>
-              <input
-                type="checkbox"
-                checked={w.done}
-                onChange={() => {
-                  dispatch({ type: 'toggleWarmup', index: i });
-                }}
-              />
-              <span className={styles.warmupText}>
-                <span>{w.name}</span>
-                {w.detail !== '' && <span className={styles.muted}>{w.detail}</span>}
-              </span>
-            </label>
-          </li>
-        ))}
-      </ul>
+      {warmupOpen ? (
+        <h2 id="warmup-title" className={styles.warmupTitle}>Échauffement</h2>
+      ) : (
+        <button
+          type="button"
+          id="warmup-title"
+          className={styles.moodToggle}
+          aria-expanded={false}
+          onClick={() => {
+            setWarmupChoice(true);
+          }}
+        >
+          <span className={styles.moodLabel}>
+            {warmupAllDone
+              ? `Échauffement fait (${String(state.warmup.length)})`
+              : `Échauffement (${String(warmupDone)}/${String(state.warmup.length)})`}
+          </span>
+          <Icon name="chevron" size={16} />
+        </button>
+      )}
+      {warmupOpen && (
+        <ul className={styles.warmupList}>
+          {state.warmup.map((w, i) => (
+            <li key={i}>
+              <label className={styles.warmupItem}>
+                <input
+                  type="checkbox"
+                  checked={w.done}
+                  onChange={() => {
+                    dispatch({ type: 'toggleWarmup', index: i });
+                    // Dernier élément coché : retour au repli automatique.
+                    if (!w.done && warmupDone + 1 === state.warmup.length) setWarmupChoice(null);
+                  }}
+                />
+                <span className={styles.warmupText}>
+                  <span>{w.name}</span>
+                  {w.detail !== '' && <span className={styles.muted}>{w.detail}</span>}
+                </span>
+              </label>
+            </li>
+          ))}
+        </ul>
+      )}
+      {warmupOpen && warmupAllDone && (
+        <button
+          type="button"
+          className={styles.moodToggle}
+          onClick={() => {
+            setWarmupChoice(false);
+          }}
+        >
+          <span className={styles.moodLabel}>Replier l’échauffement</span>
+          <Icon name="chevron" size={16} />
+        </button>
+      )}
     </section>
   );
 
