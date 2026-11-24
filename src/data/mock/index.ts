@@ -8,7 +8,10 @@ import { createMockExercisesRepo } from './exercises.repo';
 import { createMockPerformancesRepo } from './performances.repo';
 import { createMockSessionsRepo } from './sessions.repo';
 
-/** Backend local (localStorage), même contrat et mêmes validations que Supabase. Ne lève jamais `NetworkError`. */
+/**
+ * Backend local (localStorage), même contrat et mêmes validations que Supabase.
+ * Seul `performances.add` lève `NetworkError`, quand le navigateur est hors ligne (démo de la file D8).
+ */
 export function createMockBackend(storage: Storage = localStorage, opts: MockOptions = {}): DataBackend {
   const ctx = createMockContext(storage, opts);
   return {

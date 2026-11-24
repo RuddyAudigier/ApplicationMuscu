@@ -113,26 +113,28 @@ export function ProgramScreen() {
         <button
           type="button"
           className={styles.sessionMain}
-          aria-label={`${isActive ? 'Reprendre' : 'Démarrer'} ${title}`}
           disabled={session.exercises.length === 0 || (!canStart && !isActive)}
           onClick={() => { onStart(session); }}
         >
+          {/* Nom accessible = texte visible (WCAG 2.5.3) ; les espaces explicites séparent les mots
+              (conteneurs flex : ils ne s'affichent pas). */}
+          <span className="visually-hidden">{isActive ? 'Reprendre' : 'Démarrer'}</span>{' '}
           <span className={styles.sessionHead}>
             <span className={styles.sessionTitle}>
               {code && <span className={styles.code}>{code}</span>} {session.name}
-            </span>
+            </span>{' '}
             {isActive ? (
               <span className={styles.badge}>En cours</span>
             ) : (
               last && <span className={last.isToday ? styles.badge : styles.when}>{last.label}</span>
             )}
-          </span>
+          </span>{' '}
           <span className={styles.exercises}>
             {session.exercises.length === 0 && <span className={styles.muted}>Aucun exercice</span>}
             {session.exercises.slice(0, VISIBLE_EXERCISES).map((e) => (
               <span key={e.exerciseId} className={styles.exercise}>
-                <span>{e.name}</span>
-                <span className={styles.muted}>{seriesLabel(e.series)}</span>
+                <span>{e.name}</span>{' '}
+                <span className={styles.muted}>{seriesLabel(e.series)}</span>{' '}
               </span>
             ))}
             {hidden > 0 && (

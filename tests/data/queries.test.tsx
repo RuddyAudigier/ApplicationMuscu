@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { createMockBackend } from '../../src/data/mock';
@@ -189,6 +189,23 @@ describe('useAddPerformances (D7/D8)', () => {
       await expect(result.current.mutateAsync([perf()])).rejects.toThrow('permission denied');
     });
     expect(localStorage.getItem(OFFLINE_QUEUE_KEY)).toBeNull();
+  });
+});
+
+describe('useAddPerformances while the browser is offline', () => {
+  afterEach(() => {
+    onlineManager.setOnline(true);
+  });
+
+  it('runs anyway (not paused by TanStack) so a NetworkError queues the batch', async () => {
+    const backend = createMockBackend(new MemoryStorage());
+    vi.spyOn(backend.performances, 'add').mockRejectedValueOnce(new NetworkError('offline'));
+    const { wrapper } = setup(backend);
+    const { result } = renderHook(() => useAddPerformances(), { wrapper });
+    onlineManager.setOnline(false);
+    const res = await act(() => result.current.mutateAsync([perf()]));
+    expect(res).toEqual({ written: 0, queued: true });
+    expect(JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) ?? '[]')).toHaveLength(1);
   });
 });
 

@@ -29,7 +29,7 @@ export function ExercisePicker({ exercises, selected, onSelect, look }: Exercise
       >
         {look === 'card' ? (
           <span className={styles.exerciseCardText}>
-            <span className={styles.exerciseCardLabel}>Exercice</span>
+            <span className={styles.exerciseCardLabel}>Exercice</span>{' '}
             <span className={styles.exerciseCardName}>{name}</span>
           </span>
         ) : (

@@ -68,16 +68,18 @@ function Timeline({ segments }: { segments: WeekSegment[] }) {
 function ActiveCard({ active }: { active: WorkoutState }) {
   const done = active.exercises.reduce((n, e) => n + e.series.filter((s) => s.validated).length, 0);
   return (
-    <Link to="/workout" className={styles.dayCard} aria-label={`Reprendre ${active.sessionName}`}>
+    // Nom accessible = texte visible (WCAG 2.5.3) ; les espaces explicites séparent les mots.
+    <Link to="/workout" className={styles.dayCard}>
+      <span className="visually-hidden">Reprendre </span>
       <div className={styles.dayHead}>
         <div className={styles.dayTitles}>
-          <span className={styles.dayKicker}>Séance en cours{active.cycle ? ` · Cycle ${active.cycle}` : ''}</span>
+          <span className={styles.dayKicker}>Séance en cours{active.cycle ? ` · Cycle ${active.cycle}` : ''}</span>{' '}
           <span className={styles.dayName}>{active.sessionName}</span>
         </div>
         <span className={styles.play}><Icon name="play" size={20} /></span>
-      </div>
+      </div>{' '}
       <div className={styles.dayStats}>
-        <span className={styles.dayNumber}>{done}</span>
+        <span className={styles.dayNumber}>{done}</span>{' '}
         <span className={styles.dayText}>
           {done > 1 ? 'séries validées' : 'série validée'}
           <br />
@@ -164,17 +166,18 @@ function SessionCard({
           if (exercises) onStart(session, exercises);
         }}
         disabled={exercises === null}
-        aria-label={`Démarrer ${session.name}`}
       >
+        {/* Nom accessible = texte visible (WCAG 2.5.3) ; les espaces explicites séparent les mots. */}
+        <span className="visually-hidden">Démarrer </span>
         <div className={styles.dayHead}>
           <div className={styles.dayTitles}>
-            <span className={styles.dayKicker}>Séance du jour · {code}</span>
+            <span className={styles.dayKicker}>Séance du jour · {code}</span>{' '}
             <span className={styles.dayName}>{session.name}</span>
           </div>
           <span className={styles.play}><Icon name="play" size={20} /></span>
-        </div>
+        </div>{' '}
         <div className={styles.dayStats}>
-          <span className={styles.dayNumber}>{series}</span>
+          <span className={styles.dayNumber}>{series}</span>{' '}
           <span className={styles.dayText}>
             {series > 1 ? 'séries prévues' : 'série prévue'}
             <br />
