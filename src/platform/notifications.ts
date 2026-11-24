@@ -20,7 +20,7 @@ const SWITCH_CHANNEL = 'cycles';
 const SESSION_ACTION_TYPE = 'session';
 const START_ACTION = 'start';
 const SMALL_ICON = 'ic_stat_mymuscle';
-const ICON_COLOR = '#D4FF3A';
+const ICON_COLOR = '#d4f53c';
 
 /** Lecture tolérante : stockage indisponible ou contenu illisible → défauts. */
 export function loadReminderPrefs(): ReminderPrefs {
