@@ -327,6 +327,18 @@ export function HomeScreen() {
         </Link>
       )}
 
+      {status && (
+        <Link to="/bilan" className={[styles.review, status.daysLeft <= 3 && styles.reviewAccent].filter(Boolean).join(' ')}>
+          <span className={styles.reportTitles}>
+            <span className={styles.reportKicker}>
+              {status.daysLeft <= 3 ? `Fin du bloc dans ${plural(status.daysLeft, 'jour', 'jours')}` : 'Cycle ' + status.current}
+            </span>
+            <span className={styles.reportName}>Bilan du bloc</span>
+          </span>
+          <span className={styles.reportMeta}><Icon name="chevron" size={18} /></span>
+        </Link>
+      )}
+
       <section className={styles.prs} aria-labelledby="home-prs">
         <div className={styles.prsHead}>
           <h2 id="home-prs" className={styles.prsTitle}>Derniers PR</h2>

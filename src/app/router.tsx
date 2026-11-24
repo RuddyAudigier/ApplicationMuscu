@@ -4,6 +4,7 @@ import { HomeScreen } from '@/features/home';
 import { ProgramScreen } from '@/features/program';
 import { AddRecordScreen, RecordsScreen } from '@/features/records';
 import { ReportScreen } from '@/features/report';
+import { ReviewScreen } from '@/features/review';
 import { SettingsScreen } from '@/features/settings';
 import { WorkoutScreen } from '@/features/workout';
 import { Layout } from './Layout';
@@ -16,6 +17,7 @@ export const routes: RouteObject[] = [
       { path: '/program', element: <ProgramScreen /> },
       { path: '/workout', element: <WorkoutScreen /> },
       { path: '/report', element: <ReportScreen /> },
+      { path: '/bilan', element: <ReviewScreen /> },
       { path: '/records/add', element: <AddRecordScreen /> },
       { path: '/records/:exerciseId?', element: <RecordsScreen /> },
       { path: '/exercises', element: <ExercisesScreen /> },

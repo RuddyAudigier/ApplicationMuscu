@@ -30,6 +30,7 @@ Le design est sombre, « noir & citron » : fond noir, accents jaune citron, typ
 | Programme | `/program` |
 | Séance en cours | `/workout` |
 | Compte rendu | `/report` |
+| Bilan du bloc | `/bilan` |
 | Records | `/records/:exerciseId?` |
 | Ajouter un PR hors séance | `/records/add` |
 | Exercices et fiche exercice | `/exercises`, `/exercises/:id` |
@@ -68,6 +69,10 @@ Le design est sombre, « noir & citron » : fond noir, accents jaune citron, typ
 ### Compte rendu (PDF pour le coach)
 
 Résumé de la séance (exercices, séries, PR obtenus), exportable en PDF et partageable.
+
+### Bilan du bloc
+
+Synthèse d’un bloc de cycle (le bloc en cours ou l’un des précédents) : séances faites, prévues et sautées, PR obtenus, exercices sans PR, forme du jour, états par exercice et états généraux notés. Une zone « Ressenti du bloc » se saisit et s’enregistre dans le journal ; le bilan s’exporte en PDF pour le coach. Les blocs passés sont reconstitués par tranches de 14 jours (les prolongations passées ne sont pas mémorisées). Accessible depuis l’accueil, mise en avant dans les 3 derniers jours du bloc.
 
 ### Records
 
