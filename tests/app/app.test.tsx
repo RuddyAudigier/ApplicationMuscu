@@ -85,7 +85,7 @@ describe('router placeholders', () => {
     ['/report', 'Compte rendu'],
     ['/records', 'Records'],
     ['/records/abc', 'Records'],
-    ['/records/add', 'Ajouter un record'],
+    ['/records/add', 'Ajouter un PR'],
     ['/exercises', 'Exercices'],
     ['/exercises/abc', 'Fiche exercice'],
     ['/settings', 'Réglages'],

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { Exercise, Variant } from '@/domain/model';
 import { importPerformances, parseCsv } from '@/domain/csv';
 
@@ -113,5 +113,22 @@ describe('importPerformances', () => {
 
   it('missing columns behave as empty cells', () => {
     expect(importPerformances('exercice;reps\nSquat;5', ex, d).errors).toEqual(['Ligne 2: poids invalide.']);
+  });
+
+  it('rejects rows dated after today', () => {
+    const r = importPerformances('exercice;reps;poids;date\nSquat;5;100;2026-03-10\nSquat;5;100;11/03/2026', ex, d);
+    expect(r.rows).toHaveLength(1);
+    expect(r.errors).toEqual(['Ligne 3: date dans le futur (11/03/2026).']);
+  });
+
+  it('defaults today to the current local day', () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date(2026, 2, 10, 12) });
+    try {
+      const r = importPerformances('exercice;reps;poids;date\nSquat;5;100;\nSquat;5;100;2026-03-11', ex);
+      expect(r.rows[0]?.performanceDate).toBe('2026-03-10');
+      expect(r.errors).toEqual(['Ligne 3: date dans le futur (2026-03-11).']);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

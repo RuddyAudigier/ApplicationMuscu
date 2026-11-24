@@ -1,4 +1,4 @@
-import { parseDateToIso } from './dates';
+import { parseDateToIso, todayIso } from './dates';
 import type { Exercise, IsoDate, PerformanceInput } from './model';
 import { normalizeHeader, normalizeVariantName } from './names';
 import { toNumber } from './numbers';
@@ -87,6 +87,7 @@ function importLine(
   const dateRaw = get('date');
   const date = dateRaw === '' ? today : parseDateToIso(dateRaw);
   if (date === null) return fail(`date invalide (${dateRaw}).`);
+  if (date > today) return fail(`date dans le futur (${dateRaw}).`);
   if (reps === 0) return fail('0 rep, ignorée.');
 
   const variantRaw = get('variant');
@@ -114,12 +115,13 @@ function importLine(
 
 /**
  * Import CSV legacy (INV §3.14, messages exacts). Les lignes invalides sont ignorées avec une
- * erreur ; les lignes à 0 rep sont exclues et signalées (D7). `today` = date par défaut.
+ * erreur ; les lignes à 0 rep sont exclues et signalées (D7). `today` (jour local par défaut) =
+ * date des lignes sans date ; les lignes datées après `today` sont rejetées.
  */
 export function importPerformances(
   text: string,
   exercises: Exercise[],
-  today: IsoDate,
+  today: IsoDate = todayIso(),
 ): { rows: PerformanceInput[]; errors: string[] } {
   const table = parseCsv(text);
   const [header, ...data] = table;
