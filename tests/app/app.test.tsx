@@ -5,6 +5,8 @@ import { BackendProvider, Providers, useBackend } from '../../src/app/providers'
 import { createTestRouter } from '../../src/app/router';
 import { createMockBackend } from '../../src/data/mock';
 import { NetworkError, ValidationError } from '../../src/data/ports';
+import { startWorkout } from '../../src/domain/workout';
+import { saveActiveWorkout } from '../../src/features/workout';
 
 /** Les écrans lisent les données : on les monte dans les vrais providers, backend mock. */
 const renderRoute = (path: string) =>
@@ -80,7 +82,6 @@ describe('router placeholders', () => {
   it.each([
     ['/', 'Accueil'],
     ['/program', 'Programme'],
-    ['/workout', 'Séance en cours'],
     ['/report', 'Compte rendu'],
     ['/records', 'Records'],
     ['/records/abc', 'Records'],
@@ -125,8 +126,28 @@ describe('layout navigation', () => {
     expect(screen.getByRole('link', { name: 'Records' })).toHaveAttribute('aria-current', 'page');
   });
 
-  it.each(['/workout', '/report'])('hides the bottom nav on %s', (path) => {
+  it.each(['/report'])('hides the bottom nav on %s', (path) => {
     renderRoute(path);
     expect(screen.queryByRole('navigation')).toBeNull();
+  });
+
+  it('hides the bottom nav on /workout (séance en cours)', async () => {
+    const backend = createMockBackend(localStorage);
+    const exercises = await backend.exercises.list();
+    const [session] = await backend.sessions.list();
+    if (!session) throw new Error('seed');
+    saveActiveWorkout(startWorkout(session, exercises, new Date()));
+    render(
+      <Providers backend={backend}>
+        <RouterProvider router={createTestRouter(['/workout'])} />
+      </Providers>,
+    );
+    expect(await screen.findByRole('heading', { level: 1, name: 'Développé couché' })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation')).toBeNull();
+  });
+
+  it('redirects /workout to home without an active workout', () => {
+    renderRoute('/workout');
+    expect(screen.getByRole('heading', { name: 'Accueil' })).toBeInTheDocument();
   });
 });
