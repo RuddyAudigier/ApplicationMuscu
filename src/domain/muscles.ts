@@ -2,8 +2,8 @@ import type { Exercise } from './model';
 import { normalizeSearch } from './names';
 
 export const MUSCLE_CATALOG: readonly string[] = [
-  'Pecs', 'Trapeze', 'Grand dorsal', 'Bas du dos', 'Épaules', 'Biceps', 'Triceps', 'Avant-bras',
-  'Abdominaux', 'Quadriceps', 'Ischios', 'Fessiers', 'Mollets', 'Abducteurs', 'Psoas',
+  'Pectoraux', 'Trapèzes', 'Grand dorsal', 'Bas du dos', 'Épaules', 'Biceps', 'Triceps', 'Avant-bras',
+  'Abdominaux', 'Quadriceps', 'Ischio-jambiers', 'Fessiers', 'Mollets', 'Abducteurs', 'Psoas',
 ];
 
 export function normalizeMuscleGroups(v: unknown): string[] {

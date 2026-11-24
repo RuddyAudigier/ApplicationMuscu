@@ -2,6 +2,7 @@ import { e1rm, roundE1rm } from '@/domain/e1rm';
 import type { CycleId, Exercise, ExerciseDraft, Id, Performance, Session, Variant } from '@/domain/model';
 import { matchesQuery, muscleKey, muscleKeys } from '@/domain/muscles';
 import { normalizeSearch } from '@/domain/names';
+import { formatWeight } from '@/domain/numbers';
 import { bestByReps, paretoMask } from '@/domain/perfTable';
 import { DEFAULT_VARIANT, variantLabel } from '@/domain/variants';
 
@@ -115,7 +116,7 @@ export function createDraft(name: string, muscleGroups: string[]): ExerciseDraft
 
 /** « 27,5 kg » ; « — » sans perf. */
 export function formatKg(v: number | null): string {
-  return v === null ? '—' : `${String(v).replace('.', ',')} kg`;
+  return v === null ? '—' : `${formatWeight(v)} kg`;
 }
 
 /** « Par défaut · 14 records », « 1 record », « Aucun record ». */

@@ -29,6 +29,7 @@ describe('RecordsScreen', () => {
     expect(screen.getAllByRole('rowheader')).toHaveLength(30);
     expect(within(rowFor(6)).getByText('92,5 kg')).toBeInTheDocument();
     expect(within(rowFor(6)).getByText('10/03')).toBeInTheDocument();
+    expect(within(rowFor(6)).getByText('9,5')).toBeInTheDocument();
     // 5 × 90 est dominé par 6 × 92,5 (Pareto).
     expect(within(rowFor(5)).getByText('à conquérir')).toBeInTheDocument();
   });

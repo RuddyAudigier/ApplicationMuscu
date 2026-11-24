@@ -120,7 +120,8 @@ describe('WorkoutScreen', { timeout: 20_000 }, () => {
     renderWorkout(backend);
     await ready();
     expect(screen.getByText(SESSION)).toBeInTheDocument();
-    expect(screen.getByText(/exercice 1 sur 2/)).toBeInTheDocument();
+    // Nom de séance et progression sur deux lignes distinctes (pas de troncature commune).
+    expect(screen.getByText('Exercice 1 sur 2')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'Développé couché' })).toBeInTheDocument();
     expect(await screen.findByText(/Coudes ouverts/)).toBeInTheDocument();
     const variants = screen.getByRole('radiogroup', { name: 'Variante' });
@@ -145,8 +146,11 @@ describe('WorkoutScreen', { timeout: 20_000 }, () => {
     // 30 lignes ; 5 × 90 est dominé par 6 × 92,5 (Pareto).
     const rows = within(dialog).getAllByRole('button', { name: /reps? :/ });
     expect(rows).toHaveLength(30);
-    expect(within(dialog).getByRole('button', { name: /^5 reps : vide/ })).toBeInTheDocument();
-    await user.click(within(dialog).getByRole('button', { name: /^6 reps : 92,5 kg/ }));
+    expect(within(dialog).getByRole('button', { name: /^5 reps : à conquérir/ })).toBeInTheDocument();
+    const six = within(dialog).getByRole('button', { name: /^6 reps : 92,5 kg, RPE 9,5/ });
+    expect(within(six).getByText('9,5')).toBeInTheDocument();
+    expect(within(within(dialog).getByRole('button', { name: /^5 reps/ })).getByText('à conquérir')).toBeInTheDocument();
+    await user.click(six);
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(screen.getByText('Cible : battre 6 × 92,5 kg')).toBeInTheDocument();
     expect(screen.getByLabelText('Reps')).toHaveValue('6');
@@ -164,7 +168,7 @@ describe('WorkoutScreen', { timeout: 20_000 }, () => {
     const dialog = screen.getByRole('dialog', { name: 'Mes records' });
     await user.click(within(dialog).getByRole('radio', { name: 'Pause' }));
     expect(within(dialog).getByRole('radio', { name: 'Pause' })).toHaveAttribute('aria-checked', 'true');
-    await user.click(within(dialog).getByRole('button', { name: /^8 reps : vide/ }));
+    await user.click(within(dialog).getByRole('button', { name: /^8 reps : à conquérir/ }));
     expect(screen.getByText('Cible : premier record à 8 reps')).toBeInTheDocument();
     const variants = screen.getByRole('radiogroup', { name: 'Variante' });
     expect(within(variants).getByRole('radio', { name: 'Pause' })).toHaveAttribute('aria-checked', 'true');
@@ -227,7 +231,7 @@ describe('WorkoutScreen', { timeout: 20_000 }, () => {
     await doSerie(user, '5', '80');
     await user.click(screen.getByRole('button', { name: 'Fatigué ? Arrêter à 1 série' }));
     expect(screen.getByRole('heading', { level: 1, name: 'Squat' })).toBeInTheDocument();
-    expect(screen.getByText(/exercice 2 sur 2/)).toBeInTheDocument();
+    expect(screen.getByText('Exercice 2 sur 2')).toBeInTheDocument();
     const bench = loadActiveWorkout()?.exercises[0];
     expect(bench?.stoppedEarly).toBe(true);
     expect(bench?.series).toHaveLength(1);
@@ -251,7 +255,7 @@ describe('WorkoutScreen', { timeout: 20_000 }, () => {
     await user.clear(within(dialog).getByLabelText('Rechercher un exercice'));
     await user.type(within(dialog).getByLabelText('Rechercher un exercice'), 'deve');
     await user.click(within(dialog).getByRole('button', { name: /Développé couché/ }));
-    expect(screen.getByText(/exercice 3 sur 3/)).toBeInTheDocument();
+    expect(screen.getByText('Exercice 3 sur 3')).toBeInTheDocument();
     expect(loadActiveWorkout()?.exercises).toHaveLength(3);
   });
 
@@ -383,7 +387,7 @@ describe('WorkoutScreen', { timeout: 20_000 }, () => {
     const dialog = screen.getByRole('dialog', { name: 'Mes records' });
     await user.click(within(dialog).getByRole('radio', { name: 'Pause' }));
     expect(within(dialog).getByRole('radio', { name: 'Pause' })).toHaveAttribute('aria-checked', 'true');
-    expect(within(dialog).getByRole('button', { name: /^6 reps : vide/ })).toHaveAttribute('aria-pressed', 'false');
+    expect(within(dialog).getByRole('button', { name: /^6 reps : à conquérir/ })).toHaveAttribute('aria-pressed', 'false');
     await user.click(within(dialog).getByRole('button', { name: 'Fermer' }));
     const variants = screen.getByRole('radiogroup', { name: 'Variante' });
     expect(within(variants).getByRole('radio', { name: 'Pause' })).toHaveAttribute('aria-checked', 'true');

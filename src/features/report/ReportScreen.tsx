@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
+import { formatDecimal } from '@/domain/numbers';
 import type { Report } from '@/domain/report';
 import { buildPdf, preloadPdf } from '@/platform/pdf';
 import { shareFile } from '@/platform/share';
@@ -27,7 +28,7 @@ function SerieRow({ s }: { s: ReportSerie }) {
         <span className={styles.perf}>{formatPerf(s)}</span>
         <span className={styles.variant}>{s.variant}</span>
       </span>
-      <span className={styles.rpe}>RPE {s.rpe}</span>
+      <span className={styles.rpe}>RPE {formatDecimal(s.rpe)}</span>
       <span className={styles.prCol}>
         {s.isPr && (
           <>
