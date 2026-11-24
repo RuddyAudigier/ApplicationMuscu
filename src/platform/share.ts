@@ -38,8 +38,17 @@ async function nativeShare(
     directory: Directory.Cache,
     recursive: true,
   });
-  const { uri } = await Filesystem.getUri({ path, directory: Directory.Cache });
-  await Share.share({ title: meta.title, text: meta.text, url: uri, dialogTitle });
+  try {
+    const { uri } = await Filesystem.getUri({ path, directory: Directory.Cache });
+    await Share.share({ title: meta.title, text: meta.text, url: uri, dialogTitle });
+  } finally {
+    // Nettoyage du cache ; un échec ici ne doit pas masquer le résultat du partage.
+    try {
+      await Filesystem.deleteFile({ path, directory: Directory.Cache });
+    } catch {
+      // fichier déjà supprimé ou plugin indisponible
+    }
+  }
 }
 
 export async function shareImage(
@@ -82,8 +91,11 @@ function download(file: File): void {
 }
 
 /**
- * Partage un fichier (PDF…) : partage natif Capacitor, puis Web Share (fichiers),
- * puis téléchargement direct. Une annulation par l'utilisateur arrête la chaîne.
+ * Partage un fichier (PDF…).
+ * - Natif (Capacitor) : partage système ; une erreur autre qu'une annulation est relancée
+ *   (un `<a download>` ne fait rien dans la WebView : pas de faux succès).
+ * - Web : Web Share avec fichiers si `canShare` l'accepte, sinon téléchargement direct.
+ * Une annulation par l'utilisateur arrête la chaîne.
  */
 export async function shareFile(
   file: File,
@@ -95,10 +107,14 @@ export async function shareFile(
       return 'shared';
     } catch (error) {
       if (isCancel(error)) return 'cancelled';
+      throw error;
     }
   }
-  // Pas de canShare : il renvoie false à tort sur certains appareils.
-  if (typeof navigator.share === 'function') {
+  const canShareFiles =
+    typeof navigator.share === 'function' &&
+    typeof navigator.canShare === 'function' &&
+    navigator.canShare({ files: [file] });
+  if (canShareFiles) {
     try {
       await navigator.share({ title: meta.title, text: meta.text, files: [file] });
       return 'shared';

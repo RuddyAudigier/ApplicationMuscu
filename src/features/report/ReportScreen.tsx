@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import type { Report } from '@/domain/report';
-import { buildPdf } from '@/platform/pdf';
+import { buildPdf, preloadPdf } from '@/platform/pdf';
 import { shareFile } from '@/platform/share';
 import { Button, EmptyState, StatTile, useToast } from '@/ui';
 import { loadLastReport } from '@/features/workout';
@@ -31,8 +31,11 @@ function SerieRow({ s }: { s: ReportSerie }) {
       <span className={styles.prCol}>
         {s.isPr && (
           <>
-            <span className={styles.prBadge} aria-label={kind ? `PR, ${PR_KIND_LONG[kind]}` : 'PR'}>
-              PR
+            <span className={styles.prBadge}>
+              <span aria-hidden="true">PR</span>
+              <span className="visually-hidden">
+                {kind ? `Record personnel : ${PR_KIND_LONG[kind]}` : 'Record personnel'}
+              </span>
             </span>
             {kind && (
               <span className={styles.prKind} aria-hidden="true">
@@ -50,21 +53,34 @@ function ReportView({ report }: { report: Report }) {
   const toast = useToast();
   const [sending, setSending] = useState(false);
 
+  // Charge jsPDF dès l'affichage : au clic, le partage reste dans la fenêtre d'activation.
+  useEffect(() => {
+    preloadPdf().catch(() => undefined);
+  }, []);
+
   const send = async (): Promise<void> => {
     setSending(true);
     try {
-      const blob = await buildPdf(reportPdfModel(report));
+      let file: File;
       const name = reportFileName(report);
-      const file = new File([blob], name, { type: 'application/pdf' });
-      const result = await shareFile(file, {
-        title: `Compte rendu · ${report.title}`,
-        text: `Compte rendu de la séance ${report.title} (${shortDate(report.date)}) : ${summaryLine(report)}.`,
-        dialogTitle: 'Envoyer au coach',
-      });
-      if (result === 'shared') toast.show('Compte rendu partagé.', 'success');
-      else if (result === 'downloaded') toast.show(`PDF téléchargé : ${name}`, 'success');
-    } catch {
-      toast.show('Impossible de générer le PDF. Réessaie dans un instant.', 'error');
+      try {
+        const blob = await buildPdf(reportPdfModel(report));
+        file = new File([blob], name, { type: 'application/pdf' });
+      } catch {
+        toast.show('Impossible de générer le PDF. Réessaie dans un instant.', 'error');
+        return;
+      }
+      try {
+        const result = await shareFile(file, {
+          title: `Compte rendu · ${report.title}`,
+          text: `Compte rendu de la séance ${report.title} (${shortDate(report.date)}) : ${summaryLine(report)}.`,
+          dialogTitle: 'Envoyer au coach',
+        });
+        if (result === 'shared') toast.show('Compte rendu partagé.', 'success');
+        else if (result === 'downloaded') toast.show(`PDF téléchargé : ${name}`, 'success');
+      } catch {
+        toast.show("Le partage du PDF a échoué : il n'a pas été envoyé. Réessaie dans un instant.", 'error');
+      }
     } finally {
       setSending(false);
     }
@@ -74,10 +90,13 @@ function ReportView({ report }: { report: Report }) {
     <div className={styles.screen}>
       <header className={styles.header}>
         <p className={styles.meta}>
-          {report.cycle && (
-            <span className={styles.cycle} aria-label={`Cycle ${report.cycle}`}>
+          {report.cycle ? (
+            <span className={styles.cycle}>
+              <span className="visually-hidden">Cycle </span>
               {report.cycle}
             </span>
+          ) : (
+            <span>Hors cycle ·</span>
           )}{' '}
           {report.title} · {shortDate(report.date)} · {formatDuration(report.durationMin)}
         </p>

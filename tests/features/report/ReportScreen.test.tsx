@@ -6,10 +6,11 @@ import { sampleReport } from './fixtures';
 
 const mocks = vi.hoisted(() => ({
   buildPdf: vi.fn(),
+  preloadPdf: vi.fn(),
   shareFile: vi.fn(),
 }));
 
-vi.mock('@/platform/pdf', () => ({ buildPdf: mocks.buildPdf }));
+vi.mock('@/platform/pdf', () => ({ buildPdf: mocks.buildPdf, preloadPdf: mocks.preloadPdf }));
 vi.mock('@/platform/share', () => ({ shareFile: mocks.shareFile }));
 
 import { ReportScreen } from '@/features/report';
@@ -34,6 +35,7 @@ describe('ReportScreen', () => {
     localStorage.clear();
     vi.resetAllMocks();
     mocks.buildPdf.mockResolvedValue(new Blob(['%PDF'], { type: 'application/pdf' }));
+    mocks.preloadPdf.mockResolvedValue({});
   });
 
   it('shows an empty state with a link home when there is no report', async () => {
@@ -48,8 +50,9 @@ describe('ReportScreen', () => {
     saveLastReport(sampleReport);
     renderScreen();
     expect(screen.getByRole('heading', { level: 1, name: 'Séance terminée' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Cycle A')).toHaveTextContent('A');
-    expect(screen.getByText(/Haut du corps · lundi 23\/11 · 52 min/)).toBeInTheDocument();
+    const meta = screen.getByText(/Haut du corps · lundi 23\/11 · 52 min/);
+    expect(meta).toHaveTextContent(/^Cycle A Haut du corps/);
+    expect(screen.getByText('Cycle', { exact: false, selector: '.visually-hidden' })).toBeInTheDocument();
     expect(screen.getAllByText('PR')[0]?.parentElement).toHaveTextContent('2PR');
     expect(screen.getByText('séries').parentElement).toHaveTextContent('3séries');
     expect(screen.getByText('exercices').parentElement).toHaveTextContent('2exercices');
@@ -61,11 +64,14 @@ describe('ReportScreen', () => {
     expect(rows[0]).toHaveTextContent('4 × 100 kg');
     expect(rows[0]).toHaveTextContent('Classique');
     expect(rows[0]).toHaveTextContent('RPE 9');
-    expect(within(rows[0] as HTMLElement).getByLabelText('PR, record de répétitions')).toBeInTheDocument();
+    // Le type de PR atteint les lecteurs d'écran via du texte masqué visuellement.
+    expect(within(rows[0] as HTMLElement).getByText('Record personnel : record de répétitions')).toHaveClass('visually-hidden');
+    expect(within(rows[0] as HTMLElement).getByText('PR')).toHaveAttribute('aria-hidden', 'true');
     expect(rows[1]).toHaveTextContent('5 × 82,5 kg');
     expect(within(rows[1] as HTMLElement).queryByText('PR')).toBeNull();
     expect(screen.getByText('1 série · fatigué')).toBeInTheDocument();
-    expect(screen.getByLabelText('PR, record hybride')).toBeInTheDocument();
+    expect(screen.getByText('Record personnel : record hybride')).toBeInTheDocument();
+    expect(mocks.preloadPdf).toHaveBeenCalledTimes(1);
   });
 
   it('handles a report without cycle, series or PR kind', () => {
@@ -77,7 +83,7 @@ describe('ReportScreen', () => {
       exercises: [],
     });
     renderScreen();
-    expect(screen.queryByLabelText(/^Cycle/)).toBeNull();
+    expect(screen.getByText(/Haut du corps · lundi/)).toHaveTextContent(/^Hors cycle · Haut du corps/);
     expect(screen.getByText('série')).toBeInTheDocument();
     expect(screen.getByText('exercice')).toBeInTheDocument();
     expect(screen.getByText('Aucune série validée pendant cette séance.')).toBeInTheDocument();
@@ -89,7 +95,24 @@ describe('ReportScreen', () => {
       exercises: [{ name: 'X', seriesLabel: '1 série', series: [{ n: 1, variant: 'Classique', reps: 1, weight: 1, rpe: 8, isPr: true, prKind: null }] }],
     });
     renderScreen();
-    expect(screen.getByRole('list', { name: 'Séries — X' })).toContainElement(screen.getByLabelText('PR'));
+    expect(screen.getByRole('list', { name: 'Séries — X' })).toContainElement(screen.getByText('Record personnel'));
+  });
+
+  it('survives a failed jspdf preload', () => {
+    mocks.preloadPdf.mockRejectedValue(new Error('offline'));
+    saveLastReport(sampleReport);
+    renderScreen();
+    expect(screen.getByRole('button', { name: 'Envoyer au coach (PDF)' })).toBeEnabled();
+  });
+
+  it('shows an error, not a false success, when sharing fails', async () => {
+    saveLastReport(sampleReport);
+    mocks.shareFile.mockRejectedValue(new Error('native share failed'));
+    renderScreen();
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer au coach (PDF)' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent("Le partage du PDF a échoué : il n'a pas été envoyé.");
+    expect(screen.queryByText(/PDF téléchargé/)).toBeNull();
+    expect(screen.queryByText('Compte rendu partagé.')).toBeNull();
   });
 
   it('builds the PDF and shares it with a sanitized file name', async () => {

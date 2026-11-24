@@ -38,9 +38,30 @@ const MUTED: [number, number, number] = [110, 106, 100];
 const RULE: [number, number, number] = [220, 218, 214];
 const ACCENT: [number, number, number] = [212, 245, 60];
 
+/** Interligne jsPDF par défaut (facteur 1,15) converti de points en mm. */
+const lineStep = (pt: number): number => pt * 1.15 * (25.4 / 72);
+
+type JsPdfModule = typeof import('jspdf');
+let jsPdfModule: Promise<JsPdfModule> | null = null;
+
+/**
+ * Lance le chargement de jsPDF (une seule fois) : à appeler au montage de l'écran pour que
+ * le partage Web Share reste dans la fenêtre d'activation utilisateur au clic.
+ */
+export function preloadPdf(): Promise<JsPdfModule> {
+  jsPdfModule ??= import('jspdf').catch((error: unknown) => {
+    jsPdfModule = null;
+    throw error;
+  });
+  return jsPdfModule;
+}
+
 export async function buildPdf(model: PdfReportModel): Promise<Blob> {
-  const { jsPDF } = await import('jspdf');
+  const { jsPDF } = await preloadPdf();
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+  doc.setProperties({ title: model.title, creator: 'MyMuscle' });
+
+  const split = (text: string, width: number): string[] => doc.splitTextToSize(text, width) as string[];
 
   const total = model.widths.reduce((a, b) => a + b, 0) || 1;
   const xs: number[] = [];
@@ -57,28 +78,52 @@ export async function buildPdf(model: PdfReportModel): Promise<Blob> {
     y = MARGIN;
   };
 
-  // Bandeau titre.
-  doc.setFillColor(...ACCENT);
-  doc.rect(MARGIN, y, 4, 12, 'F');
+  // Bandeau titre (retour à la ligne si le nom de séance est long).
   doc.setTextColor(...INK);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(20);
-  doc.text(model.title, MARGIN + 7, y + 9);
-  y += 18;
+  const titleLines = split(model.title, CONTENT_W - 7);
+  const titleExtra = (titleLines.length - 1) * lineStep(20);
+  doc.setFillColor(...ACCENT);
+  doc.rect(MARGIN, y, 4, 12 + titleExtra, 'F');
+  doc.text(titleLines, MARGIN + 7, y + 9);
+  y += 18 + titleExtra;
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
   doc.setTextColor(...MUTED);
   for (const line of model.meta) {
-    doc.text(line, MARGIN, y);
-    y += 5;
+    const lines = split(line, CONTENT_W);
+    doc.text(lines, MARGIN, y);
+    y += 5 + (lines.length - 1) * lineStep(10);
   }
   y += 2;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
   doc.setTextColor(...INK);
-  doc.text(model.summary, MARGIN, y);
-  y += 10;
+  const summaryLines = split(model.summary, CONTENT_W);
+  doc.text(summaryLines, MARGIN, y);
+  y += 10 + (summaryLines.length - 1) * lineStep(12);
+
+  /** Titre de section : la légende est mesurée d'abord pour réserver sa place à droite. */
+  const sectionTitle = (heading: string, caption: string): void => {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    const captionW = caption ? doc.getTextWidth(caption) : 0;
+    const headingW = Math.max(CONTENT_W - captionW - 4, CONTENT_W / 2);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(...INK);
+    const lines = split(heading, headingW);
+    doc.text(lines, MARGIN, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...MUTED);
+    const captionLines = split(caption, CONTENT_W - headingW - 4);
+    doc.text(captionLines, PAGE_W - MARGIN, y, { align: 'right' });
+    const rows = Math.max(lines.length, 1);
+    y += 6 + (rows - 1) * lineStep(12) + Math.max(0, captionLines.length - rows) * lineStep(9);
+  };
 
   const header = (): void => {
     doc.setFont('helvetica', 'bold');
@@ -95,15 +140,7 @@ export async function buildPdf(model: PdfReportModel): Promise<Blob> {
 
   for (const section of model.sections) {
     ensure(14 + ROW_H * Math.min(section.rows.length, 2));
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.setTextColor(...INK);
-    doc.text(section.heading, MARGIN, y);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(...MUTED);
-    doc.text(section.caption, PAGE_W - MARGIN, y, { align: 'right' });
-    y += 6;
+    sectionTitle(section.heading, section.caption);
     header();
     for (const row of section.rows) {
       doc.setFont('helvetica', 'normal');
@@ -117,6 +154,7 @@ export async function buildPdf(model: PdfReportModel): Promise<Blob> {
       if (y + height > PAGE_H - MARGIN) {
         doc.addPage();
         y = MARGIN;
+        sectionTitle(`${section.heading} (suite)`, section.caption);
         header();
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
