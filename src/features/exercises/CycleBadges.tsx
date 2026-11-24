@@ -1,8 +1,6 @@
 import type { CycleId } from '@/domain/model';
-import { Skeleton } from '@/ui';
+import { cx, Skeleton } from '@/ui';
 import styles from './CycleBadges.module.css';
-
-const cx = (...names: (string | false | undefined)[]): string => names.filter(Boolean).join(' ');
 
 /** Séances chargées ou non : jamais de pastilles déduites d'une liste de repli vide. */
 export type CyclesState = 'pending' | 'error' | 'success';

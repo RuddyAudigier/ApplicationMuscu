@@ -2,6 +2,7 @@ export { Badge, type BadgeProps, type BadgeTone } from './Badge';
 export { BottomNav, type BottomNavProps, type NavItem } from './BottomNav';
 export { Button, type ButtonProps, type ButtonVariant } from './Button';
 export { Card, type CardProps } from './Card';
+export { cx } from './cx';
 export { Chip, type ChipProps } from './Chip';
 export {
   ConfirmDialog,

@@ -61,8 +61,8 @@ export function longDateFr(iso: IsoDate): string {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
-/** Concatène les classes CSS définies. */
-export const cx = (...names: (string | false | null | undefined)[]): string => names.filter(Boolean).join(' ');
+/** Réexport du `cx` partagé (src/ui) pour les imports existants. */
+export { cx } from '@/ui/cx';
 
 export const kg =(n: number): string => `${formatWeight(n)} kg`;
 

@@ -3,8 +3,7 @@ import type { Performance, Variant } from '@/domain/model';
 import { formatDecimal, formatWeight } from '@/domain/numbers';
 import { variantLabel } from '@/domain/variants';
 import { recordsTable, type RecordRow } from '@/domain/workout';
-import { Pill, Sheet } from '@/ui';
-import { cx } from './cx';
+import { cx, Pill, Sheet } from '@/ui';
 import { isSameVariant, variantKeyOf } from './livePr';
 import styles from './WorkoutScreen.module.css';
 

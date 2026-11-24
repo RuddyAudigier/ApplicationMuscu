@@ -191,7 +191,7 @@ describe('AddRecordScreen', () => {
   it('changes exercise from the picker and resets the variant', async () => {
     const user = userEvent.setup();
     renderAt('/records/add?variant=Pause');
-    await user.click(await screen.findByRole('button', { name: /Changer d'exercice/ }));
+    await user.click(await screen.findByRole('button', { name: /Changer d’exercice/ }));
     await user.click(within(screen.getByRole('dialog')).getByRole('radio', { name: 'Squat' }));
     expect(screen.getByRole('button', { name: /Exercice : Squat/ })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Classique' })).toHaveAttribute('aria-checked', 'true');

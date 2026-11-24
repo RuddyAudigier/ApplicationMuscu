@@ -18,13 +18,13 @@ const batch = { createdAt: '2026-11-20T10:00:00.000Z', payload: [{
   variantId: null, variantName: '', serieNumber: 1, performanceDate: '2026-11-20',
 }] };
 
-function setup(backend: DataBackend = createMockBackend(localStorage)) {
+function setup(backend: DataBackend = createMockBackend(localStorage), initialEntries = ['/', '/settings']) {
   const router = createMemoryRouter(
     [
       { path: '/', element: <h1>Accueil</h1> },
       { path: '/settings', element: <SettingsScreen /> },
     ],
-    { initialEntries: ['/', '/settings'], initialIndex: 1 },
+    { initialEntries, initialIndex: initialEntries.length - 1 },
   );
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
@@ -50,6 +50,13 @@ describe('SettingsScreen', () => {
       expect(screen.getByRole('heading', { level: 2, name })).toBeInTheDocument();
     }
     expect(screen.getByText(/méthode fontesque/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Retour' }));
+    expect(router.state.location.pathname).toBe('/');
+  });
+
+  it('revient à l’accueil quand Réglages est ouvert sans historique interne', async () => {
+    const { router, user } = setup(undefined, ['/settings']);
+    expect(router.state.location.key).toBe('default');
     await user.click(screen.getByRole('button', { name: 'Retour' }));
     expect(router.state.location.pathname).toBe('/');
   });

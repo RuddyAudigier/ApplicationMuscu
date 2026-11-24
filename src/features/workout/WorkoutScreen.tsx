@@ -13,9 +13,8 @@ import {
 } from '@/domain/workout';
 import { todayIso } from '@/domain/dates';
 import { useAddPerformances, useExercises, usePerformances, useSessions } from '@/data/queries';
-import { Button, Field, Icon, IconButton, Pill, Sheet, Skeleton, useConfirm, useToast } from '@/ui';
+import { Button, cx, Field, Icon, IconButton, Pill, Sheet, Skeleton, useConfirm, useToast } from '@/ui';
 import { AddExerciseSheet } from './AddExerciseSheet';
-import { cx } from './cx';
 import { isSameVariant, livePrFlags, prSignature, variantKeyOf, variantsOf } from './livePr';
 import { RecordsSheet } from './RecordsSheet';
 import { sessionCode } from './sessionCode';

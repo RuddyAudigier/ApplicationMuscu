@@ -29,7 +29,7 @@ export async function openRecordsOf(page: Page, exercise: string): Promise<void>
   await expect(page.getByRole('heading', { name: 'Records', level: 1 })).toBeVisible();
   await page.getByRole('button', { name: /^Exercice : / }).click();
   await page.getByRole('radio', { name: exercise, exact: true }).click();
-  await expect(page.getByRole('button', { name: `Exercice : ${exercise}. Changer d'exercice` })).toBeVisible();
+  await expect(page.getByRole('button', { name: `Exercice : ${exercise}. Changer d’exercice` })).toBeVisible();
 }
 
 /** Ligne du tableau Records pour `reps` répétitions. */
