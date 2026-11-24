@@ -70,3 +70,28 @@ test('axe /report sans séance', async ({ freshPage: page }) => {
   await expect(page.getByRole('heading', { name: 'Compte rendu', level: 1 })).toBeVisible();
   await expectNoSeriousViolations(page);
 });
+
+test('axe sheet « Mes records » en séance', async ({ freshPage: page }) => {
+  await todayCard(page).click();
+  await expect(page).toHaveURL(/\/workout$/);
+  await page.getByRole('button', { name: 'Mes records' }).click();
+  await expect(page.getByRole('dialog', { name: 'Mes records' })).toBeVisible();
+  await expectNoSeriousViolations(page);
+});
+
+test('axe sheet de variante sur la fiche exercice', async ({ freshPage: page }) => {
+  await page.goto('/exercises');
+  await page.getByRole('link', { name: /Squat/ }).click();
+  await expect(page.getByRole('heading', { name: 'Squat', level: 1 })).toBeVisible();
+  await page.getByRole('button', { name: /Gérer la variante$/ }).first().click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expectNoSeriousViolations(page);
+});
+
+test('axe /records/add avec la date « Autre »', async ({ freshPage: page }) => {
+  await page.goto('/records/add');
+  await expect(page.getByRole('heading', { name: 'Ajouter un PR', level: 1 })).toBeVisible();
+  await page.getByRole('radiogroup', { name: 'Date du PR' }).getByRole('radio', { name: 'Autre' }).click();
+  await expect(page.getByLabel('Choisir la date')).toBeVisible();
+  await expectNoSeriousViolations(page);
+});

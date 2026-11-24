@@ -1,4 +1,4 @@
-import { BENCH, SEED_SESSION, expect, openRecordsOf, recordRow, test, todayCard } from './fixtures';
+import { BENCH, SEED_SESSION, expect, openRecordsOf, readPendingQueue, recordRow, seedMockDb, test, todayCard } from './fixtures';
 
 /** Valide la série en cours (reps, kg, RPE) dans l'écran de séance. */
 async function fillSerie(page: import('@playwright/test').Page, reps: string, kg: string, rpe: string) {
@@ -67,15 +67,8 @@ test('2. PR hors séance daté d’hier : visible dans le tableau Records', asyn
 });
 
 test('3. cycle prolongé à 3 semaines : bascule annoncée dans 11 jours', async ({ freshPage: page }) => {
-  await page.clock.setFixedTime(new Date('2026-11-24T10:00:00+01:00'));
-  // Cycle A commencé il y a 10 jours (2 semaines) : bascule dans 4 jours.
-  await page.evaluate(() => {
-    const key = 'local_test_db_v2';
-    const db = JSON.parse(localStorage.getItem(key) ?? '{}') as Record<string, unknown>;
-    db.cycleState = { current: 'A', startedOn: '2026-11-14', weeks: 2 };
-    localStorage.setItem(key, JSON.stringify(db));
-  });
-  await page.reload();
+  // Horloge figée au 24/11/2026 (fixture) ; cycle A commencé il y a 10 jours (2 semaines) : bascule dans 4 jours.
+  await seedMockDb(page, { cycleState: { current: 'A', startedOn: '2026-11-14', weeks: 2 } });
   const cycle = page.getByRole('region', { name: 'Cycle en cours' });
   await expect(cycle).toContainText('Bascule vers B');
   await expect(cycle).toContainText('dans 4 jours');
@@ -118,8 +111,7 @@ test('5. hors ligne au moment de terminer : rien n’est perdu, la séance arriv
   // Rien n'est perdu : le lot part dans la file locale et le compte rendu s'affiche.
   await expect(page.getByText(/Ta séance est gardée sur cet appareil/)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Séance terminée' })).toBeVisible();
-  const pending = await page.evaluate(() => JSON.parse(localStorage.getItem('pending_performances_queue_v1') ?? '[]') as unknown[]);
-  expect(pending).toHaveLength(1);
+  expect(await readPendingQueue(page)).toHaveLength(1);
 
   // Encore hors ligne : pas encore dans Records.
   await page.getByRole('link', { name: /Retour à l.accueil/ }).click();
@@ -131,5 +123,5 @@ test('5. hors ligne au moment de terminer : rien n’est perdu, la séance arriv
   // Retour du réseau : la file est rejouée et la série apparaît.
   await context.setOffline(false);
   await expect(recordRow(page, 2)).toContainText('107,5 kg');
-  expect(await page.evaluate(() => localStorage.getItem('pending_performances_queue_v1'))).toBeNull();
+  expect(await readPendingQueue(page)).toBeNull();
 });

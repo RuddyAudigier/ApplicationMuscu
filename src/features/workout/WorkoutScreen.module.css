@@ -15,11 +15,13 @@
   gap: var(--space-2);
 }
 
+/* « A1 · Exercice 1 sur 5 » sur une ligne : seul le nom (séance sans cycle) se tronque. */
 .progress {
   display: flex;
   flex: 1 1 auto;
-  flex-direction: column;
+  align-items: baseline;
   min-width: 0;
+  white-space: pre;
   color: var(--color-text-muted);
   font-size: 0.8125rem;
   line-height: 1.3;
@@ -35,6 +37,10 @@
 .session {
   color: var(--color-accent);
   font-weight: var(--weight-bold);
+}
+
+.step {
+  flex-shrink: 0;
 }
 
 /* « Terminer » ne se tronque jamais : c'est le titre qui cède la place. */
@@ -119,6 +125,44 @@
   font-weight: var(--weight-medium);
 }
 
+.doneActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.editBtn {
+  min-height: var(--touch-target);
+  padding: 0 var(--space-2);
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  font-weight: var(--weight-medium);
+}
+
+.editBtn:hover {
+  color: var(--color-text);
+}
+
+.serieActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.recordsBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
 .prBadge {
   padding: 4px 8px;
   border-radius: var(--radius-full);
@@ -163,7 +207,7 @@
   font-weight: var(--weight-semibold);
 }
 
-.recordsBtn:hover {
+.recordsBtn:hover:not(:disabled) {
   background: var(--color-surface);
 }
 
@@ -240,7 +284,7 @@
 }
 
 .input::placeholder {
-  color: var(--color-text-subtle);
+  color: var(--color-text-muted);
 }
 
 .rpes {
@@ -336,7 +380,7 @@
 .tableHead {
   flex-shrink: 0;
   padding: 14px var(--space-3) 6px;
-  color: var(--color-text-subtle);
+  color: var(--color-text-muted);
   font-size: 0.6875rem;
 }
 

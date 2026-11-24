@@ -129,7 +129,7 @@
 
 .segmentLabel {
   font-size: 11px;
-  color: var(--color-text-subtle);
+  color: var(--color-text-muted);
 }
 
 .segment[data-status='current'] .segmentLabel {

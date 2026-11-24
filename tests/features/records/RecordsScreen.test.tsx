@@ -79,7 +79,7 @@ describe('RecordsScreen', () => {
     const backend = createMockBackend(localStorage);
     const { squat } = await exerciseIds(backend);
     const { router } = renderAt('/records', backend);
-    await user.click(await screen.findByRole('button', { name: /Changer d'exercice/ }));
+    await user.click(await screen.findByRole('button', { name: /Changer d’exercice/ }));
     const dialog = screen.getByRole('dialog', { name: 'Choisir un exercice' });
     await user.click(within(dialog).getByRole('radio', { name: 'Squat' }));
     expect(router.state.location.pathname).toBe(`/records/${squat}`);
@@ -162,7 +162,7 @@ describe('CSV import (menu ⋯)', () => {
   async function openMenu() {
     const user = userEvent.setup();
     await screen.findByText('92,5 kg');
-    await user.click(screen.getByRole('button', { name: "Plus d'options" }));
+    await user.click(screen.getByRole('button', { name: "Plus d’options" }));
     return { user, input: screen.getByLabelText(/Importer un CSV/) };
   }
 
@@ -203,7 +203,7 @@ describe('CSV import (menu ⋯)', () => {
     renderAt('/records', backend);
     const { user, input } = await openMenu();
     await user.upload(input, csv('exercice,reps,poids\nSquat,5,100\n'));
-    expect(await screen.findByText("Import échoué, rien n'a été enregistré : refusé")).toBeInTheDocument();
+    expect(await screen.findByText("Import échoué, rien n’a été enregistré : refusé")).toBeInTheDocument();
   });
 
   it('ignores an empty selection', async () => {
@@ -223,7 +223,7 @@ describe('CSV import (menu ⋯)', () => {
     vi.spyOn(backend.exercises, 'list').mockRejectedValue(new NetworkError('offline'));
     renderAt('/records', backend);
     await screen.findByText(/Impossible de charger les records/);
-    await user.click(screen.getByRole('button', { name: "Plus d'options" }));
+    await user.click(screen.getByRole('button', { name: "Plus d’options" }));
     expect(screen.getByLabelText(/Importer un CSV/)).toBeDisabled();
     expect(screen.getByText(/import indisponible/)).toHaveAttribute('role', 'alert');
   });
@@ -233,7 +233,7 @@ describe('CSV import (menu ⋯)', () => {
     const backend = createMockBackend(localStorage);
     vi.spyOn(backend.exercises, 'list').mockReturnValue(new Promise(() => undefined));
     renderAt('/records', backend);
-    await user.click(screen.getByRole('button', { name: "Plus d'options" }));
+    await user.click(screen.getByRole('button', { name: "Plus d’options" }));
     expect(screen.getByLabelText(/Importer un CSV/)).toBeDisabled();
     expect(screen.getByText('Chargement des exercices…')).toBeInTheDocument();
   });

@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
+import { vi } from 'vitest';
 import { Chip, Field, NumberField, Segmented } from '../../src/ui';
 
 function NumberHarness({ onValue }: { onValue: (v: string) => void }) {
@@ -114,6 +115,24 @@ describe('Segmented', () => {
     expect(radio('6')).toHaveAttribute('aria-checked', 'true');
     await user.keyboard('{ArrowUp}a');
     expect(radio('10')).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('disabled: options désactivées, aucun changement', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <Segmented
+        label="Durée"
+        value=""
+        disabled
+        onChange={onChange}
+        options={[{ value: '2', label: '2' }, { value: '3', label: '3' }]}
+      />,
+    );
+    const radio = screen.getByRole('radio', { name: '3' });
+    expect(radio).toBeDisabled();
+    await user.click(radio);
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it('makes the first option tabbable when value matches none', () => {

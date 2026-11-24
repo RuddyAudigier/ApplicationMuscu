@@ -5,8 +5,9 @@ import type { Exercise } from '@/domain/model';
 import { Button, Icon, Sheet, Skeleton, useToast } from '@/ui';
 import { CoachNotesField } from './CoachNotesField';
 import { CycleBadgesFor } from './CycleBadges';
+import { EditExerciseSheet } from './EditExerciseSheet';
 import { SessionsError } from './SessionsError';
-import { cyclesFor } from './exerciseLogic';
+import { cyclesFor, errorText, hasExercisePerformances } from './exerciseLogic';
 import { MuscleMap } from './MuscleMap';
 import { VariantsSection, type PerfState } from './VariantsSection';
 import styles from './ExerciseDetailScreen.module.css';
@@ -73,6 +74,7 @@ function ExerciseDetail({ exercise }: { exercise: Exercise }) {
   const toast = useToast();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
 
   const cycles = sessions.isSuccess ? cyclesFor(exercise.id, sessions.data) : [];
   const perfs: PerfState = performances.isSuccess
@@ -86,17 +88,24 @@ function ExerciseDetail({ exercise }: { exercise: Exercise }) {
         }
       : { status: 'pending' };
 
+  // C2 : suppression seulement si l'historique est chargé et vide (cascade en base non vérifiée).
+  const hasHistory = performances.isSuccess ? hasExercisePerformances(exercise.id, performances.data) : null;
+
   const doDelete = () => {
+    if (hasHistory !== false) return;
     setDeleteError(null);
     remove.mutate(exercise.id, {
       onSuccess: () => {
-        toast.show('Exercice supprimé. Tes performances sont conservées.', 'success');
+        toast.show('Exercice supprimé.', 'success');
         void navigate('/exercises');
       },
       onError: (error) => {
-        setDeleteError(error.message || 'La suppression a échoué.');
+        setDeleteError(errorText('Suppression impossible', error));
       },
     });
+  };
+  const closeDelete = () => {
+    setConfirmDelete(false);
   };
 
   return (
@@ -113,6 +122,7 @@ function ExerciseDetail({ exercise }: { exercise: Exercise }) {
             </span>
           ))}
         </div>
+        {exercise.description.trim() !== '' && <p className={styles.description}>{exercise.description}</p>}
         {sessions.isError && (
           <SessionsError
             onRetry={() => {
@@ -129,52 +139,90 @@ function ExerciseDetail({ exercise }: { exercise: Exercise }) {
       <MuscleMap muscles={exercise.muscleGroups} />
 
       <Button
+        variant="secondary"
+        icon="edit"
+        fullWidth
+        onClick={() => {
+          setEditing(true);
+        }}
+      >
+        Modifier l’exercice
+      </Button>
+
+      <Button
         variant="danger"
         icon="trash"
         fullWidth
+        disabled={hasHistory === null}
+        aria-describedby={performances.isError ? 'delete-exercise-unavailable' : undefined}
         onClick={() => {
           setConfirmDelete(true);
         }}
       >
         Supprimer l’exercice
       </Button>
-
-      <Sheet
-        open={confirmDelete}
-        role="alertdialog"
-        title={`Supprimer « ${exercise.name} » ?`}
-        aria-describedby="delete-exercise-text"
-        onClose={() => {
-          setConfirmDelete(false);
-        }}
-        footer={
-          <div className={styles.sheetActions}>
-            <Button
-              variant="secondary"
-              size="lg"
-              fullWidth
-              onClick={() => {
-                setConfirmDelete(false);
-              }}
-            >
-              Annuler
-            </Button>
-            <Button variant="danger" size="lg" fullWidth loading={remove.isPending} onClick={doDelete}>
-              Supprimer
-            </Button>
-          </div>
-        }
-      >
-        <p id="delete-exercise-text" className={styles.sheetText}>
-          L’exercice est retiré de la liste et de tes séances, avec ses variantes et les remarques du coach. Tes
-          performances déjà enregistrées ne sont pas effacées, mais elles ne seront plus rattachées à une fiche.
+      {performances.isError && (
+        <p id="delete-exercise-unavailable" className={styles.sheetText}>
+          Historique indisponible : suppression impossible pour l’instant.
         </p>
-        {deleteError && (
-          <p role="alert" className={styles.fieldError}>
-            {deleteError}
+      )}
+
+      {editing && (
+        <EditExerciseSheet
+          exercise={exercise}
+          onClose={() => {
+            setEditing(false);
+          }}
+        />
+      )}
+
+      {hasHistory ? (
+        <Sheet
+          open={confirmDelete}
+          role="alertdialog"
+          title="Suppression impossible"
+          aria-describedby="delete-exercise-text"
+          onClose={closeDelete}
+          footer={
+            <Button variant="accent" size="lg" fullWidth onClick={closeDelete}>
+              Compris
+            </Button>
+          }
+        >
+          <p id="delete-exercise-text" className={styles.sheetText}>
+            Cet exercice a des performances enregistrées : il ne peut pas être supprimé pour ne pas risquer ton
+            historique. Renomme-le plutôt.
           </p>
-        )}
-      </Sheet>
+        </Sheet>
+      ) : (
+        <Sheet
+          open={confirmDelete}
+          role="alertdialog"
+          title={`Supprimer « ${exercise.name} » ?`}
+          aria-describedby="delete-exercise-text"
+          onClose={closeDelete}
+          footer={
+            <div className={styles.sheetActions}>
+              <Button variant="secondary" size="lg" fullWidth onClick={closeDelete}>
+                Annuler
+              </Button>
+              <Button variant="danger" size="lg" fullWidth loading={remove.isPending} onClick={doDelete}>
+                Supprimer
+              </Button>
+            </div>
+          }
+        >
+          <p id="delete-exercise-text" className={styles.sheetText}>
+            L’exercice est retiré de la liste et de tes séances, avec ses variantes et les remarques du coach.
+            Aucune performance n’est enregistrée pour lui.
+          </p>
+          {deleteError && (
+            <p role="alert" className={styles.fieldError}>
+              {deleteError}
+            </p>
+          )}
+        </Sheet>
+      )}
     </div>
   );
 }

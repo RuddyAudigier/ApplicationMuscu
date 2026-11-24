@@ -6,7 +6,9 @@ import { variantLabel } from '@/domain/variants';
 import { Button, Field, Icon, Sheet, Skeleton, useToast } from '@/ui';
 import {
   draftWith,
+  errorText,
   formatKg,
+  hasVariantPerformances,
   newVariant,
   removeVariant,
   renameVariant,
@@ -48,7 +50,7 @@ export function VariantsSection({ exercise, perfs }: Props) {
       {
         onSuccess: onDone,
         onError: (error) => {
-          onFail(error.message || 'La modification des variantes a échoué.');
+          onFail(errorText('Modification des variantes impossible', error));
         },
       },
     );
@@ -164,6 +166,7 @@ export function VariantsSection({ exercise, perfs }: Props) {
           exercise={exercise}
           variant={current}
           stat={currentStat}
+          hasHistory={perfs.status === 'success' ? hasVariantPerformances(exercise.id, current, perfs.data) : null}
           busy={busy}
           onClose={() => {
             setSelected(null);
@@ -188,12 +191,14 @@ interface SheetProps {
   exercise: Exercise;
   variant: Variant;
   stat: VariantStat | null;
+  /** La variante a des performances (`null` : historique pas encore chargé ou en erreur). */
+  hasHistory: boolean | null;
   busy: boolean;
   onClose: () => void;
   onSave: (variants: Variant[], message: string, onFail: (message: string) => void) => void;
 }
 
-function VariantSheet({ exercise, variant, stat, busy, onClose, onSave }: SheetProps) {
+function VariantSheet({ exercise, variant, stat, hasHistory, busy, onClose, onSave }: SheetProps) {
   const key = variantKey(variant);
   const label = variantLabel(variant.name);
   const [name, setName] = useState(variant.name);
@@ -215,12 +220,44 @@ function VariantSheet({ exercise, variant, stat, busy, onClose, onSave }: SheetP
   };
 
   const remove = () => {
-    if (busy) return;
-    onSave(removeVariant(exercise.variants, key), 'Variante supprimée. Ses records sont conservés.', (message) => {
+    // C2 : jamais de suppression d'une variante qui a un historique (cascade en base non vérifiée).
+    if (busy || hasHistory !== false) return;
+    onSave(removeVariant(exercise.variants, key), 'Variante supprimée.', (message) => {
       setConfirming(false);
       setError(message);
     });
   };
+
+  if (confirming && hasHistory) {
+    return (
+      <Sheet
+        open
+        role="alertdialog"
+        title="Suppression impossible"
+        aria-describedby="delete-variant-text"
+        onClose={() => {
+          setConfirming(false);
+        }}
+        footer={
+          <Button
+            variant="accent"
+            size="lg"
+            fullWidth
+            onClick={() => {
+              setConfirming(false);
+            }}
+          >
+            Compris
+          </Button>
+        }
+      >
+        <p id="delete-variant-text" className={styles.sheetText}>
+          Cette variante a des performances enregistrées : elle ne peut pas être supprimée pour ne pas risquer ton
+          historique. Renomme-la plutôt.
+        </p>
+      </Sheet>
+    );
+  }
 
   if (confirming) {
     return (
@@ -252,9 +289,7 @@ function VariantSheet({ exercise, variant, stat, busy, onClose, onSave }: SheetP
         }
       >
         <p id="delete-variant-text" className={styles.sheetText}>
-          La variante disparaît de la fiche et de la séance. Ses records
-          {stat && stat.records > 0 ? ` (${String(stat.records)})` : ''} ne sont pas effacés : l’historique est
-          conservé en base, mais ils ne seront plus affichés dans l’application.
+          La variante disparaît de la fiche et de la séance. Aucune performance n’est enregistrée pour elle.
         </p>
       </Sheet>
     );
@@ -300,7 +335,7 @@ function VariantSheet({ exercise, variant, stat, busy, onClose, onSave }: SheetP
             variant="danger"
             icon="trash"
             fullWidth
-            disabled={busy}
+            disabled={busy || hasHistory === null}
             onClick={() => {
               setConfirming(true);
             }}

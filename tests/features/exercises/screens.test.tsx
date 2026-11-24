@@ -38,6 +38,16 @@ async function benchId(backend: DataBackend): Promise<string> {
   return bench.id;
 }
 
+/** Exercice sans aucune performance (suppression autorisée). */
+function createCurl(backend: DataBackend) {
+  return backend.exercises.create({
+    name: 'Curl',
+    description: '',
+    muscleGroups: ['Biceps'],
+    variants: [{ id: null, exerciseId: null, name: 'Touch and Go', isDefault: true }],
+  });
+}
+
 describe('ExercisesScreen', () => {
   it('lists exercises with their cycle badges', async () => {
     setup('/exercises');
@@ -76,16 +86,18 @@ describe('ExercisesScreen', () => {
     await user.click(screen.getByRole('button', { name: 'Créer un exercice' }));
     const dialog = screen.getByRole('dialog', { name: 'Nouvel exercice' });
     await user.click(within(dialog).getByRole('button', { name: 'Créer l’exercice' }));
-    expect(within(dialog).getByText("Le nom de l'exercice est requis.")).toBeInTheDocument();
+    expect(within(dialog).getByText("Le nom de l’exercice est requis.")).toBeInTheDocument();
     expect(within(dialog).getByText('Choisis au moins un muscle.')).toBeInTheDocument();
 
     await user.type(within(dialog).getByLabelText('Nom'), 'Curl');
+    await user.type(within(dialog).getByLabelText('Description'), 'Coudes fixes.');
     await user.click(within(dialog).getByRole('button', { name: 'Biceps' }));
     await user.click(within(dialog).getByRole('button', { name: 'Créer l’exercice' }));
 
     await screen.findByRole('heading', { level: 1, name: 'Curl' });
     const created = (await backend.exercises.list()).find((e) => e.name === 'Curl');
     expect(created?.muscleGroups).toEqual(['Biceps']);
+    expect(created?.description).toBe('Coudes fixes.');
     expect(created?.variants).toHaveLength(1);
     expect(router.state.location.pathname).toBe(`/exercises/${created?.id ?? ''}`);
   });
@@ -294,15 +306,15 @@ describe('ExerciseDetailScreen', () => {
     expect(saved?.variants.map((v) => v.name)).toEqual(['Touch and Go', 'Pause 2 s']);
   });
 
-  it('deletes a variant after an honest confirmation, keeping performances', async () => {
+  it('deletes a variant without performances after confirmation', async () => {
     const backend = createMockBackend(localStorage);
     const id = await benchId(backend);
     const before = (await backend.performances.list()).length;
     const { user } = setup(`/exercises/${id}`, backend);
-    await user.click(await screen.findByRole('button', { name: /^Pause,/ }));
+    await user.click(await screen.findByRole('button', { name: /^Pause, Aucun record/ }));
     await user.click(screen.getByRole('button', { name: 'Supprimer la variante' }));
     const confirm = screen.getByRole('alertdialog', { name: 'Supprimer « Pause » ?' });
-    expect(confirm).toHaveAccessibleDescription(/ne sont pas effacés/);
+    expect(confirm).toHaveAccessibleDescription(/Aucune performance n’est enregistrée/);
     await user.click(within(confirm).getByRole('button', { name: 'Annuler' }));
     expect(screen.getByRole('dialog', { name: 'Pause' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Supprimer la variante' }));
@@ -313,27 +325,129 @@ describe('ExerciseDetailScreen', () => {
     expect((await backend.performances.list()).length).toBe(before);
   });
 
-  it('deletes the exercise after confirmation and returns to the list', async () => {
+  it('refuses to delete a variant that has performances', async () => {
     const backend = createMockBackend(localStorage);
     const id = await benchId(backend);
-    const { user, router } = setup(`/exercises/${id}`, backend);
-    await user.click(await screen.findByRole('button', { name: 'Supprimer l’exercice' }));
-    const confirm = screen.getByRole('alertdialog', { name: 'Supprimer « Développé couché » ?' });
-    expect(confirm).toHaveAccessibleDescription(/ne sont pas effacées/);
+    const ex = (await backend.exercises.list()).find((e) => e.id === id);
+    const pause = ex?.variants.find((v) => v.name === 'Pause');
+    await backend.performances.add([{
+      exerciseId: id, exerciseName: 'Développé couché', sessionName: 'S', reps: 5, weight: 80, rpe: 8,
+      variantId: pause?.id ?? null, variantName: 'Pause', serieNumber: 1, performanceDate: '2026-03-02',
+    }]);
+    const updateSpy = vi.spyOn(backend.exercises, 'update');
+    const { user } = setup(`/exercises/${id}`, backend);
+    await user.click(await screen.findByRole('button', { name: /^Pause, 1 record/ }));
+    await user.click(screen.getByRole('button', { name: 'Supprimer la variante' }));
+    const dialog = screen.getByRole('alertdialog', { name: 'Suppression impossible' });
+    expect(dialog).toHaveAccessibleDescription(
+      'Cette variante a des performances enregistrées : elle ne peut pas être supprimée pour ne pas risquer ton historique. Renomme-la plutôt.',
+    );
+    expect(within(dialog).queryByRole('button', { name: 'Supprimer' })).toBeNull();
+    await user.click(within(dialog).getByRole('button', { name: 'Compris' }));
+    expect(screen.getByRole('dialog', { name: 'Pause' })).toBeInTheDocument();
+    expect(updateSpy).not.toHaveBeenCalled();
+  });
+
+  it('refuses to delete an exercise that has performances', async () => {
+    const backend = createMockBackend(localStorage);
+    const id = await benchId(backend);
+    const removeSpy = vi.spyOn(backend.exercises, 'remove');
+    const { user } = setup(`/exercises/${id}`, backend);
+    await screen.findByRole('button', { name: /^Classique, Par défaut · / });
+    await user.click(screen.getByRole('button', { name: 'Supprimer l’exercice' }));
+    const dialog = screen.getByRole('alertdialog', { name: 'Suppression impossible' });
+    expect(dialog).toHaveAccessibleDescription(
+      'Cet exercice a des performances enregistrées : il ne peut pas être supprimé pour ne pas risquer ton historique. Renomme-le plutôt.',
+    );
+    expect(within(dialog).queryByRole('button', { name: 'Supprimer' })).toBeNull();
+    await user.click(within(dialog).getByRole('button', { name: 'Compris' }));
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(removeSpy).not.toHaveBeenCalled();
+  });
+
+  it('waits for the history before allowing deletion', async () => {
+    const backend = createMockBackend(localStorage);
+    const id = await benchId(backend);
+    backend.performances.list = () => Promise.reject(new Error('réseau'));
+    setup(`/exercises/${id}`, backend);
+    expect(await screen.findByText(/Historique indisponible : suppression impossible pour l’instant/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Supprimer l’exercice' })).toBeDisabled();
+  });
+
+  it('deletes an exercise without performances after confirmation', async () => {
+    const backend = createMockBackend(localStorage);
+    const created = await createCurl(backend);
+    const { user, router } = setup(`/exercises/${created.id}`, backend);
+    await screen.findByRole('button', { name: /^Classique, Par défaut · Aucun record/ });
+    await user.click(screen.getByRole('button', { name: 'Supprimer l’exercice' }));
+    const confirm = screen.getByRole('alertdialog', { name: 'Supprimer « Curl » ?' });
+    expect(confirm).toHaveAccessibleDescription(/Aucune performance n’est enregistrée/);
+    expect(confirm).not.toHaveAccessibleDescription(/conserv/);
     await user.click(within(confirm).getByRole('button', { name: 'Supprimer' }));
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/exercises');
     });
-    expect((await backend.exercises.list()).some((e) => e.id === id)).toBe(false);
+    expect((await backend.exercises.list()).some((e) => e.id === created.id)).toBe(false);
   });
 
   it('shows a delete error inside the confirmation', async () => {
     const backend = createMockBackend(localStorage);
-    const id = await benchId(backend);
-    vi.spyOn(backend.exercises, 'remove').mockRejectedValue(new Error('Suppression refusée.'));
-    const { user } = setup(`/exercises/${id}`, backend);
-    await user.click(await screen.findByRole('button', { name: 'Supprimer l’exercice' }));
+    const created = await createCurl(backend);
+    vi.spyOn(backend.exercises, 'remove').mockRejectedValue(new Error('refus du serveur'));
+    const { user } = setup(`/exercises/${created.id}`, backend);
+    await screen.findByRole('button', { name: /^Classique, Par défaut · Aucun record/ });
+    await user.click(screen.getByRole('button', { name: 'Supprimer l’exercice' }));
     await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Supprimer' }));
-    expect(await screen.findByText('Suppression refusée.')).toBeInTheDocument();
+    expect(await screen.findByText('Suppression impossible : refus du serveur')).toBeInTheDocument();
+  });
+
+  it('shows a French prefix before a variant save error', async () => {
+    const backend = createMockBackend(localStorage);
+    const id = await benchId(backend);
+    vi.spyOn(backend.exercises, 'update').mockRejectedValue(new Error('refus du serveur'));
+    const { user } = setup(`/exercises/${id}`, backend);
+    const input = await screen.findByRole('textbox', { name: 'Nom de la nouvelle variante' });
+    await user.type(input, 'Tempo{Enter}');
+    expect(await screen.findByText('Modification des variantes impossible : refus du serveur')).toBeInTheDocument();
+  });
+
+  it('edits name, description and muscles in a sheet', async () => {
+    const backend = createMockBackend(localStorage);
+    const id = await benchId(backend);
+    const updateSpy = vi.spyOn(backend.exercises, 'update');
+    const { user } = setup(`/exercises/${id}`, backend);
+    await user.click(await screen.findByRole('button', { name: 'Modifier l’exercice' }));
+    const dialog = screen.getByRole('dialog', { name: 'Modifier l’exercice' });
+    const name = within(dialog).getByLabelText('Nom');
+    expect(name).toHaveValue('Développé couché');
+    await user.clear(name);
+    await user.click(within(dialog).getByRole('button', { name: 'Enregistrer' }));
+    expect(within(dialog).getByText('Le nom de l’exercice est requis.')).toBeInTheDocument();
+    await user.type(name, 'Développé incliné');
+    const description = within(dialog).getByLabelText('Description');
+    await user.clear(description);
+    await user.type(description, 'Banc à 30°.');
+    await user.click(within(dialog).getByRole('button', { name: 'Triceps' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Épaules' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Enregistrer' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Développé incliné' })).toBeInTheDocument();
+    await waitFor(() => { expect(screen.queryByRole('dialog')).toBeNull(); });
+    expect(screen.getByText('Banc à 30°.')).toBeInTheDocument();
+    const saved = (await backend.exercises.list()).find((e) => e.id === id);
+    expect(saved?.description).toBe('Banc à 30°.');
+    expect(saved?.muscleGroups).toEqual(['Pectoraux', 'Épaules']);
+    expect(saved?.variants.map((v) => v.name)).toEqual(['Touch and Go', 'Pause']);
+    expect(updateSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows a French prefix before an edit error', async () => {
+    const backend = createMockBackend(localStorage);
+    const id = await benchId(backend);
+    vi.spyOn(backend.exercises, 'update').mockRejectedValue(new Error('refus du serveur'));
+    const { user } = setup(`/exercises/${id}`, backend);
+    await user.click(await screen.findByRole('button', { name: 'Modifier l’exercice' }));
+    const dialog = screen.getByRole('dialog', { name: 'Modifier l’exercice' });
+    await user.click(within(dialog).getByRole('button', { name: 'Enregistrer' }));
+    expect(await within(dialog).findByText('Modification impossible : refus du serveur')).toBeInTheDocument();
   });
 });

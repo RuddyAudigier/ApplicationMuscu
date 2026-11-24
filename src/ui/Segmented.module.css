@@ -33,3 +33,8 @@
   color: var(--color-on-inverse);
   font-weight: var(--weight-bold);
 }
+
+.option:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

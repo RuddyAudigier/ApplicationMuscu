@@ -80,7 +80,7 @@ function ReportView({ report }: { report: Report }) {
         if (result === 'shared') toast.show('Compte rendu partagé.', 'success');
         else if (result === 'downloaded') toast.show(`PDF téléchargé : ${name}`, 'success');
       } catch {
-        toast.show("Le partage du PDF a échoué : il n'a pas été envoyé. Réessaie dans un instant.", 'error');
+        toast.show("Le partage du PDF a échoué : il n’a pas été envoyé. Réessaie dans un instant.", 'error');
       }
     } finally {
       setSending(false);
@@ -151,7 +151,7 @@ export function ReportScreen() {
         <EmptyState
           icon="list"
           title="Aucune séance terminée"
-          message="Termine une séance pour voir son compte rendu et l'envoyer à ton coach."
+          message="Termine une séance pour voir son compte rendu et l’envoyer à ton coach."
           action={
             <Link to="/" className={styles.homeButton}>
               Retour à l&apos;accueil

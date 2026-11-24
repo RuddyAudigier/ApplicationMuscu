@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useId, useState, type ReactNode, type SyntheticEvent } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import {
   archiveCount,
   flush,
@@ -293,10 +293,16 @@ function DataSection() {
 
 export function SettingsScreen() {
   const navigate = useNavigate();
+  const location = useLocation();
+  /* Ouvert directement (lien, rechargement) : pas d’historique interne, retour à l’accueil. */
+  const goBack = () => {
+    if (location.key === 'default') void navigate('/');
+    else void navigate(-1);
+  };
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
-        <IconButton icon="back" label="Retour" className={styles.back} onClick={() => { void navigate(-1); }} />
+        <IconButton icon="back" label="Retour" className={styles.back} onClick={goBack} />
         <h1 className={styles.title}>Réglages</h1>
       </header>
       <CycleSection />

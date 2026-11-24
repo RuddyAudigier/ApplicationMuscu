@@ -2,8 +2,7 @@ import { useId, useState, type ChangeEvent } from 'react';
 import { importPerformances } from '@/domain/csv';
 import type { Exercise } from '@/domain/model';
 import { useAddPerformances } from '@/data/queries';
-import { Sheet } from '@/ui';
-import { cx } from './format';
+import { cx, Sheet } from '@/ui';
 import styles from './Records.module.css';
 
 interface Outcome {
@@ -69,7 +68,7 @@ export function CsvImportSheet({ open, onClose, exercises, exercisesStatus }: Cs
       );
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
-      setOutcome({ summary: `Import échoué, rien n'a été enregistré : ${message}`, kind: 'error', errors: [] });
+      setOutcome({ summary: `Import échoué, rien n’a été enregistré : ${message}`, kind: 'error', errors: [] });
     } finally {
       setBusy(false);
     }

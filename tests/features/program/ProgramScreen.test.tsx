@@ -48,7 +48,7 @@ describe('ProgramScreen', () => {
   it('affiche les onglets A/B, la durée et les séances du cycle en cours', async () => {
     setup();
     expect(screen.getByRole('heading', { level: 1, name: 'Programme' })).toBeInTheDocument();
-    const tabA = screen.getByRole('tab', { name: /A En cours/ });
+    const tabA = await screen.findByRole('tab', { name: /A En cours/ });
     expect(tabA).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: /B dans 14 j/ })).toHaveAttribute('aria-selected', 'false');
     expect(screen.getByRole('radio', { name: '2 sem.' })).toHaveAttribute('aria-checked', 'true');
@@ -252,6 +252,42 @@ describe('ProgramScreen', () => {
     await seedRow();
     await user.click(screen.getByRole('radio', { name: '3 sem.' }));
     expect(await screen.findByText('La durée du cycle n’a pas pu être enregistrée. Réessaie.')).toBeInTheDocument();
+  });
+
+  it('cycle en cours de chargement : squelette, durée désactivée, pas de cycle par défaut', async () => {
+    const backend = createMockBackend(localStorage);
+    await backend.cycles.save({ current: 'B', startedOn: todayIso(), weeks: 3 });
+    let release: () => void = () => undefined;
+    const get = backend.cycles.get.bind(backend.cycles);
+    backend.cycles.get = () => new Promise((resolve) => { release = () => { resolve(get()); }; });
+    setup(backend);
+    expect(screen.getByText('Chargement du cycle…')).toBeInTheDocument();
+    for (const radio of screen.getAllByRole('radio')) {
+      expect(radio).toBeDisabled();
+      expect(radio).toHaveAttribute('aria-checked', 'false');
+    }
+    expect(screen.queryByRole('tab', { name: /En cours/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: startName('Démarrer', `A1 ${SEED}`) })).toBeNull();
+    release();
+    expect(await screen.findByRole('tab', { name: /B En cours/ })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('radio', { name: '3 sem.' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: '3 sem.' })).toBeEnabled();
+  });
+
+  it('cycle illisible : erreur avec Réessayer, jamais le cycle par défaut', async () => {
+    const backend = createMockBackend(localStorage);
+    const get = backend.cycles.get.bind(backend.cycles);
+    let fail = true;
+    backend.cycles.get = () => (fail ? Promise.reject(new Error('réseau')) : get());
+    const { user } = setup(backend);
+    expect(await screen.findByText(/Impossible de charger ton cycle A\/B/)).toBeInTheDocument();
+    expect(screen.queryByRole('radiogroup', { name: /Durée/ })).toBeNull();
+    expect(screen.queryByRole('tab', { name: /En cours/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: startName('Démarrer', `A1 ${SEED}`) })).toBeNull();
+    fail = false;
+    await user.click(screen.getByRole('button', { name: 'Réessayer' }));
+    expect(await screen.findByRole('tab', { name: /A En cours/ })).toBeInTheDocument();
+    expect(await seedRow()).toBeEnabled();
   });
 
   it('affiche une erreur de chargement avec Réessayer', async () => {

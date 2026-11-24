@@ -41,10 +41,13 @@ export function ProgramScreen() {
   const exercisesQuery = useExercises();
   const perfsQuery = usePerformances();
 
-  const cycleState = cycleQuery.data ?? defaultCycleState(today);
-  const status = cycleStatus(cycleState, today);
+  // Défaut seulement si la lecture a réussi sans état enregistré ; jamais en attente ou en erreur (D8).
+  const cycleState = cycleQuery.isSuccess ? (cycleQuery.data ?? defaultCycleState(today)) : null;
+  const status = cycleState ? cycleStatus(cycleState, today) : null;
   const [tab, setTab] = useState<CycleId | null>(null);
-  const shownCycle = tab ?? status.current;
+  const shownCycle: CycleId = tab ?? status?.current ?? 'A';
+  /** Aucun onglet choisi et cycle inconnu : la liste n'est pas affichée (pas de cycle deviné). */
+  const cycleUnknown = tab === null && status === null;
   const [builder, setBuilder] = useState<BuilderState>(null);
   const [pendingStart, setPendingStart] = useState<Session | null>(null);
   const [confirmRevert, setConfirmRevert] = useState(false);
@@ -55,6 +58,7 @@ export function ProgramScreen() {
   const active = loadActiveWorkout();
 
   const saveWeeks = (weeks: 2 | 3) => {
+    if (!cycleState) return;
     saveCycle.mutate(withCycleWeeks(cycleState, today, weeks), {
       onError: () => {
         toast.show('La durée du cycle n’a pas pu être enregistrée. Réessaie.', 'error');
@@ -64,7 +68,7 @@ export function ProgramScreen() {
 
   const setWeeks = (value: string) => {
     const weeks = value === '3' ? 3 : 2;
-    if (weeks === status.weeks) return;
+    if (!cycleState || !status || weeks === status.weeks) return;
     if (weeks === 2 && revertSwitchesNow(cycleState, today)) {
       setConfirmRevert(true);
       return;
@@ -152,7 +156,52 @@ export function ProgramScreen() {
     );
   };
 
-  const isCurrentTab = shownCycle === status.current;
+  const isCurrentTab = shownCycle === status?.current;
+
+  const duration = !cycleState || !status ? (
+    cycleQuery.isError ? (
+      <div className={styles.errorBox} role="alert">
+        <p>Impossible de charger ton cycle A/B. Vérifie ta connexion puis réessaie.</p>
+        <Button variant="secondary" onClick={() => { void cycleQuery.refetch(); }}>
+          Réessayer
+        </Button>
+      </div>
+    ) : (
+      <div className={styles.loading} aria-busy="true">
+        <div className={styles.durationRow}>
+          <span className={styles.durationLabel}>Durée du cycle</span>
+          <Segmented
+            label="Durée du cycle"
+            options={WEEK_OPTIONS}
+            value=""
+            disabled
+            onChange={setWeeks}
+            className={styles.weeks}
+          />
+        </div>
+        <span className="visually-hidden">Chargement du cycle…</span>
+        <Skeleton height={18} />
+      </div>
+    )
+  ) : isCurrentTab ? (
+    <>
+      <div className={styles.durationRow}>
+        <span className={styles.durationLabel}>Durée du cycle {shownCycle}</span>
+        <Segmented
+          label={`Durée du cycle ${shownCycle}`}
+          options={WEEK_OPTIONS}
+          value={String(status.weeks)}
+          onChange={setWeeks}
+          className={styles.weeks}
+        />
+      </div>
+      <p className={styles.hint}>{durationHint(cycleState, today)}</p>
+    </>
+  ) : (
+    <p className={styles.hint}>{upcomingHint(cycleState, today, shownCycle)}</p>
+  );
+
+  const sessionsPending = sessionsQuery.isPending || (cycleUnknown && cycleQuery.isPending);
 
   return (
     <div className={styles.screen}>
@@ -182,32 +231,14 @@ export function ProgramScreen() {
               onClick={() => { setTab(c); }}
               onKeyDown={onTabKey}
             >
-              <span className={styles.tabLetter}>{c}</span> {tabCaption(cycleState, today, c)}
+              <span className={styles.tabLetter}>{c}</span> {cycleState ? tabCaption(cycleState, today, c) : ''}
             </button>
           );
         })}
       </div>
 
       <div id={`${ids}-panel`} role="tabpanel" aria-labelledby={`${ids}-tab-${shownCycle}`} className={styles.panel}>
-        <div className={styles.duration}>
-          {isCurrentTab ? (
-            <>
-              <div className={styles.durationRow}>
-                <span className={styles.durationLabel}>Durée du cycle {shownCycle}</span>
-                <Segmented
-                  label={`Durée du cycle ${shownCycle}`}
-                  options={WEEK_OPTIONS}
-                  value={String(status.weeks)}
-                  onChange={setWeeks}
-                  className={styles.weeks}
-                />
-              </div>
-              <p className={styles.hint}>{durationHint(cycleState, today)}</p>
-            </>
-          ) : (
-            <p className={styles.hint}>{upcomingHint(cycleState, today, shownCycle)}</p>
-          )}
-        </div>
+        <div className={styles.duration}>{duration}</div>
 
         {exercisesQuery.isError && (
           <div className={styles.errorBox} role="alert">
@@ -218,7 +249,7 @@ export function ProgramScreen() {
           </div>
         )}
 
-        {sessionsQuery.isPending ? (
+        {cycleUnknown && cycleQuery.isError ? null : sessionsPending ? (
           <div className={styles.loading} role="status" aria-busy="true">
             <span className="visually-hidden">Chargement des séances…</span>
             <Skeleton height={96} />
@@ -284,8 +315,8 @@ export function ProgramScreen() {
       <ConfirmDialog
         open={confirmRevert}
         title="Revenir à 2 semaines ?"
-        message={`Revenir à 2 semaines fait basculer vers ${status.next} maintenant : le cycle ${status.current} a déjà duré 2 semaines.`}
-        confirmLabel={`Basculer vers ${status.next}`}
+        message={`Revenir à 2 semaines fait basculer vers ${status?.next ?? ''} maintenant : le cycle ${status?.current ?? ''} a déjà duré 2 semaines.`}
+        confirmLabel={`Basculer vers ${status?.next ?? ''}`}
         onConfirm={() => {
           setConfirmRevert(false);
           saveWeeks(2);

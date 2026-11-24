@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import type { Exercise, Id } from '@/domain/model';
-import { Icon, Sheet } from '@/ui';
-import { cx } from './format';
+import { cx, Icon, Sheet } from '@/ui';
 import styles from './Records.module.css';
 
 interface ExercisePickerProps {
@@ -22,7 +21,7 @@ export function ExercisePicker({ exercises, selected, onSelect, look }: Exercise
         type="button"
         className={look === 'pill' ? styles.exercisePill : styles.exerciseCard}
         aria-haspopup="dialog"
-        aria-label={`Exercice : ${name}. Changer d'exercice`}
+        aria-label={`Exercice : ${name}. Changer d’exercice`}
         onClick={() => {
           setOpen(true);
         }}

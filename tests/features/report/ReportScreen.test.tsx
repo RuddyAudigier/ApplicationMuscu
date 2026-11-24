@@ -110,7 +110,7 @@ describe('ReportScreen', () => {
     mocks.shareFile.mockRejectedValue(new Error('native share failed'));
     renderScreen();
     await userEvent.click(screen.getByRole('button', { name: 'Envoyer au coach (PDF)' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent("Le partage du PDF a échoué : il n'a pas été envoyé.");
+    expect(await screen.findByRole('alert')).toHaveTextContent("Le partage du PDF a échoué : il n’a pas été envoyé.");
     expect(screen.queryByText(/PDF téléchargé/)).toBeNull();
     expect(screen.queryByText('Compte rendu partagé.')).toBeNull();
   });

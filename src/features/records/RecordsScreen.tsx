@@ -8,11 +8,11 @@ import { progressionFor } from '@/domain/progression';
 import { getDefaultVariant, variantLabel, variantMatches } from '@/domain/variants';
 import { recordsTable } from '@/domain/workout';
 import { useExercises, usePerformances } from '@/data/queries';
-import { Button, EmptyState, Pill, Segmented, Skeleton, StatTile } from '@/ui';
+import { Button, cx, EmptyState, Pill, Segmented, Skeleton, StatTile } from '@/ui';
 import { CsvImportSheet } from './CsvImportSheet';
 import { E1rmChart } from './E1rmChart';
 import { ExercisePicker } from './ExercisePicker';
-import { cx, kg, weekStartIso } from './format';
+import { kg, weekStartIso } from './format';
 import styles from './Records.module.css';
 
 type View = 'table' | 'curve';
@@ -81,7 +81,7 @@ export function RecordsScreen() {
         <button
           type="button"
           className={styles.moreButton}
-          aria-label="Plus d'options"
+          aria-label="Plus d’options"
           aria-haspopup="dialog"
           onClick={() => {
             setMenuOpen(true);

@@ -3,8 +3,7 @@ import type { Performance, Variant } from '@/domain/model';
 import { formatDecimal, formatWeight } from '@/domain/numbers';
 import { variantLabel } from '@/domain/variants';
 import { recordsTable, type RecordRow } from '@/domain/workout';
-import { Pill, Sheet } from '@/ui';
-import { cx } from './cx';
+import { cx, Pill, Sheet } from '@/ui';
 import { isSameVariant, variantKeyOf } from './livePr';
 import styles from './WorkoutScreen.module.css';
 
@@ -34,6 +33,12 @@ export function RecordsSheet(props: RecordsSheetProps) {
 }
 
 const shortDate = (iso: string | null): string => (iso === null ? '' : iso === todayIso() ? 'auj.' : isoToShortFr(iso));
+/** Date du nom accessible : reprend le texte visible (« auj. » compris, WCAG 2.5.3). */
+const dateLabel = (iso: string | null): string => {
+  if (iso === null) return '';
+  const visible = shortDate(iso);
+  return visible === 'auj.' ? ', auj.' : `, le ${visible}`;
+};
 
 function RecordsBody({
   exerciseId,
@@ -79,24 +84,26 @@ function RecordsBody({
           const label =
             row.weight === null
               ? `${repsLabel} : à conquérir, viser un premier record`
-              : `${repsLabel} : ${formatWeight(row.weight)} kg${row.rpe === null ? '' : `, RPE ${formatDecimal(row.rpe)}`}${row.date ? `, le ${isoToShortFr(row.date)}` : ''}`;
+              : `${repsLabel} : ${formatWeight(row.weight)} kg${row.rpe === null ? '' : `, RPE ${formatDecimal(row.rpe)}`}${dateLabel(row.date)}`;
           return (
             <li key={row.reps}>
               <button
                 type="button"
                 className={cx(styles.row, selected && styles.rowSelected)}
                 aria-pressed={selected}
-                aria-label={label}
                 onClick={() => {
                   if (variant) onPick(row, variant);
                 }}
               >
-                <span className={styles.rowReps}>{repsLabel}</span>
-                <span className={row.weight === null ? styles.rowEmpty : styles.rowWeight}>
+                {/* Nom tiré du contenu (pas d'aria-label) : la phrase lue reprend le texte visible
+                    dans l'ordre (WCAG 2.5.3) ; les colonnes visibles ne sont pas lues en double. */}
+                <span className="visually-hidden">{label}</span>
+                <span className={styles.rowReps} aria-hidden="true">{repsLabel}</span>
+                <span className={row.weight === null ? styles.rowEmpty : styles.rowWeight} aria-hidden="true">
                   {row.weight === null ? 'à conquérir' : `${formatWeight(row.weight)} kg`}
                 </span>
-                <span className={styles.rowMeta}>{formatDecimal(row.rpe)}</span>
-                <span className={cx(styles.rowMeta, styles.right)}>{shortDate(row.date)}</span>
+                <span className={styles.rowMeta} aria-hidden="true">{formatDecimal(row.rpe)}</span>
+                <span className={cx(styles.rowMeta, styles.right)} aria-hidden="true">{shortDate(row.date)}</span>
               </button>
             </li>
           );
