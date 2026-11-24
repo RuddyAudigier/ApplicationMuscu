@@ -172,6 +172,7 @@ grant select on exercises_with_muscles to anon, authenticated;
 -- 4. Données
 -- ---------------------------------------------------------------------
 insert into general_advice (id) values (1);
+insert into week_plan (id) values (1);
 
 -- Cycle en cours : A, démarré aujourd'hui, 2 semaines (modifiable dans Réglages).
 insert into cycle_state (id, current, started_on, weeks) values (1, 'A', current_date, 2);

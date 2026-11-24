@@ -15,7 +15,8 @@ const MOCK_VALUES = ['mock', 'local', 'test'];
 export function createBackend(env: BackendEnv = import.meta.env): DataBackend {
   const kind = (env.VITE_DATA_BACKEND ?? '').trim().toLowerCase();
   if (MOCK_VALUES.includes(kind)) return createMockBackend();
-  const url = env.VITE_SUPABASE_URL?.trim();
+  // URL du projet seule : un `/rest/v1` (copié depuis l'onglet API) ou un `/` final doublerait le chemin.
+  const url = env.VITE_SUPABASE_URL?.trim().replace(/\/+$/, '').replace(/\/rest\/v1$/i, '');
   const key = env.VITE_SUPABASE_ANON_KEY?.trim();
   if (!url || !key) throw new Error('Configuration Supabase manquante : VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY.');
   return createSupabaseBackend(createSupabaseClient(url, key));

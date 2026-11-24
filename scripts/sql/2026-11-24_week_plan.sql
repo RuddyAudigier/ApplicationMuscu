@@ -18,3 +18,6 @@ alter table week_plan enable row level security;
 drop policy if exists app_all on week_plan;
 create policy app_all on week_plan for all to anon, authenticated using (true) with check (true);
 grant select, insert, update, delete on week_plan to anon, authenticated;
+
+-- Ligne unique (évite une réponse 406 « aucune ligne » avant le premier réglage).
+insert into week_plan (id) values (1) on conflict (id) do nothing;
