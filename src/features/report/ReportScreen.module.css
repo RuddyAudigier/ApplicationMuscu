@@ -106,7 +106,7 @@
 }
 
 .n {
-  color: var(--color-text-subtle);
+  color: var(--color-text-muted); /* subtle : contraste < 4,5:1 (axe) */
   font-size: var(--text-xs);
 }
 

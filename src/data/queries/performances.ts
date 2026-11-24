@@ -24,6 +24,9 @@ export function useAddPerformances(): UseMutationResult<AddPerformancesResult, E
   const { performances } = useBackend();
   const client = useQueryClient();
   return useMutation({
+    // Jamais mise en pause hors ligne par TanStack : l'envoi doit échouer en `NetworkError`
+    // pour que le lot parte dans la file locale (sinon « Terminer » tourne indéfiniment).
+    networkMode: 'always',
     mutationFn: async (inputs: PerformanceInput[]): Promise<AddPerformancesResult> => {
       try {
         const { written } = await performances.add(inputs);

@@ -24,3 +24,7 @@ Thumbs.db
 
 # Agent worktrees
 .claude/
+
+# Playwright
+test-results/
+playwright-report/

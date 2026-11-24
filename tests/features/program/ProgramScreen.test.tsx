@@ -12,6 +12,8 @@ import { ProgramScreen } from '@/features/program';
 import { loadActiveWorkout, loadLastReport, saveActiveWorkout, saveLastReport } from '@/features/workout';
 
 const SEED = 'Séance test (mock)';
+/** Nom accessible = texte visible du bouton (WCAG 2.5.3) : il commence par l'action et le titre. */
+const startName = (verb: string, title: string) => new RegExp(`^${verb} ${title.replace(/[()]/g, '\\$&')}`);
 
 const daysAgo = (n: number) => todayIso(new Date(Date.now() - n * 86_400_000));
 
@@ -40,7 +42,7 @@ function setup(backend: DataBackend = createMockBackend(localStorage)) {
   return { backend, router, user: userEvent.setup() };
 }
 
-const seedRow = () => screen.findByRole('button', { name: `Démarrer A1 ${SEED}` });
+const seedRow = () => screen.findByRole('button', { name: startName('Démarrer', `A1 ${SEED}`) });
 
 describe('ProgramScreen', () => {
   it('affiche les onglets A/B, la durée et les séances du cycle en cours', async () => {
@@ -145,7 +147,7 @@ describe('ProgramScreen', () => {
       startedAt: new Date().toISOString(), exercises: [],
     });
     const { user } = setup(backend);
-    const row = await screen.findByRole('button', { name: `Reprendre A1 ${SEED}` });
+    const row = await screen.findByRole('button', { name: startName('Reprendre', `A1 ${SEED}`) });
     expect(within(row).getByText('En cours')).toBeInTheDocument();
     await user.click(row);
     expect(await screen.findByRole('heading', { name: 'Séance en cours' })).toBeInTheDocument();
@@ -178,7 +180,7 @@ describe('ProgramScreen', () => {
     expect(created?.exercises.map((e) => [e.name, e.series])).toEqual([['Développé couché', 3], ['Squat', 5]]);
     expect(screen.queryByText(/porte déjà ce nom/)).toBeNull();
     await user.click(screen.getByRole('tab', { name: /^B/ }));
-    expect(await screen.findByRole('button', { name: 'Démarrer B1 Bas du corps' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: startName('Démarrer', 'B1 Bas du corps') })).toBeInTheDocument();
   });
 
   it('refuse un nom déjà pris dans le même cycle', async () => {
@@ -239,7 +241,7 @@ describe('ProgramScreen', () => {
     await backend.sessions.create({ name: 'Ancienne', cycle: null, exercises: [{ exerciseId: exercises[0]?.id ?? '', series: 1 }] });
     setup(backend);
     expect(await screen.findByRole('heading', { name: 'Sans cycle' })).toBeInTheDocument();
-    const row = screen.getByRole('button', { name: 'Démarrer Ancienne' });
+    const row = screen.getByRole('button', { name: startName('Démarrer', 'Ancienne') });
     expect(within(row).getByText('1 série')).toBeInTheDocument();
   });
 

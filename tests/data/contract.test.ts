@@ -1,5 +1,5 @@
 import { createMockBackend } from '../../src/data/mock';
-import { ValidationError, type DataBackend } from '../../src/data/ports';
+import { NetworkError, ValidationError, type DataBackend } from '../../src/data/ports';
 import type { PerformanceInput } from '../../src/domain/model';
 import { MemoryStorage, sequentialIds } from './helpers';
 
@@ -222,6 +222,23 @@ function contract(name: string, make: () => DataBackend): void {
 }
 
 contract('mock', () => createMockBackend(new MemoryStorage(), { genId: sequentialIds() }));
+
+describe('mock backend offline simulation', () => {
+  it('rejects performances.add with NetworkError (nothing written) while offline, then writes once online', async () => {
+    let online = false;
+    const b = createMockBackend(new MemoryStorage(), { isOnline: () => online });
+    const before = (await b.performances.list()).length;
+    await expect(b.performances.add([perf()])).rejects.toBeInstanceOf(NetworkError);
+    expect(await b.performances.list()).toHaveLength(before);
+    online = true;
+    await expect(b.performances.add([perf()])).resolves.toEqual({ written: 1 });
+  });
+
+  it('is online by default when navigator.onLine is true', async () => {
+    const b = createMockBackend(new MemoryStorage());
+    await expect(b.performances.add([perf()])).resolves.toEqual({ written: 1 });
+  });
+});
 
 describe('mock backend specifics', () => {
   it('seeds INV §4 data under local_test_db_v2', async () => {

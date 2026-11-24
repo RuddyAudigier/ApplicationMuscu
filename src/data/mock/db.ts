@@ -31,6 +31,8 @@ export type MockExercise = MockDb['exercises'][number];
 export interface MockContext {
   genId: (prefix: string) => Id;
   now: () => Date;
+  /** Réseau simulé : hors ligne, les envois de performances échouent en `NetworkError` (démo de la file). */
+  isOnline: () => boolean;
   /** Lit la base (seed si absente, invalide ou d'une autre version). */
   read: () => MockDb;
   /** Applique `fn` sur une copie fraîche puis persiste. */
@@ -45,7 +47,9 @@ export function task<T>(fn: () => T): Promise<T> {
   });
 }
 
-export interface MockOptions { genId?: (prefix: string) => Id; now?: () => Date }
+export interface MockOptions { genId?: (prefix: string) => Id; now?: () => Date; isOnline?: () => boolean }
+
+const browserOnline = (): boolean => typeof navigator === 'undefined' || navigator.onLine;
 
 function defaultGenId(prefix: string): Id {
   const uuid = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : null;
@@ -55,6 +59,7 @@ function defaultGenId(prefix: string): Id {
 export function createMockContext(storage: Storage, opts: MockOptions = {}): MockContext {
   const genId = opts.genId ?? defaultGenId;
   const now = opts.now ?? (() => new Date());
+  const isOnline = opts.isOnline ?? browserOnline;
 
   const persist = (db: MockDb): void => {
     storage.setItem(MOCK_DB_STORAGE_KEY, JSON.stringify({ ...db, updatedAt: now().toISOString() }));
@@ -85,6 +90,7 @@ export function createMockContext(storage: Storage, opts: MockOptions = {}): Moc
   return {
     genId,
     now,
+    isOnline,
     read,
     write(fn) {
       const db = read();

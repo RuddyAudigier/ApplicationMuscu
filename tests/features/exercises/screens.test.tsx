@@ -117,9 +117,9 @@ describe('ExerciseDetailScreen', () => {
     expect(screen.getByRole('link', { name: 'Records' })).toHaveAttribute('href', `/records/${id}`);
     expect(screen.getByRole('img', { name: 'Carte musculaire : Pectoraux, Triceps' })).toBeInTheDocument();
     // 92,5 × (1 + 6/30) = 111
-    const classic = await screen.findByRole('button', { name: /^Classique, Par défaut · 1 record, meilleur e1RM 111 kg/ });
+    const classic = await screen.findByRole('button', { name: /^Classique, Par défaut · 1 record, 111 kg \(meilleur e1RM\)/ });
     expect(classic).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Pause, Aucun record, meilleur e1RM —/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Pause, Aucun record, — \(meilleur e1RM\)/ })).toBeInTheDocument();
   });
 
   it('saves coach notes on blur and reports it', async () => {

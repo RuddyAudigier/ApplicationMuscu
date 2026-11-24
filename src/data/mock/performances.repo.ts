@@ -1,6 +1,6 @@
 import { todayIso } from '../../domain/dates';
 import type { Performance } from '../../domain/model';
-import type { PerformancesRepo } from '../ports';
+import { NetworkError, type PerformancesRepo } from '../ports';
 import { mapPerformanceRow, parseRows, preparePerformances } from '../shared/rules';
 import { task, type MockContext } from './db';
 
@@ -12,8 +12,9 @@ export function createMockPerformancesRepo(ctx: MockContext): PerformancesRepo {
   return {
     list: () => task(() => parseRows(ctx.read().performances, mapPerformanceRow, 'performances').sort(byDateDesc)),
 
-    /** Mêmes validations que Supabase ; aucune suppression (D1). */
+    /** Mêmes validations que Supabase ; aucune suppression (D1). Hors ligne : `NetworkError`, rien d'écrit. */
     add: (inputs) => task(() => {
+      if (!ctx.isOnline()) throw new NetworkError('Hors ligne (mock) : performances non envoyées.');
       const rows = preparePerformances(inputs, todayIso(ctx.now()));
       if (rows.length === 0) return { written: 0 };
       ctx.write((db) => {

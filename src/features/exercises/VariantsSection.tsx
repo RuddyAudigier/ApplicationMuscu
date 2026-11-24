@@ -98,9 +98,10 @@ export function VariantsSection({ exercise, perfs }: Props) {
                 type="button"
                 className={styles.variantRow}
                 disabled={busy}
+                // Le nom reprend le texte visible dans l'ordre (WCAG 2.5.3).
                 aria-label={
                   stat
-                    ? `${label}, ${variantMeta(stat)}, meilleur e1RM ${formatKg(stat.bestE1rm)}. Gérer la variante`
+                    ? `${label}, ${variantMeta(stat)}, ${formatKg(stat.bestE1rm)} (meilleur e1RM). Gérer la variante`
                     : `${label}${v.isDefault ? ', par défaut' : ''}. Gérer la variante`
                 }
                 onClick={() => {
@@ -108,7 +109,7 @@ export function VariantsSection({ exercise, perfs }: Props) {
                 }}
               >
                 <span className={styles.variantText}>
-                  <span className={styles.variantName}>{label}</span>
+                  <span className={styles.variantName}>{label}</span>{' '}
                   {stat ? (
                     <span className={styles.variantMeta}>{variantMeta(stat)}</span>
                   ) : perfs.status === 'pending' ? (
@@ -116,7 +117,7 @@ export function VariantsSection({ exercise, perfs }: Props) {
                   ) : (
                     <span className={styles.variantMeta}>{v.isDefault ? 'Par défaut' : ''}</span>
                   )}
-                </span>
+                </span>{' '}
                 {stat ? (
                   <span className={styles.variantBest}>{formatKg(stat.bestE1rm)}</span>
                 ) : perfs.status === 'pending' ? (
