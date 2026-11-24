@@ -11,12 +11,14 @@ import {
   type WorkoutExercise,
   type WorkoutState,
 } from '@/domain/workout';
-import { useAddPerformances, useExercises, usePerformances } from '@/data/queries';
-import { Button, Icon, IconButton, Pill, useConfirm, useToast } from '@/ui';
+import { todayIso } from '@/domain/dates';
+import { useAddPerformances, useExercises, usePerformances, useSessions } from '@/data/queries';
+import { Button, Field, Icon, IconButton, Pill, Sheet, Skeleton, useConfirm, useToast } from '@/ui';
 import { AddExerciseSheet } from './AddExerciseSheet';
 import { cx } from './cx';
 import { isSameVariant, livePrFlags, prSignature, variantKeyOf, variantsOf } from './livePr';
 import { RecordsSheet } from './RecordsSheet';
+import { sessionCode } from './sessionCode';
 import { loadActiveWorkout, loadLastReport, saveActiveWorkout, saveLastReport } from './storage';
 import { WorkoutProvider, useWorkout } from './WorkoutContext';
 import styles from './WorkoutScreen.module.css';
@@ -60,9 +62,11 @@ function WorkoutView() {
   const exercisesQuery = useExercises();
   const perfsQuery = usePerformances();
   const addPerformances = useAddPerformances();
+  const sessionsQuery = useSessions();
   const [exIdx, setExIdx] = useState(() => firstPendingIndex(state));
   const [recordsOpen, setRecordsOpen] = useState(false);
   const [bonusOpen, setBonusOpen] = useState(false);
+  const [optionsOpen, setOptionsOpen] = useState(false);
   const [finishing, setFinishing] = useState(false);
 
   const exercises = exercisesQuery.data ?? NO_EXERCISES;
@@ -145,6 +149,40 @@ function WorkoutView() {
     }
   };
 
+  const abandon = async (): Promise<void> => {
+    setOptionsOpen(false);
+    const ok = await confirm({
+      title: 'Abandonner la séance ?',
+      message: 'Les séries saisies ne seront pas enregistrées. Ton historique ne change pas.',
+      confirmLabel: 'Abandonner',
+      danger: true,
+    });
+    if (!ok) return;
+    stopPersisting();
+    saveActiveWorkout(null);
+    void navigate('/');
+  };
+
+  const removeExercise = async (): Promise<void> => {
+    setOptionsOpen(false);
+    if (!we) return;
+    const done = we.series.filter((s) => s.validated).length;
+    const ok = await confirm({
+      title: 'Retirer l’exercice ?',
+      message:
+        done > 0
+          ? `« ${we.name} » sort de cette séance : ${seriesWord(done)} validée${done > 1 ? 's' : ''} ne ${done > 1 ? 'seront' : 'sera'} pas enregistrée${done > 1 ? 's' : ''}.`
+          : `« ${we.name} » sort de cette séance. Ton programme ne change pas.`,
+      confirmLabel: 'Retirer',
+      danger: true,
+    });
+    if (!ok) return;
+    dispatch({ type: 'removeExercise', ex: current });
+    setExIdx(Math.max(0, Math.min(current, total - 2)));
+  };
+
+  const today = todayIso();
+  const code = sessionsQuery.data ? sessionCode(sessionsQuery.data, state.sessionId, state.cycle) : null;
   const header = (
     <header className={styles.header}>
       <IconButton
@@ -156,9 +194,21 @@ function WorkoutView() {
         }}
       />
       <span className={styles.progress}>
-        <span className={styles.session}>{state.sessionName}</span>
-        {total > 0 && <span className={styles.step}>{`Exercice ${String(current + 1)} sur ${String(total)}`}</span>}
+        <span className={styles.session}>{code ?? state.sessionName}</span>
+        {total > 0 && (
+          <>
+            <span aria-hidden="true">{' · '}</span>
+            <span className={styles.step}>{`Exercice ${String(current + 1)} sur ${String(total)}`}</span>
+          </>
+        )}
       </span>
+      <IconButton
+        icon="more"
+        label="Options de la séance"
+        onClick={() => {
+          setOptionsOpen(true);
+        }}
+      />
       <Button
         className={styles.finish}
         variant="secondary"
@@ -171,6 +221,52 @@ function WorkoutView() {
         Terminer
       </Button>
     </header>
+  );
+
+  const optionsSheet = (
+    <Sheet
+      open={optionsOpen}
+      onClose={() => {
+        setOptionsOpen(false);
+      }}
+      title="Options de la séance"
+    >
+      <div className={styles.options}>
+        <Field
+          type="date"
+          label="Date de la séance"
+          hint="Pour saisir une séance faite un autre jour."
+          value={state.date}
+          max={today}
+          onChange={(e) => {
+            const date = e.target.value;
+            // Jamais dans le futur ; un champ vidé garde la date actuelle.
+            if (/^\d{4}-\d{2}-\d{2}$/.test(date) && date <= today) dispatch({ type: 'setDate', date });
+          }}
+        />
+        {we && (
+          <Button
+            variant="secondary"
+            icon="trash"
+            fullWidth
+            onClick={() => {
+              void removeExercise();
+            }}
+          >
+            {`Retirer ${we.name}`}
+          </Button>
+        )}
+        <Button
+          variant="danger"
+          fullWidth
+          onClick={() => {
+            void abandon();
+          }}
+        >
+          Abandonner la séance
+        </Button>
+      </div>
+    </Sheet>
   );
   const dataBanner = dataError && (
     <div role="alert" className={styles.dataError}>
@@ -212,12 +308,14 @@ function WorkoutView() {
           Ajouter un exercice
         </Button>
         {bonusSheet}
+        {optionsSheet}
       </div>
     );
   }
 
-  const exercise = exercises.find((e) => e.id === we.exerciseId);
-  const variants = variantsOf(exercise, we.exerciseId);
+  const exercise = exercisesQuery.isSuccess ? exercises.find((e) => e.id === we.exerciseId) : undefined;
+  // Jamais de variantes devinées (chargement, erreur, exercice inconnu) : seulement celles de l'exercice.
+  const variants = exercise ? variantsOf(exercise, we.exerciseId) : [];
   const prs = prFlags?.[current] ?? [];
   const serieIdx = we.series.findIndex((s) => !s.validated);
   const serie = serieIdx >= 0 ? we.series[serieIdx] : undefined;
@@ -263,30 +361,59 @@ function WorkoutView() {
         </div>
       )}
 
-      <div role="radiogroup" aria-label="Variante" className={styles.pills}>
-        {variants.map((v) => (
-          <Pill
-            key={variantKeyOf(v)}
-            selected={isSameVariant(v, activeKey)}
-            disabled={!serie}
-            onSelect={() => {
-              switchVariant(v);
-            }}
-          >
-            {variantLabel(v.name)}
-          </Pill>
-        ))}
-      </div>
+      {exercise ? (
+        <div role="radiogroup" aria-label="Variante" className={styles.pills}>
+          {variants.map((v) => (
+            <Pill
+              key={variantKeyOf(v)}
+              selected={isSameVariant(v, activeKey)}
+              disabled={!serie}
+              onSelect={() => {
+                switchVariant(v);
+              }}
+            >
+              {variantLabel(v.name)}
+            </Pill>
+          ))}
+        </div>
+      ) : exercisesQuery.isPending ? (
+        <div className={styles.pills} aria-busy="true">
+          <span className="visually-hidden">Chargement des variantes…</span>
+          <Skeleton width={96} height={44} />
+          <Skeleton width={72} height={44} />
+        </div>
+      ) : (
+        exercisesQuery.isSuccess && (
+          <p className={cx(styles.muted, styles.pills)}>
+            Exercice introuvable dans ta bibliothèque : variantes et records indisponibles.
+          </p>
+        )
+      )}
 
-      <DoneSeries we={we} prs={prs} variants={variants} />
+      <DoneSeries
+        we={we}
+        prs={prs}
+        variants={variants}
+        onEdit={(i) => {
+          dispatch({ type: 'unlock', ex: current, serie: i });
+        }}
+      />
 
       {serie ? (
         <SerieForm
           serie={serie}
           n={serieIdx + 1}
+          recordsAvailable={exercise !== undefined}
           onOpenRecords={() => {
             setRecordsOpen(true);
           }}
+          onRemove={
+            we.series.length > 1
+              ? () => {
+                  dispatch({ type: 'removeSerie', ex: current, serie: serieIdx });
+                }
+              : null
+          }
           onChange={(field, value) => {
             dispatch({ type: 'setField', ex: current, serie: serieIdx, field, value });
           }}
@@ -355,7 +482,7 @@ function WorkoutView() {
       </div>
 
       <RecordsSheet
-        open={recordsOpen}
+        open={recordsOpen && exercise !== undefined}
         onClose={() => {
           setRecordsOpen(false);
         }}
@@ -379,11 +506,20 @@ function WorkoutView() {
         }}
       />
       {bonusSheet}
+      {optionsSheet}
     </div>
   );
 }
 
-function DoneSeries({ we, prs, variants }: { we: WorkoutExercise; prs: boolean[]; variants: Variant[] }) {
+interface DoneSeriesProps {
+  we: WorkoutExercise;
+  prs: boolean[];
+  variants: Variant[];
+  /** Rouvre la série (déverrouillage) pour la corriger. */
+  onEdit: (serie: number) => void;
+}
+
+function DoneSeries({ we, prs, variants, onEdit }: DoneSeriesProps) {
   const done = we.series.map((s, i) => ({ s, i })).filter(({ s }) => s.validated);
   if (done.length === 0) return null;
   const multi = variants.length > 1;
@@ -401,7 +537,19 @@ function DoneSeries({ we, prs, variants }: { we: WorkoutExercise; prs: boolean[]
                 {multi && ` · ${variantLabel(v?.name ?? s.variantKey)}`}
               </span>
             </span>
-            {prs[i] && <span className={styles.prBadge}>PR</span>}
+            <span className={styles.doneActions}>
+              {prs[i] && <span className={styles.prBadge}>PR</span>}
+              <button
+                type="button"
+                className={styles.editBtn}
+                aria-label={`Modifier la série ${String(i + 1)}`}
+                onClick={() => {
+                  onEdit(i);
+                }}
+              >
+                Modifier
+              </button>
+            </span>
           </li>
         );
       })}
@@ -412,7 +560,11 @@ function DoneSeries({ we, prs, variants }: { we: WorkoutExercise; prs: boolean[]
 interface SerieFormProps {
   serie: SerieEntry;
   n: number;
+  /** « Mes records » indisponible tant que l'exercice (et ses variantes) n'est pas connu. */
+  recordsAvailable: boolean;
   onOpenRecords: () => void;
+  /** Supprime cette série à faire ; `null` si c'est la dernière de l'exercice. */
+  onRemove: (() => void) | null;
   onChange: (field: 'reps' | 'kg', value: string) => void;
   onRpe: (value: number) => void;
   onValidate: () => void;
@@ -427,7 +579,18 @@ function targetText(serie: SerieEntry): string {
   return `Cible : battre ${String(target.reps)} × ${formatWeight(target.weight)} kg`;
 }
 
-function SerieForm({ serie, n, onOpenRecords, onChange, onRpe, onValidate, stopLabel, onStop }: SerieFormProps) {
+function SerieForm({
+  serie,
+  n,
+  recordsAvailable,
+  onOpenRecords,
+  onRemove,
+  onChange,
+  onRpe,
+  onValidate,
+  stopLabel,
+  onStop,
+}: SerieFormProps) {
   const repsRef = useRef<HTMLInputElement>(null);
   return (
     <section className={styles.form} aria-labelledby="serie-title">
@@ -435,10 +598,13 @@ function SerieForm({ serie, n, onOpenRecords, onChange, onRpe, onValidate, stopL
         <h2 id="serie-title" className={styles.serieTitle}>
           Série {n}
         </h2>
-        <button type="button" className={styles.recordsBtn} onClick={onOpenRecords}>
-          <Icon name="table" size={16} />
-          Mes records
-        </button>
+        <span className={styles.serieActions}>
+          {onRemove && <IconButton icon="trash" label={`Supprimer la série ${String(n)}`} onClick={onRemove} />}
+          <button type="button" className={styles.recordsBtn} onClick={onOpenRecords} disabled={!recordsAvailable}>
+            <Icon name="table" size={16} />
+            Mes records
+          </button>
+        </span>
       </div>
 
       <p className={cx(styles.target, serie.target && styles.targetOn)}>

@@ -34,6 +34,12 @@ export function RecordsSheet(props: RecordsSheetProps) {
 }
 
 const shortDate = (iso: string | null): string => (iso === null ? '' : iso === todayIso() ? 'auj.' : isoToShortFr(iso));
+/** Date du nom accessible : reprend le texte visible (« auj. » compris, WCAG 2.5.3). */
+const dateLabel = (iso: string | null): string => {
+  if (iso === null) return '';
+  const visible = shortDate(iso);
+  return visible === 'auj.' ? ', auj.' : `, le ${visible}`;
+};
 
 function RecordsBody({
   exerciseId,
@@ -79,7 +85,7 @@ function RecordsBody({
           const label =
             row.weight === null
               ? `${repsLabel} : à conquérir, viser un premier record`
-              : `${repsLabel} : ${formatWeight(row.weight)} kg${row.rpe === null ? '' : `, RPE ${formatDecimal(row.rpe)}`}${row.date ? `, le ${isoToShortFr(row.date)}` : ''}`;
+              : `${repsLabel} : ${formatWeight(row.weight)} kg${row.rpe === null ? '' : `, RPE ${formatDecimal(row.rpe)}`}${dateLabel(row.date)}`;
           return (
             <li key={row.reps}>
               <button

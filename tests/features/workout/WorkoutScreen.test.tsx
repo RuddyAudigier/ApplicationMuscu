@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryRouter, RouterProvider } from 'react-router';
@@ -7,6 +7,7 @@ import { createMockBackend } from '@/data/mock';
 import { OFFLINE_QUEUE_KEY } from '@/data/offlineQueue';
 import { NetworkError, ValidationError, type DataBackend } from '@/data/ports';
 import { BackendProvider } from '@/data/queries';
+import { todayIso } from '@/domain/dates';
 import type { Report } from '@/domain/report';
 import { startWorkout, type WorkoutState } from '@/domain/workout';
 import {
@@ -119,8 +120,7 @@ describe('WorkoutScreen', { timeout: 20_000 }, () => {
     await seedWorkout(backend);
     renderWorkout(backend);
     await ready();
-    expect(screen.getByText(SESSION)).toBeInTheDocument();
-    // Nom de séance et progression sur deux lignes distinctes (pas de troncature commune).
+    expect(await screen.findByText('A1')).toBeInTheDocument();
     expect(screen.getByText('Exercice 1 sur 2')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'Développé couché' })).toBeInTheDocument();
     expect(await screen.findByText(/Coudes ouverts/)).toBeInTheDocument();
@@ -543,6 +543,150 @@ describe('WorkoutScreen', { timeout: 20_000 }, () => {
     await ready();
     await doSerie(user, '5', '80');
     expect(screen.getByLabelText('Reps')).toHaveFocus();
+  });
+
+  it('en-tête : code de séance (A1) ou nom de la séance sans cycle', async () => {
+    const backend = makeBackend();
+    const state = await seedWorkout(backend);
+    renderWorkout(backend);
+    await ready();
+    const header = screen.getByRole('banner');
+    expect(await within(header).findByText('A1')).toBeInTheDocument();
+    expect(header).toHaveTextContent('A1 · Exercice 1 sur 2');
+    expect(within(header).queryByText(SESSION)).toBeNull();
+    cleanup();
+    saveActiveWorkout({ ...state, cycle: null });
+    renderWorkout(backend);
+    await ready();
+    expect(screen.getByRole('banner')).toHaveTextContent(`${SESSION} · Exercice 1 sur 2`);
+  });
+
+  it('exercices en chargement : pas de variante devinée, « Mes records » désactivé', async () => {
+    const backend = makeBackend();
+    await seedWorkout(backend);
+    backend.exercises.list = () => new Promise(() => undefined);
+    renderWorkout(backend);
+    expect(screen.getByText('Chargement des variantes…')).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: 'Classique' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Mes records' })).toBeDisabled();
+  });
+
+  it('exercice inconnu : aucune variante, « Mes records » désactivé', async () => {
+    const backend = makeBackend();
+    const state = await seedWorkout(backend);
+    const [bench] = state.exercises;
+    if (!bench) throw new Error('seed');
+    saveActiveWorkout({ ...state, exercises: [{ ...bench, exerciseId: 'inconnu' }] });
+    renderWorkout(backend);
+    await ready();
+    expect(screen.getByText(/Exercice introuvable dans ta bibliothèque/)).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: 'Classique' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Mes records' })).toBeDisabled();
+  });
+
+  it('« Modifier » une série faite la rouvre avec ses valeurs', async () => {
+    const user = userEvent.setup();
+    const backend = makeBackend();
+    await seedWorkout(backend);
+    renderWorkout(backend);
+    await ready();
+    await doSerie(user, '5', '80');
+    expect(screen.getByRole('heading', { name: 'Série 2' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Modifier la série 1' }));
+    expect(screen.getByRole('heading', { name: 'Série 1' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Reps')).toHaveValue('5');
+    expect(screen.queryByRole('list', { name: 'Séries faites' })).toBeNull();
+    expect(loadActiveWorkout()?.exercises[0]?.series[0]?.validated).toBe(false);
+  });
+
+  it('supprime une série à faire', async () => {
+    const user = userEvent.setup();
+    const backend = makeBackend();
+    await seedWorkout(backend);
+    renderWorkout(backend);
+    await ready();
+    await user.click(screen.getByRole('button', { name: 'Supprimer la série 1' }));
+    expect(loadActiveWorkout()?.exercises[0]?.series).toHaveLength(2);
+    await user.click(screen.getByRole('button', { name: 'Supprimer la série 1' }));
+    expect(loadActiveWorkout()?.exercises[0]?.series).toHaveLength(1);
+    // La dernière série ne se supprime pas : on retire l'exercice.
+    expect(screen.queryByRole('button', { name: /Supprimer la série/ })).toBeNull();
+  });
+
+  it('retire l’exercice après confirmation', async () => {
+    const user = userEvent.setup();
+    const backend = makeBackend();
+    await seedWorkout(backend);
+    renderWorkout(backend);
+    await ready();
+    await user.click(screen.getByRole('button', { name: 'Options de la séance' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Retirer Développé couché' }));
+    let confirm = await screen.findByRole('alertdialog', { name: 'Retirer l’exercice ?' });
+    await user.click(within(confirm).getByRole('button', { name: 'Annuler' }));
+    expect(loadActiveWorkout()?.exercises).toHaveLength(2);
+    await user.click(screen.getByRole('button', { name: 'Options de la séance' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Retirer Développé couché' }));
+    confirm = await screen.findByRole('alertdialog', { name: 'Retirer l’exercice ?' });
+    await user.click(within(confirm).getByRole('button', { name: 'Retirer' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Squat' })).toBeInTheDocument();
+    expect(screen.getByRole('banner')).toHaveTextContent('Exercice 1 sur 1');
+    expect(loadActiveWorkout()?.exercises.map((e) => e.name)).toEqual(['Squat']);
+  });
+
+  it('date de la séance : aujourd’hui par défaut, modifiable dans le passé seulement', async () => {
+    const user = userEvent.setup();
+    const backend = makeBackend();
+    await seedWorkout(backend);
+    renderWorkout(backend);
+    await ready();
+    await user.click(screen.getByRole('button', { name: 'Options de la séance' }));
+    const input = within(screen.getByRole('dialog')).getByLabelText('Date de la séance');
+    const today = todayIso();
+    expect(input).toHaveValue(today);
+    expect(input).toHaveAttribute('max', today);
+    fireEvent.change(input, { target: { value: '2099-01-01' } });
+    expect(loadActiveWorkout()?.date).toBe(today);
+    fireEvent.change(input, { target: { value: '2026-03-02' } });
+    expect(loadActiveWorkout()?.date).toBe('2026-03-02');
+  });
+
+  it('abandonne la séance après confirmation', async () => {
+    const user = userEvent.setup();
+    const backend = makeBackend();
+    await seedWorkout(backend);
+    renderWorkout(backend);
+    await ready();
+    await doSerie(user, '5', '80');
+    await user.click(screen.getByRole('button', { name: 'Options de la séance' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Abandonner la séance' }));
+    let confirm = await screen.findByRole('alertdialog', { name: 'Abandonner la séance ?' });
+    await user.click(within(confirm).getByRole('button', { name: 'Annuler' }));
+    expect(loadActiveWorkout()).not.toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Options de la séance' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Abandonner la séance' }));
+    confirm = await screen.findByRole('alertdialog', { name: 'Abandonner la séance ?' });
+    await user.click(within(confirm).getByRole('button', { name: 'Abandonner' }));
+    expect(await screen.findByRole('heading', { name: 'Accueil' })).toBeInTheDocument();
+    expect(loadActiveWorkout()).toBeNull();
+    expect(await backend.performances.list()).toHaveLength(5);
+  });
+
+  it('« Mes records » : le nom accessible contient le texte visible « auj. »', async () => {
+    const user = userEvent.setup();
+    const backend = makeBackend();
+    const state = await seedWorkout(backend);
+    const benchId = state.exercises[0]?.exerciseId ?? '';
+    const bench = (await backend.exercises.list()).find((e) => e.id === benchId);
+    const variant = bench?.variants[0];
+    await backend.performances.add([{
+      exerciseId: benchId, exerciseName: 'Développé couché', sessionName: SESSION, reps: 12, weight: 70, rpe: 9,
+      variantId: variant?.id ?? null, variantName: variant?.name ?? '', serieNumber: 1, performanceDate: todayIso(),
+    }]);
+    renderWorkout(backend);
+    await ready();
+    await user.click(screen.getByRole('button', { name: 'Mes records' }));
+    const row = await within(screen.getByRole('dialog')).findByRole('button', { name: /^12 reps : 70 kg, RPE 9, auj\.$/ });
+    expect(within(row).getByText('auj.')).toBeInTheDocument();
   });
 
   it('« Fatigué » avec une série saisie non validée : confirmation', async () => {
