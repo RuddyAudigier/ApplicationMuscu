@@ -9,6 +9,14 @@ describe('catalog', () => {
     for (const m of MUSCLE_CATALOG) expect(muscleKey(m)).not.toBeNull();
     expect(new Set(MUSCLE_CATALOG.map((m) => muscleKey(m))).size).toBe(15);
   });
+
+  it('uses display names with accents, not aliases', () => {
+    expect(MUSCLE_CATALOG).toContain('Pectoraux');
+    expect(MUSCLE_CATALOG).toContain('Trapèzes');
+    expect(MUSCLE_CATALOG).toContain('Ischio-jambiers');
+    expect(MUSCLE_CATALOG).not.toContain('Pecs');
+    expect(MUSCLE_CATALOG).not.toContain('Trapeze');
+  });
 });
 
 describe('normalizeMuscleGroups', () => {

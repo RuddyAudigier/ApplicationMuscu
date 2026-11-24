@@ -61,8 +61,8 @@ describe('ExercisesScreen', () => {
     await user.clear(search);
 
     const filters = screen.getByRole('group', { name: 'Filtrer par muscle' });
-    await user.click(within(filters).getByRole('button', { name: 'Pecs' }));
-    expect(within(filters).getByRole('button', { name: 'Pecs' })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(within(filters).getByRole('button', { name: 'Pectoraux' }));
+    expect(within(filters).getByRole('button', { name: 'Pectoraux' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.queryByRole('link', { name: /Squat/ })).toBeNull();
     await user.click(within(filters).getByRole('button', { name: 'Psoas' }));
     expect(screen.getByText('Aucun exercice trouvé')).toBeInTheDocument();

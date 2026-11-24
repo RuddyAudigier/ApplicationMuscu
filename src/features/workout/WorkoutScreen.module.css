@@ -16,10 +16,18 @@
 }
 
 .progress {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
   min-width: 0;
-  overflow: hidden;
   color: var(--color-text-muted);
   font-size: 0.8125rem;
+  line-height: 1.3;
+}
+
+.session,
+.step {
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -27,6 +35,11 @@
 .session {
   color: var(--color-accent);
   font-weight: var(--weight-bold);
+}
+
+/* « Terminer » ne se tronque jamais : c'est le titre qui cède la place. */
+.finish {
+  flex-shrink: 0;
 }
 
 .title {

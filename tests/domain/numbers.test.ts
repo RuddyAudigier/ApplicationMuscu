@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  formatSignedWeight, formatWeight, parseReps, parseRpe, parseWeight, round2, toNumber,
+  formatDecimal, formatSignedWeight, formatWeight, parseReps, parseRpe, parseWeight, round2, toNumber,
 } from '@/domain/numbers';
 
 describe('toNumber', () => {
@@ -66,5 +66,15 @@ describe('formatSignedWeight', () => {
     expect(formatSignedWeight(-2.5)).toBe('-2,5');
     expect(formatSignedWeight(2.5)).toBe('+2,5');
     expect(formatSignedWeight(undefined)).toBe('-');
+  });
+});
+
+describe('formatDecimal', () => {
+  it('formats with a French decimal comma', () => {
+    expect(formatDecimal(9.5)).toBe('9,5');
+    expect(formatDecimal(8)).toBe('8');
+    expect(formatDecimal('7.25')).toBe('7,25');
+    expect(formatDecimal(null)).toBe('');
+    expect(formatDecimal(undefined)).toBe('');
   });
 });

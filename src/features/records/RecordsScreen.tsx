@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { isoToShortFr, todayIso } from '@/domain/dates';
 import { roundE1rm } from '@/domain/e1rm';
 import type { Exercise, Performance, Variant } from '@/domain/model';
-import { formatWeight } from '@/domain/numbers';
+import { formatDecimal, formatWeight } from '@/domain/numbers';
 import { progressionFor } from '@/domain/progression';
 import { getDefaultVariant, variantLabel, variantMatches } from '@/domain/variants';
 import { recordsTable } from '@/domain/workout';
@@ -205,7 +205,7 @@ function RecordsTable({ rows, today, weekStart }: TableProps) {
                   {empty ? 'à conquérir' : kg(row.weight ?? 0)}
                   {fresh && <span className={styles.srOnly}> (PR cette semaine)</span>}
                 </td>
-                <td className={styles.rpe}>{row.rpe ?? ''}</td>
+                <td className={styles.rpe}>{formatDecimal(row.rpe)}</td>
                 <td className={cx(styles.date, fresh && styles.dateFresh)}>
                   {row.date === null ? '' : row.date === today ? 'auj.' : isoToShortFr(row.date)}
                 </td>

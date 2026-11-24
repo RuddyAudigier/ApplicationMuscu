@@ -42,6 +42,13 @@ export function formatWeight(v: unknown): string {
   return String(round2(n)).replace('.', ',');
 }
 
+/** Nombre décimal à la française (« 9,5 ») ; chaîne vide sans valeur. */
+export function formatDecimal(v: unknown): string {
+  const n = toNumber(v);
+  if (n === null) return '';
+  return String(round2(n)).replace('.', ',');
+}
+
 export function formatSignedWeight(v: unknown): string {
   const n = toNumber(v);
   if (n === null) return '-';

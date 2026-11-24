@@ -1,6 +1,6 @@
 import { isoToShortFr, todayIso } from '@/domain/dates';
 import type { Performance, Variant } from '@/domain/model';
-import { formatWeight } from '@/domain/numbers';
+import { formatDecimal, formatWeight } from '@/domain/numbers';
 import { variantLabel } from '@/domain/variants';
 import { recordsTable, type RecordRow } from '@/domain/workout';
 import { Pill, Sheet } from '@/ui';
@@ -78,8 +78,8 @@ function RecordsBody({
           const repsLabel = `${String(row.reps)} rep${row.reps > 1 ? 's' : ''}`;
           const label =
             row.weight === null
-              ? `${repsLabel} : vide, viser un premier record`
-              : `${repsLabel} : ${formatWeight(row.weight)} kg${row.rpe === null ? '' : `, RPE ${String(row.rpe)}`}${row.date ? `, le ${isoToShortFr(row.date)}` : ''}`;
+              ? `${repsLabel} : à conquérir, viser un premier record`
+              : `${repsLabel} : ${formatWeight(row.weight)} kg${row.rpe === null ? '' : `, RPE ${formatDecimal(row.rpe)}`}${row.date ? `, le ${isoToShortFr(row.date)}` : ''}`;
           return (
             <li key={row.reps}>
               <button
@@ -93,9 +93,9 @@ function RecordsBody({
               >
                 <span className={styles.rowReps}>{repsLabel}</span>
                 <span className={row.weight === null ? styles.rowEmpty : styles.rowWeight}>
-                  {row.weight === null ? 'vide' : `${formatWeight(row.weight)} kg`}
+                  {row.weight === null ? 'à conquérir' : `${formatWeight(row.weight)} kg`}
                 </span>
-                <span className={styles.rowMeta}>{row.rpe ?? ''}</span>
+                <span className={styles.rowMeta}>{formatDecimal(row.rpe)}</span>
                 <span className={cx(styles.rowMeta, styles.right)}>{shortDate(row.date)}</span>
               </button>
             </li>

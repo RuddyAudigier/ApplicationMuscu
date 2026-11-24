@@ -1,5 +1,5 @@
 import { isoToFr, isoToShortFr, todayIso } from '@/domain/dates';
-import { formatWeight } from '@/domain/numbers';
+import { formatDecimal, formatWeight } from '@/domain/numbers';
 import type { Report } from '@/domain/report';
 import type { PdfReportModel } from '@/platform/pdf';
 
@@ -97,7 +97,7 @@ export function reportPdfModel(r: Report, generatedAt: Date = new Date()): PdfRe
         `S${String(s.n)}`,
         s.variant,
         formatPerf(s),
-        String(s.rpe),
+        formatDecimal(s.rpe),
         s.isPr ? (s.prKind ? `PR ${PR_KIND_LABEL[s.prKind]}` : 'PR') : '—',
       ]),
     })),

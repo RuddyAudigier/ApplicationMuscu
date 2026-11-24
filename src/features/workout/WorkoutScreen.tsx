@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router';
 import type { Exercise, Performance, Variant } from '@/domain/model';
-import { formatWeight } from '@/domain/numbers';
+import { formatDecimal, formatWeight } from '@/domain/numbers';
 import { buildReport } from '@/domain/report';
 import { variantLabel } from '@/domain/variants';
 import {
@@ -157,9 +157,10 @@ function WorkoutView() {
       />
       <span className={styles.progress}>
         <span className={styles.session}>{state.sessionName}</span>
-        {total > 0 && ` · exercice ${String(current + 1)} sur ${String(total)}`}
+        {total > 0 && <span className={styles.step}>{`Exercice ${String(current + 1)} sur ${String(total)}`}</span>}
       </span>
       <Button
+        className={styles.finish}
         variant="secondary"
         loading={finishing}
         disabled={!dataReady}
@@ -396,7 +397,7 @@ function DoneSeries({ we, prs, variants }: { we: WorkoutExercise; prs: boolean[]
             <span className={styles.doneValue}>
               {s.reps} × {formatWeight(s.kg)}{' '}
               <span className={styles.doneMeta}>
-                kg · RPE {s.rpe}
+                kg · RPE {formatDecimal(s.rpe)}
                 {multi && ` · ${variantLabel(v?.name ?? s.variantKey)}`}
               </span>
             </span>
