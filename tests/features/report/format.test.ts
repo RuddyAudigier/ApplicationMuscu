@@ -52,7 +52,7 @@ describe('report format', () => {
     const noCycle = reportPdfModel({
       ...sampleReport,
       cycle: null,
-      exercises: [{ name: 'X', seriesLabel: '1 série', series: [{ n: 1, variant: 'Classique', reps: 1, weight: 1, rpe: 8, isPr: true, prKind: null }] }],
+      exercises: [{ exerciseId: 'x', feeling: null, name: 'X', seriesLabel: '1 série', series: [{ n: 1, variant: 'Classique', reps: 1, weight: 1, rpe: 8, isPr: true, prKind: null }] }],
     });
     expect(noCycle.meta[0]).toBe('Hors cycle');
     expect(noCycle.sections[0]?.rows[0]?.[4]).toBe('PR');

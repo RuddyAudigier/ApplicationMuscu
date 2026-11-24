@@ -4,8 +4,9 @@ import { useCycleState, useExercises, usePerformances, useSaveCycleState, useSes
 import { cycleStatus, defaultCycleState } from '@/domain/cycles';
 import { todayIso } from '@/domain/dates';
 import type { CycleId, Session } from '@/domain/model';
+import type { Form } from '@/domain/journal';
 import { startWorkout } from '@/domain/workout';
-import { loadActiveWorkout, saveActiveWorkout, saveLastReport } from '@/features/workout';
+import { FormSheet, loadActiveWorkout, saveActiveWorkout, saveLastReport } from '@/features/workout';
 import { Button, ConfirmDialog, EmptyState, IconButton, Segmented, Skeleton, useToast } from '@/ui';
 import {
   durationHint,
@@ -81,9 +82,12 @@ export function ProgramScreen() {
   /** Démarrage seulement avec la bibliothèque chargée (variantes par défaut correctes). */
   const canStart = exercisesQuery.isSuccess;
 
-  const launch = (session: Session) => {
+  // Séance en attente du choix de la forme du jour.
+  const [formFor, setFormFor] = useState<Session | null>(null);
+
+  const launch = (session: Session, form: Form) => {
     if (!exercisesQuery.isSuccess) return;
-    saveActiveWorkout(startWorkout(session, exercisesQuery.data, new Date()));
+    saveActiveWorkout(startWorkout(session, exercisesQuery.data, new Date(), form));
     // Le dernier compte rendu reste visible jusqu'au démarrage de la séance suivante.
     saveLastReport(null);
     void navigate('/workout');
@@ -98,7 +102,7 @@ export function ProgramScreen() {
       setPendingStart(session);
       return;
     }
-    launch(session);
+    setFormFor(session);
   };
 
   const onTabKey = (event: KeyboardEvent<HTMLButtonElement>) => {
@@ -302,6 +306,16 @@ export function ProgramScreen() {
         />
       )}
 
+      <FormSheet
+        open={formFor !== null}
+        onClose={() => { setFormFor(null); }}
+        onPick={(form) => {
+          const session = formFor;
+          setFormFor(null);
+          if (session) launch(session, form);
+        }}
+      />
+
       <ConfirmDialog
         open={pendingStart !== null}
         title="Abandonner la séance en cours ?"
@@ -311,7 +325,7 @@ export function ProgramScreen() {
         onConfirm={() => {
           const session = pendingStart;
           setPendingStart(null);
-          if (session) launch(session);
+          if (session) setFormFor(session);
         }}
         onCancel={() => { setPendingStart(null); }}
       />

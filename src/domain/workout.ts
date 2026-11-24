@@ -1,4 +1,5 @@
 import { todayIso } from './dates';
+import { FEELINGS, type Feeling, type Form } from './journal';
 import type { CycleId, Exercise, Id, IsoDate, IsoDateTime, Performance, PerformanceInput, Session, Variant } from './model';
 import { normalizeVariantName } from './names';
 import { parseReps, parseRpe, parseWeight } from './numbers';
@@ -13,10 +14,16 @@ export interface SerieEntry {
 }
 export interface WorkoutExercise {
   exerciseId: Id; name: string; plannedSeries: number; stoppedEarly: boolean; series: SerieEntry[];
+  /** Ressenti de l'exercice (`null` = non renseigné). */
+  feeling: Feeling | null;
 }
 export interface WorkoutState {
   version: 2; sessionId: Id; sessionName: string; cycle: CycleId | null; date: IsoDate; startedAt: IsoDateTime;
   exercises: WorkoutExercise[];
+  /** Forme du jour choisie au démarrage (`null` = non renseignée). */
+  form: Form | null;
+  /** État général de la séance (texte libre). */
+  mood: string;
 }
 
 export type WorkoutAction =
@@ -30,7 +37,10 @@ export type WorkoutAction =
   | { type: 'stopExercise'; ex: number }
   | { type: 'addExercise'; exercise: Exercise; series?: number }
   | { type: 'removeExercise'; ex: number }
-  | { type: 'setDate'; date: IsoDate };
+  | { type: 'setDate'; date: IsoDate }
+  | { type: 'setForm'; form: Form | null }
+  | { type: 'setMood'; mood: string }
+  | { type: 'setFeeling'; ex: number; feeling: Feeling | null };
 
 const DEFAULT_RPE = 9;
 const DEFAULT_SERIES = 3;
@@ -50,6 +60,7 @@ const buildExercise = (exerciseId: Id, name: string, series: number, exercise: E
   name,
   plannedSeries: series,
   stoppedEarly: false,
+  feeling: null,
   series: Array.from({ length: series }, () => emptySerie(defaultKey(exercise))),
 });
 
@@ -61,7 +72,10 @@ export function resolveVariant(exercise: Exercise | undefined, key: string): { v
   return found ? { variantId: found.id, variantName: found.name } : { variantId: null, variantName: key };
 }
 
-export function startWorkout(session: Session, exercises: Exercise[], now: Date): WorkoutState {
+/** Fatigué : une série de moins par exercice (jamais moins d'une). */
+const seriesFor = (planned: number, form: Form | null): number => (form === 'fatigue' ? Math.max(1, planned - 1) : planned);
+
+export function startWorkout(session: Session, exercises: Exercise[], now: Date, form: Form | null = null): WorkoutState {
   return {
     version: 2,
     sessionId: session.id,
@@ -69,8 +83,10 @@ export function startWorkout(session: Session, exercises: Exercise[], now: Date)
     cycle: session.cycle,
     date: todayIso(now),
     startedAt: now.toISOString(),
+    form,
+    mood: '',
     exercises: session.exercises.map((se) =>
-      buildExercise(se.exerciseId, se.name, se.series, exercises.find((e) => e.id === se.exerciseId)),
+      buildExercise(se.exerciseId, se.name, seriesFor(se.series, form), exercises.find((e) => e.id === se.exerciseId)),
     ),
   };
 }
@@ -166,6 +182,12 @@ export function workoutReducer(state: WorkoutState, action: WorkoutAction): Work
       return { ...state, exercises: state.exercises.filter((_, i) => i !== action.ex) };
     case 'setDate':
       return { ...state, date: action.date };
+    case 'setForm':
+      return { ...state, form: action.form };
+    case 'setMood':
+      return { ...state, mood: action.mood };
+    case 'setFeeling':
+      return updateExercise(state, action.ex, (e) => (e.feeling === action.feeling ? e : { ...e, feeling: action.feeling }));
   }
 }
 
@@ -220,6 +242,8 @@ const isSerie = shape({
   variantKey: isString, reps: isString, kg: isString, rpe: isNumber, validated: isBoolean,
   validatedAt: orNull(isString), target: orNull(shape({ reps: isNumber, weight: orNull(isNumber) })),
 });
+const isFeeling: Guard = (v) => FEELINGS.some((f) => f.id === v);
+const isForm: Guard = (v) => v === 'frais' || v === 'fatigue';
 const isWorkoutState = shape({
   version: (v) => v === 2, sessionId: isString, sessionName: isString, cycle: orNull(isCycle), date: isString,
   startedAt: isString,
@@ -230,5 +254,15 @@ const isWorkoutState = shape({
 
 /** Relit une séance en cours sauvegardée (localStorage) : `null` si autre version ou invalide. */
 export function parseWorkoutState(raw: unknown): WorkoutState | null {
-  return isWorkoutState(raw) ? (raw as WorkoutState) : null;
+  if (!isWorkoutState(raw)) return null;
+  const r = raw as Omit<WorkoutState, 'form' | 'mood' | 'exercises'> & {
+    form?: unknown; mood?: unknown; exercises: (Omit<WorkoutExercise, 'feeling'> & { feeling?: unknown })[];
+  };
+  // Séances sauvegardées avant l'état du jour : champs absents → valeurs par défaut.
+  return {
+    ...r,
+    form: isForm(r.form) ? (r.form as Form) : null,
+    mood: isString(r.mood) ? (r.mood as string) : '',
+    exercises: r.exercises.map((e) => ({ ...e, feeling: isFeeling(e.feeling) ? (e.feeling as Feeling) : null })),
+  };
 }

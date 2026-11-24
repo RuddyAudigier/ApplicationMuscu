@@ -102,6 +102,7 @@ describe('HomeScreen', () => {
     expect(card).toHaveTextContent('5 séries prévuessur 2 exercices');
     await waitFor(() => { expect(card).toBeEnabled(); });
     await user.click(card);
+    await user.click(await screen.findByRole('button', { name: 'Frais' }));
     await waitFor(() => { expect(router.state.location.pathname).toBe('/workout'); });
     expect(loadActiveWorkout()).toMatchObject({ sessionId: 's1', date: '2026-11-26' });
     expect(loadLastReport()).toBeNull();

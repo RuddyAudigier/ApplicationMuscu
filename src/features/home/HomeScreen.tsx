@@ -7,10 +7,11 @@ import { normalizeVariantName } from '@/domain/names';
 import { formatWeight } from '@/domain/numbers';
 import { latestPrs } from '@/domain/records';
 import { DEFAULT_VARIANT, variantLabel } from '@/domain/variants';
+import type { Form } from '@/domain/journal';
 import { startWorkout, type WorkoutState } from '@/domain/workout';
 import { hasSchedule } from '@/domain/planning';
 import { useCycleState, useExercises, usePerformances, useSessions, useWeekPlan } from '@/data/queries';
-import { loadActiveWorkout, loadLastReport, saveActiveWorkout, saveLastReport } from '@/features/workout';
+import { FormSheet, loadActiveWorkout, loadLastReport, saveActiveWorkout, saveLastReport } from '@/features/workout';
 import { Button, Icon, Skeleton } from '@/ui';
 import { nextPlannedSession, PR_LABEL, relativeDay, weekSegments, type WeekSegment } from './homeLogic';
 import styles from './HomeScreen.module.css';
@@ -237,8 +238,15 @@ export function HomeScreen() {
   const cycle: Query<CycleId> = { ...cycleQuery, data: status?.current };
   const prs = useMemo(() => (perfsQuery.data ? latestPrs(perfsQuery.data) : []), [perfsQuery.data]);
 
+  // Séance à démarrer, en attente du choix de la forme du jour.
+  const [pending, setPending] = useState<{ session: Session; exercises: Exercise[] } | null>(null);
   const start = (session: Session, exercises: Exercise[]): void => {
-    saveActiveWorkout(startWorkout(session, exercises, new Date()));
+    setPending({ session, exercises });
+  };
+  const launch = (form: Form): void => {
+    if (!pending) return;
+    saveActiveWorkout(startWorkout(pending.session, pending.exercises, new Date(), form));
+    setPending(null);
     // Le dernier compte rendu reste visible jusqu'à la séance suivante.
     saveLastReport(null);
     void navigate('/workout');
@@ -300,6 +308,8 @@ export function HomeScreen() {
           onStart={start}
         />
       )}
+
+      <FormSheet open={pending !== null} onClose={() => { setPending(null); }} onPick={launch} />
 
       {lastReport && (
         <Link to="/report" className={styles.report}>

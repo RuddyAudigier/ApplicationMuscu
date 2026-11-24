@@ -1,13 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
+import { applyReportEdits, logFromReport, upsertLog, type Feeling, type Form } from '@/domain/journal';
 import { formatDecimal } from '@/domain/numbers';
 import type { Report } from '@/domain/report';
 import { buildPdf, preloadPdf } from '@/platform/pdf';
 import { shareFile } from '@/platform/share';
-import { Button, EmptyState, StatTile, useToast } from '@/ui';
-import { loadLastReport } from '@/features/workout';
+import { Button, EmptyState, Field, Segmented, StatTile, useToast } from '@/ui';
+import {
+  FeelingChips,
+  JOURNAL_NOT_SYNCED_MESSAGE,
+  loadLastReport,
+  saveLastReport,
+  useJournalSync,
+} from '@/features/workout';
 import styles from './ReportScreen.module.css';
 import {
+  FORM_LABEL,
   PR_KIND_LABEL,
   PR_KIND_LONG,
   formatDuration,
@@ -50,8 +58,28 @@ function SerieRow({ s }: { s: ReportSerie }) {
   );
 }
 
-function ReportView({ report }: { report: Report }) {
+const FORM_OPTIONS = (['frais', 'fatigue'] as const).map((value) => ({ value, label: FORM_LABEL[value] }));
+
+function ReportView({ initial }: { initial: Report }) {
   const toast = useToast();
+  const syncJournal = useJournalSync();
+  const [report, setReport] = useState(initial);
+  const [mood, setMood] = useState(initial.mood);
+
+  /** Garde le compte rendu local, puis le journal (même id) ; un échec du journal ne perd rien. */
+  const edit = (patch: Partial<Pick<Report, 'form' | 'mood' | 'exercises'>>): void => {
+    const next: Report = { ...report, ...patch, logId: report.logId ?? crypto.randomUUID() };
+    const logId = next.logId ?? '';
+    setReport(next);
+    saveLastReport(next);
+    void syncJournal((j) => {
+      const existing = j.logs.find((l) => l.id === logId);
+      return upsertLog(j, existing ? applyReportEdits(existing, next) : logFromReport(next, logId));
+    }).then((ok) => {
+      if (!ok) toast.show(JOURNAL_NOT_SYNCED_MESSAGE, 'error');
+    });
+  };
+
   const [sending, setSending] = useState(false);
 
   // Charge jsPDF dès l'affichage : au clic, le partage reste dans la fenêtre d'activation.
@@ -110,6 +138,30 @@ function ReportView({ report }: { report: Report }) {
         <StatTile className={styles.tile} value={report.exerciseCount} label={report.exerciseCount > 1 ? 'exercices' : 'exercice'} />
       </div>
 
+      <section className={styles.state} aria-label="État du jour">
+        <h2 className={styles.stateTitle}>Forme du jour</h2>
+        <Segmented<Form>
+          label="Forme du jour"
+          options={FORM_OPTIONS}
+          value={report.form ?? ('' as Form)}
+          onChange={(form) => {
+            edit({ form });
+          }}
+        />
+        <Field
+          as="textarea"
+          label="État général"
+          rows={3}
+          value={mood}
+          onChange={(e) => {
+            setMood(e.target.value);
+          }}
+          onBlur={() => {
+            if (mood !== report.mood) edit({ mood });
+          }}
+        />
+      </section>
+
       {report.exercises.length === 0 ? (
         <p className={styles.none}>Aucune série validée pendant cette séance.</p>
       ) : (
@@ -120,6 +172,13 @@ function ReportView({ report }: { report: Report }) {
                 <h2 className={styles.exName}>{ex.name}</h2>
                 <span className={styles.exCount}>{ex.seriesLabel}</span>
               </div>
+              <FeelingChips
+                label={`Ressenti — ${ex.name}`}
+                value={ex.feeling}
+                onChange={(feeling: Feeling | null) => {
+                  edit({ exercises: report.exercises.map((x, k) => (k === i ? { ...x, feeling } : x)) });
+                }}
+              />
               <ul className={styles.series} aria-label={`Séries — ${ex.name}`}>
                 {ex.series.map((s) => (
                   <SerieRow key={s.n} s={s} />
@@ -161,5 +220,5 @@ export function ReportScreen() {
       </div>
     );
   }
-  return <ReportView report={report} />;
+  return <ReportView initial={report} />;
 }

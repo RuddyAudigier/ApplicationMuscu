@@ -1,4 +1,5 @@
 import { isoToFr, isoToShortFr, todayIso } from '@/domain/dates';
+import { FEELINGS, type Form } from '@/domain/journal';
 import { formatDecimal, formatWeight } from '@/domain/numbers';
 import type { Report } from '@/domain/report';
 import type { PdfReportModel } from '@/platform/pdf';
@@ -19,6 +20,11 @@ export const PR_KIND_LONG: Record<PrKind, string> = {
   reps: 'record de répétitions',
   hybride: 'record hybride',
 };
+
+export const FORM_LABEL: Record<Form, string> = { frais: 'Frais', fatigue: 'Fatigué' };
+
+export const feelingLabel = (id: NonNullable<Report['exercises'][number]['feeling']>): string =>
+  FEELINGS.find((f) => f.id === id)?.label ?? id;
 
 const localDate = (iso: string): Date | null => {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
@@ -84,6 +90,8 @@ export function reportPdfModel(r: Report, generatedAt: Date = new Date()): PdfRe
     `Séance du ${longDate(r.date)}`,
     `Durée : ${formatDuration(r.durationMin)}`,
   ];
+  if (r.form) meta.push(`Forme du jour : ${FORM_LABEL[r.form]}`);
+  if (r.mood.trim() !== '') meta.push(`État général : ${r.mood.trim()}`);
   return {
     title: `Compte rendu · ${r.title}`,
     meta,
@@ -91,7 +99,7 @@ export function reportPdfModel(r: Report, generatedAt: Date = new Date()): PdfRe
     columns: ['Série', 'Variante', 'Reps × Poids', 'RPE', 'PR'],
     widths: [12, 38, 24, 10, 26],
     sections: r.exercises.map((ex) => ({
-      heading: ex.name,
+      heading: ex.feeling ? `${ex.name} · ${feelingLabel(ex.feeling)}` : ex.name,
       caption: ex.seriesLabel,
       rows: ex.series.map((s) => [
         `S${String(s.n)}`,

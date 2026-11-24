@@ -8,8 +8,13 @@ export const sampleReport: Report = {
   prCount: 2,
   seriesCount: 3,
   exerciseCount: 2,
+  logId: null,
+  form: null,
+  mood: '',
   exercises: [
     {
+      exerciseId: 'bench',
+      feeling: null,
       name: 'Développé couché',
       seriesLabel: '2 séries',
       series: [
@@ -18,6 +23,8 @@ export const sampleReport: Report = {
       ],
     },
     {
+      exerciseId: 'curl',
+      feeling: null,
       name: 'Curl',
       seriesLabel: '1 série · fatigué',
       series: [{ n: 1, variant: 'Wide curl', reps: 8, weight: 20, rpe: 10, isPr: true, prKind: 'hybride' }],

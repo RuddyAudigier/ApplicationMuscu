@@ -130,7 +130,7 @@ describe('WorkoutScreen', { timeout: 20_000 }, () => {
     expect(screen.getByRole('heading', { name: 'Série 1' })).toBeInTheDocument();
     expect(screen.getByText('Pas encore de cible · ouvre « Mes records »')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Valider la série' })).toBeDisabled();
-    expect(screen.queryByRole('button', { name: /Fatigué/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Fatigué \?/ })).toBeNull();
   });
 
   it('« Mes records » : choisir une ligne fixe la cible et pré-remplit reps/kg', async () => {
@@ -499,7 +499,7 @@ describe('WorkoutScreen', { timeout: 20_000 }, () => {
     expect(await screen.findByText(/Enregistrement impossible/)).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Compte rendu' })).toBeNull();
     expect(loadActiveWorkout()?.exercises[1]?.series[0]?.validated).toBe(true);
-    expect(loadLastReport()).toEqual(previous);
+    expect(loadLastReport()).toEqual({ ...previous, logId: null, form: null, mood: '' });
     expect(localStorage.getItem(MOCK_QUEUE_KEYS.queue)).toBeNull();
   });
 

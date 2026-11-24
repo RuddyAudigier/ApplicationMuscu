@@ -16,11 +16,11 @@ const serie = (reps: number, kg: number, over: Partial<SerieEntry> = {}): SerieE
   variantKey: 'v-tng', reps: String(reps), kg: String(kg), rpe: 9, target: null, validated: true, validatedAt: null, ...over,
 });
 const wex = (series: SerieEntry[], over: Partial<WorkoutExercise> = {}): WorkoutExercise => ({
-  exerciseId: 'bench', name: 'Développé couché', plannedSeries: 3, stoppedEarly: false, series, ...over,
+  exerciseId: 'bench', name: 'Développé couché', plannedSeries: 3, stoppedEarly: false, feeling: null, series, ...over,
 });
 const state = (exs: WorkoutExercise[], over: Partial<WorkoutState> = {}): WorkoutState => ({
   version: 2, sessionId: 's1', sessionName: 'Haut A', cycle: 'A', date: '2026-11-23', startedAt: START.toISOString(),
-  exercises: exs, ...over,
+  form: null, mood: '', exercises: exs, ...over,
 });
 
 let seq = 0;
@@ -38,6 +38,7 @@ describe('buildReport', () => {
       title: 'Haut A', cycle: 'A', date: '2026-11-23', durationMin: 72, prCount: 0, seriesCount: 1, exerciseCount: 1,
     });
     expect(r.exercises).toEqual([{
+      exerciseId: 'bench', feeling: null,
       name: 'Développé couché',
       seriesLabel: '1 série · fatigué',
       series: [{ n: 1, variant: 'Classique', reps: 5, weight: 100, rpe: 9, isPr: false, prKind: null }],
@@ -147,6 +148,7 @@ describe('buildReport', () => {
     ], { cycle: null }), [], exercises, new Date(START.getTime() - 60_000));
     expect(r).toMatchObject({ cycle: null, durationMin: 0, seriesCount: 1, exerciseCount: 1 });
     expect(r.exercises).toEqual([{
+      exerciseId: 'gone', feeling: null,
       name: 'Ancien', seriesLabel: '1 série',
       series: [{ n: 3, variant: 'Classique', reps: 10, weight: 20, rpe: 7, isPr: false, prKind: null }],
     }]);

@@ -1,3 +1,4 @@
+import { FEELINGS } from '@/domain/journal';
 import type { Report } from '@/domain/report';
 import { parseWorkoutState, type WorkoutState } from '@/domain/workout';
 
@@ -34,8 +35,30 @@ export const saveActiveWorkout = (state: WorkoutState | null): boolean => write(
 const isReport = (v: unknown): v is Report =>
   typeof v === 'object' && v !== null && Array.isArray((v as { exercises?: unknown }).exercises);
 
+const FORMS: readonly unknown[] = ['frais', 'fatigue'];
+const FEELING_IDS: readonly unknown[] = FEELINGS.map((f) => f.id);
+
+/** Comptes rendus enregistrés avant l'état du jour : champs absents → valeurs par défaut. */
+const normalizeReport = (r: Report): Report => {
+  const loose = r as unknown as { logId?: unknown; form?: unknown; mood?: unknown };
+  return {
+    ...r,
+    logId: typeof loose.logId === 'string' ? loose.logId : null,
+    form: FORMS.includes(loose.form) ? (loose.form as Report['form']) : null,
+    mood: typeof loose.mood === 'string' ? loose.mood : '',
+    exercises: r.exercises.map((e) => {
+      const ex = e as unknown as { exerciseId?: unknown; feeling?: unknown };
+      return {
+        ...e,
+        exerciseId: typeof ex.exerciseId === 'string' ? ex.exerciseId : '',
+        feeling: FEELING_IDS.includes(ex.feeling) ? (ex.feeling as Report['exercises'][number]['feeling']) : null,
+      };
+    }),
+  };
+};
+
 export const loadLastReport = (): Report | null => {
   const v = read(LAST_REPORT_KEY);
-  return isReport(v) ? v : null;
+  return isReport(v) ? normalizeReport(v) : null;
 };
 export const saveLastReport = (report: Report | null): boolean => write(LAST_REPORT_KEY, report);

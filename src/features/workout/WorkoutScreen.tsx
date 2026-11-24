@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router';
 import type { Exercise, Performance, Variant } from '@/domain/model';
 import { formatDecimal, formatWeight } from '@/domain/numbers';
+import { logFromWorkout, upsertLog } from '@/domain/journal';
 import { buildReport } from '@/domain/report';
 import { variantLabel } from '@/domain/variants';
 import {
@@ -15,10 +16,12 @@ import { todayIso } from '@/domain/dates';
 import { useAddPerformances, useExercises, usePerformances, useSessions } from '@/data/queries';
 import { Button, cx, Field, Icon, IconButton, Pill, Sheet, Skeleton, useConfirm, useToast } from '@/ui';
 import { AddExerciseSheet } from './AddExerciseSheet';
+import { FeelingChips } from './FeelingChips';
 import { isSameVariant, livePrFlags, prSignature, variantKeyOf, variantsOf } from './livePr';
 import { RecordsSheet } from './RecordsSheet';
 import { sessionCode } from './sessionCode';
 import { loadActiveWorkout, loadLastReport, saveActiveWorkout, saveLastReport } from './storage';
+import { JOURNAL_NOT_SYNCED_MESSAGE, useJournalSync } from './useJournalSync';
 import { WorkoutProvider, useWorkout } from './WorkoutContext';
 import styles from './WorkoutScreen.module.css';
 
@@ -67,6 +70,8 @@ function WorkoutView() {
   const [bonusOpen, setBonusOpen] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const [moodOpen, setMoodOpen] = useState(false);
+  const syncJournal = useJournalSync();
 
   const exercises = exercisesQuery.data ?? NO_EXERCISES;
   const perfs = perfsQuery.data ?? NO_PERFS;
@@ -132,11 +137,16 @@ function WorkoutView() {
     const previousReport = loadLastReport();
     try {
       // Historique lu AVANT l'envoi : il ne contient pas encore les séries de cette séance.
-      saveLastReport(buildReport(state, perfs, exercises));
+      const logId = crypto.randomUUID();
+      saveLastReport({ ...buildReport(state, perfs, exercises), logId });
       const result = await addPerformances.mutateAsync(inputs);
       stopPersisting();
       saveActiveWorkout(null);
       if (result.queued) toast.show(QUEUED_MESSAGE, 'info');
+      // Après les performances : un échec du journal ne bloque ni l'enregistrement ni le compte rendu.
+      if (!(await syncJournal((j) => upsertLog(j, logFromWorkout(state, logId))))) {
+        toast.show(JOURNAL_NOT_SYNCED_MESSAGE, 'error');
+      }
       void navigate('/report');
     } catch (e) {
       console.error('[workout] Enregistrement de la séance impossible :', e);
@@ -220,6 +230,34 @@ function WorkoutView() {
         Terminer
       </Button>
     </header>
+  );
+
+  const moodFirstLine = state.mood.split('\n').find((l) => l.trim() !== '')?.trim() ?? '';
+  const moodSection = (
+    <section className={styles.mood}>
+      <button
+        type="button"
+        className={styles.moodToggle}
+        aria-expanded={moodOpen}
+        onClick={() => {
+          setMoodOpen((o) => !o);
+        }}
+      >
+        <span className={styles.moodLabel}>{moodFirstLine === '' ? 'Ajouter ton état général' : moodFirstLine}</span>
+        <Icon name="chevron" size={16} />
+      </button>
+      {moodOpen && (
+        <Field
+          as="textarea"
+          label="État général"
+          rows={3}
+          value={state.mood}
+          onChange={(e) => {
+            dispatch({ type: 'setMood', mood: e.target.value });
+          }}
+        />
+      )}
+    </section>
   );
 
   const optionsSheet = (
@@ -349,7 +387,17 @@ function WorkoutView() {
       {header}
       {dataBanner}
 
+      {moodSection}
+
       <h1 className={styles.title}>{name}</h1>
+
+      <FeelingChips
+        label={`Ressenti — ${name}`}
+        value={we.feeling}
+        onChange={(feeling) => {
+          dispatch({ type: 'setFeeling', ex: current, feeling });
+        }}
+      />
 
       {coachNotes !== '' && (
         <div className={styles.coach}>

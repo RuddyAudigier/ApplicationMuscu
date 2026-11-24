@@ -1,5 +1,6 @@
 import { parseDateToIso, performanceTimestamp, todayIso } from './dates';
-import type { CycleId, Exercise, IsoDate, Performance } from './model';
+import type { Feeling, Form } from './journal';
+import type { CycleId, Exercise, Id, IsoDate, Performance } from './model';
 import { parseReps, parseWeight } from './numbers';
 import { buildHistoryIndex, classify, findPreviousBest } from './records';
 import { variantLabel } from './variants';
@@ -9,10 +10,14 @@ type PrKind = 'charge' | 'reps' | 'hybride';
 interface ReportSerie {
   n: number; variant: string; reps: number; weight: number; rpe: number; isPr: boolean; prKind: PrKind | null;
 }
-interface ReportExercise { name: string; seriesLabel: string; series: ReportSerie[] }
+export interface ReportExercise { exerciseId: Id; name: string; seriesLabel: string; feeling: Feeling | null; series: ReportSerie[] }
 export interface Report {
   title: string; cycle: CycleId | null; date: IsoDate; durationMin: number;
   prCount: number; seriesCount: number; exerciseCount: number; exercises: ReportExercise[];
+  /** Compte rendu du journal lié (`null` tant que non créé). */
+  logId: string | null;
+  form: Form | null;
+  mood: string;
 }
 
 interface Pending {
@@ -109,7 +114,7 @@ export function buildReport(state: WorkoutState, history: Performance[], exercis
     const series = byExercise.get(exIndex);
     if (!series) return;
     const name = exercises.find((e) => e.id === we.exerciseId)?.name ?? we.name;
-    reportExercises.push({ name, seriesLabel: seriesLabel(series.length, we.stoppedEarly), series: series.sort((x, y) => x.n - y.n) });
+    reportExercises.push({ exerciseId: we.exerciseId, name, seriesLabel: seriesLabel(series.length, we.stoppedEarly), feeling: we.feeling, series: series.sort((x, y) => x.n - y.n) });
   });
 
   return {
@@ -121,5 +126,8 @@ export function buildReport(state: WorkoutState, history: Performance[], exercis
     seriesCount: pending.length,
     exerciseCount: reportExercises.length,
     exercises: reportExercises,
+    logId: null,
+    form: state.form,
+    mood: state.mood,
   };
 }
