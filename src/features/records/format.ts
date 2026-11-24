@@ -1,4 +1,4 @@
-import type { IsoDate } from '@/domain/model';
+import type { IsoDate, Performance } from '@/domain/model';
 import { classify } from '@/domain/records';
 import type { Reference } from '@/domain/model';
 import { isoToShortFr, todayIso } from '@/domain/dates';
@@ -17,6 +17,36 @@ export function weekStartIso(today: IsoDate): IsoDate {
 export function yesterdayIso(today: IsoDate): IsoDate {
   const [y, m, d] = today.split('-').map(Number);
   return todayIso(new Date(y ?? 1970, (m ?? 1) - 1, (d ?? 1) - 1));
+}
+
+/** Lendemain de `day`. */
+export function nextDayIso(day: IsoDate): IsoDate {
+  const [y, m, d] = day.split('-').map(Number);
+  return todayIso(new Date(y ?? 1970, (m ?? 1) - 1, (d ?? 1) + 1));
+}
+
+/** Nom de séance des perfs saisies à la main sans séance ce jour-là. */
+export const MANUAL_SESSION = 'Ajout manuel';
+/** Noms qui ne désignent pas une vraie séance (saisies manuelles, imports). */
+const NOT_A_SESSION = new Set([MANUAL_SESSION, 'Hors séance', 'Import CSV', '']);
+
+/** Séance de ce jour : nom le plus fréquent des perfs datées `day` (hors saisies manuelles). */
+export function sessionOfDay(perfs: Pick<Performance, 'performanceDate' | 'sessionName'>[], day: IsoDate): string | null {
+  const counts = new Map<string, number>();
+  for (const p of perfs) {
+    const name = p.sessionName.trim();
+    if (p.performanceDate.slice(0, 10) !== day || NOT_A_SESSION.has(name)) continue;
+    counts.set(name, (counts.get(name) ?? 0) + 1);
+  }
+  let best: string | null = null;
+  let max = 0;
+  for (const [name, n] of counts) {
+    if (n > max) {
+      best = name;
+      max = n;
+    }
+  }
+  return best;
 }
 
 /** « Dimanche 22 novembre 2026 ». */

@@ -165,6 +165,7 @@ export function RecordsScreen() {
           setMenuOpen(false);
         }}
         exercises={exercises}
+        exercisesStatus={exercisesQuery.status}
       />
     </div>
   );

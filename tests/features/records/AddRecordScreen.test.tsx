@@ -19,17 +19,14 @@ async function fill(reps: string, kg: string, rpe?: string) {
   return user;
 }
 
-const prBox = (): HTMLElement => {
-  const badge = document.querySelector('[aria-live="polite"][role="status"]:not([class*="stack"])');
-  if (!(badge instanceof HTMLElement)) throw new Error('pas d’encadré PR');
-  return badge;
-};
+const prBox = (): HTMLElement => screen.getByTestId('pr-box');
 
 describe('AddRecordScreen', () => {
   it('renders the mockup layout with the default exercise', async () => {
     renderAt('/records/add');
     expect(screen.getByRole('heading', { name: 'Ajouter un PR' })).toBeInTheDocument();
     expect(screen.getByText('Hors séance')).toBeInTheDocument();
+    expect(screen.queryByText(/rattaché à/)).toBeNull();
     expect(await screen.findByRole('button', { name: /Exercice : Développé couché/ })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Classique' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByRole('radio', { name: "Aujourd'hui" })).toHaveAttribute('aria-checked', 'true');
@@ -102,7 +99,7 @@ describe('AddRecordScreen', () => {
     expect(screen.getByText('Vendredi 6 mars 2026')).toBeInTheDocument();
     fireEvent.change(date, { target: { value: '2026-12-01' } });
     expect(screen.getByText('Date invalide ou dans le futur.')).toBeInTheDocument();
-    expect(document.querySelector('[class*="prBox"]')).toBeNull();
+    expect(screen.queryByTestId('pr-box')).toBeNull();
   });
 
   it('uses yesterday as the performance date', async () => {
@@ -120,7 +117,7 @@ describe('AddRecordScreen', () => {
         reps: 6,
         weight: 95,
         rpe: 9,
-        sessionName: 'Hors séance',
+        sessionName: 'Ajout manuel',
         variantName: 'Touch and Go',
         performanceDate: '2026-11-22',
       }),
@@ -224,5 +221,68 @@ describe('AddRecordScreen', () => {
     vi.spyOn(backend.exercises, 'list').mockResolvedValue([]);
     renderAt('/records/add', backend);
     expect(await screen.findByText("Aucun exercice : crée d'abord un exercice.")).toBeInTheDocument();
+  });
+
+  it('compares a past date against the whole day: re-entering yesterday’s set is equaled, not a PR', async () => {
+    const user = userEvent.setup();
+    const backend = createMockBackend(localStorage);
+    const { bench } = await exerciseIds(backend);
+    await backend.performances.add([benchPerf(bench, { reps: 6, weight: 95, performanceDate: '2026-11-22', sessionName: 'A1 Haut du corps' })]);
+    renderAt(`/records/add?exerciseId=${bench}`, backend);
+    await fill('6', '95');
+    // Aujourd'hui : la série d'hier est antérieure → égalé.
+    expect(prBox()).toHaveTextContent('Égale ton record à 6 reps : 95 kg du 22/11');
+    await user.click(screen.getByRole('radio', { name: 'Hier' }));
+    expect(prBox()).toHaveTextContent('Égale ton record à 6 reps : 95 kg du 22/11');
+    expect(prBox()).not.toHaveTextContent('Bat ton record');
+  });
+
+  it('attaches the set to the session of that day when one exists', async () => {
+    const user = userEvent.setup();
+    const backend = createMockBackend(localStorage);
+    const add = vi.spyOn(backend.performances, 'add');
+    const { bench, squat } = await exerciseIds(backend);
+    await backend.performances.add([
+      benchPerf(bench, { reps: 6, weight: 80, performanceDate: '2026-11-22', sessionName: 'A1 Haut du corps' }),
+      benchPerf(squat, { reps: 5, weight: 100, performanceDate: '2026-11-22', sessionName: 'A1 Haut du corps' }),
+      benchPerf(bench, { reps: 1, weight: 60, performanceDate: '2026-11-22', sessionName: 'Autre' }),
+      benchPerf(bench, { reps: 2, weight: 60, performanceDate: '2026-11-22', sessionName: 'Ajout manuel' }),
+      benchPerf(bench, { reps: 3, weight: 60, performanceDate: '2026-11-22', sessionName: 'Ajout manuel' }),
+    ]);
+    add.mockClear();
+    renderAt(`/records/add?exerciseId=${bench}`, backend);
+    await fill('6', '95');
+    expect(screen.queryByText(/rattaché à/)).toBeNull();
+    await user.click(screen.getByRole('radio', { name: 'Hier' }));
+    expect(screen.getByText(/rattaché à/)).toHaveTextContent('Dimanche 22 novembre 2026 · rattaché à A1 Haut du corps');
+    await user.click(screen.getByRole('button', { name: 'Enregistrer le PR' }));
+    expect(add).toHaveBeenCalledWith([expect.objectContaining({ sessionName: 'A1 Haut du corps', performanceDate: '2026-11-22' })]);
+  });
+
+  it('blocks the PR box and saving until the history is loaded, with a retry on error', async () => {
+    const user = userEvent.setup();
+    const backend = createMockBackend(localStorage);
+    const list = vi.spyOn(backend.performances, 'list').mockRejectedValueOnce(new NetworkError('offline'));
+    const add = vi.spyOn(backend.performances, 'add');
+    renderAt('/records/add', backend);
+    await fill('6', '95');
+    expect(await screen.findByText(/Impossible de charger ton historique/)).toHaveAttribute('role', 'alert');
+    expect(screen.queryByTestId('pr-box')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Enregistrer le PR' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Réessayer' }));
+    expect(await screen.findByTestId('pr-box')).toHaveTextContent('Bat ton record');
+    expect(screen.getByRole('button', { name: 'Enregistrer le PR' })).toBeEnabled();
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(add).not.toHaveBeenCalled();
+  });
+
+  it('does not claim anything while the history is loading', async () => {
+    const backend = createMockBackend(localStorage);
+    vi.spyOn(backend.performances, 'list').mockReturnValue(new Promise(() => undefined));
+    renderAt('/records/add', backend);
+    await fill('1', '200');
+    expect(screen.getByText('Chargement de ton historique…')).toBeInTheDocument();
+    expect(screen.queryByTestId('pr-box')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Enregistrer le PR' })).toBeDisabled();
   });
 });

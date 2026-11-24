@@ -46,6 +46,20 @@ describe('RecordsScreen', () => {
     expect(rowFor(6)).not.toHaveAttribute('data-fresh');
   });
 
+  it('starts the week on Monday: Sunday’s PR is not highlighted', async () => {
+    const backend = createMockBackend(localStorage);
+    const { bench } = await exerciseIds(backend);
+    await backend.performances.add([
+      benchPerf(bench, { reps: 2, weight: 112, performanceDate: '2026-11-22' }),
+      benchPerf(bench, { reps: 1, weight: 120, performanceDate: '2026-11-23' }),
+    ]);
+    renderAt(`/records/${bench}`, backend);
+    await screen.findByText('112 kg');
+    expect(rowFor(2)).not.toHaveAttribute('data-fresh');
+    expect(within(rowFor(2)).getByText('22/11')).toBeInTheDocument();
+    expect(rowFor(1)).toHaveAttribute('data-fresh', 'true');
+  });
+
   it('switches variant (records are separate per variant)', async () => {
     const user = userEvent.setup();
     const { router } = renderAt('/records');
@@ -199,5 +213,27 @@ describe('CSV import (menu ⋯)', () => {
       expect(screen.getByText('Importer un CSV')).toBeInTheDocument();
     });
     expect(screen.queryByText(/importée/)).toBeNull();
+  });
+
+  it('disables the import until the exercises are loaded and reports a load error', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const user = userEvent.setup();
+    const backend = createMockBackend(localStorage);
+    vi.spyOn(backend.exercises, 'list').mockRejectedValue(new NetworkError('offline'));
+    renderAt('/records', backend);
+    await screen.findByText(/Impossible de charger les records/);
+    await user.click(screen.getByRole('button', { name: "Plus d'options" }));
+    expect(screen.getByLabelText(/Importer un CSV/)).toBeDisabled();
+    expect(screen.getByText(/import indisponible/)).toHaveAttribute('role', 'alert');
+  });
+
+  it('shows a pending state while the exercises load', async () => {
+    const user = userEvent.setup();
+    const backend = createMockBackend(localStorage);
+    vi.spyOn(backend.exercises, 'list').mockReturnValue(new Promise(() => undefined));
+    renderAt('/records', backend);
+    await user.click(screen.getByRole('button', { name: "Plus d'options" }));
+    expect(screen.getByLabelText(/Importer un CSV/)).toBeDisabled();
+    expect(screen.getByText('Chargement des exercices…')).toBeInTheDocument();
   });
 });

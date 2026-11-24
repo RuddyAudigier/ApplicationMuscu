@@ -5,16 +5,13 @@ import type { Exercise, IsoDate, PerformanceInput, Variant } from '@/domain/mode
 import { parseReps, parseRpe, parseWeight } from '@/domain/numbers';
 import { classify, findPreviousBest } from '@/domain/records';
 import { getDefaultVariant, variantLabel, variantMatches } from '@/domain/variants';
-import { useAddPerformances, useExercises, useHistoryIndex } from '@/data/queries';
+import { useAddPerformances, useExercises, useHistoryIndex, usePerformances } from '@/data/queries';
 import { Button, Icon, IconButton, Pill, Skeleton, useToast } from '@/ui';
 import { ExercisePicker } from './ExercisePicker';
-import { cx, longDateFr, prMessage, yesterdayIso } from './format';
+import { cx, longDateFr, MANUAL_SESSION, nextDayIso, prMessage, sessionOfDay, yesterdayIso } from './format';
 import styles from './Records.module.css';
 
 type DateChoice = 'today' | 'yesterday' | 'other';
-
-/** Nom de séance des perfs saisies hors séance. */
-const OFF_SESSION = 'Hors séance';
 
 function initialVariant(exercise: Exercise | null, name: string | null): Variant | null {
   if (!exercise) return null;
@@ -27,7 +24,10 @@ export function AddRecordScreen() {
   const navigate = useNavigate();
   const toast = useToast();
   const exercisesQuery = useExercises();
+  const perfsQuery = usePerformances();
   const history = useHistoryIndex();
+  /** Sans historique chargé, aucune comparaison n'est fiable : pas d'encadré, pas d'enregistrement. */
+  const historyReady = perfsQuery.isSuccess;
   const addPerformances = useAddPerformances();
 
   const exercises = useMemo(() => exercisesQuery.data ?? [], [exercisesQuery.data]);
@@ -58,8 +58,13 @@ export function AddRecordScreen() {
   const dateError = dateValid ? null : 'Date invalide ou dans le futur.';
   const valid = !repsError && !weightError && !rpeError && !dateError && exercise !== null && variant !== null;
 
+  const session = useMemo(
+    () => (perfsQuery.data && dateValid ? sessionOfDay(perfsQuery.data, date) : null),
+    [perfsQuery.data, date, dateValid],
+  );
+
   const preview = useMemo(() => {
-    if (!exercise || !variant || repsN === null || repsN < 1 || weightN === null || !dateValid) return null;
+    if (!historyReady || !exercise || !variant || repsN === null || repsN < 1 || weightN === null || !dateValid) return null;
     const perf = {
       exerciseId: exercise.id,
       exerciseName: exercise.name,
@@ -70,11 +75,13 @@ export function AddRecordScreen() {
       performanceDate: date,
       createdAt: null,
     };
-    // Aujourd'hui : maintenant ; autre jour : minuit local (horodatage d'une perf antidatée).
-    const atTimestamp = date === today ? openedAt : (performanceTimestamp({ performanceDate: date, createdAt: null }) ?? openedAt);
+    // Aujourd'hui : l'ouverture de l'écran. Autre jour : toute la journée (minuit suivant, exclu),
+    // pour qu'une série déjà faite ce jour-là ressaisie ne passe jamais pour un PR.
+    const atTimestamp =
+      date === today ? openedAt : (performanceTimestamp({ performanceDate: nextDayIso(date), createdAt: null }) ?? openedAt);
     const ref = findPreviousBest(history, exercise.id, perf, { atTimestamp });
     return { message: prMessage({ reps: repsN, weight: weightN }, ref), isPr: classify({ reps: repsN, weight: weightN }, ref).improvementStatus === 'improved' };
-  }, [exercise, variant, repsN, weightN, date, dateValid, history, today, openedAt]);
+  }, [historyReady, exercise, variant, repsN, weightN, date, dateValid, history, today, openedAt]);
 
   const backHref = exercise
     ? `/records/${encodeURIComponent(exercise.id)}${variant && !variant.isDefault ? `?variant=${encodeURIComponent(variant.name)}` : ''}`
@@ -82,11 +89,11 @@ export function AddRecordScreen() {
 
   const save = async () => {
     setSubmitted(true);
-    if (!valid || repsN === null || weightN === null) return;
+    if (!valid || !historyReady || repsN === null || weightN === null) return;
     const input: PerformanceInput = {
       exerciseId: exercise.id,
       exerciseName: exercise.name,
-      sessionName: OFF_SESSION,
+      sessionName: session ?? MANUAL_SESSION,
       reps: repsN,
       weight: weightN,
       rpe: rpeN,
@@ -212,10 +219,38 @@ export function AddRecordScreen() {
               />
             </label>
           )}
-          <span className={styles.dateLine}>{dateValid ? longDateFr(date) : dateError}</span>
+          <span className={styles.dateLine}>
+            {dateValid ? longDateFr(date) : dateError}
+            {dateValid && session && (
+              <>
+                {' · rattaché à '}
+                <strong className={styles.dateSession}>{session}</strong>
+              </>
+            )}
+          </span>
+
+          {perfsQuery.isPending && <p className={styles.historyState}>Chargement de ton historique…</p>}
+          {perfsQuery.isError && (
+            <div className={styles.historyError}>
+              <p role="alert">Impossible de charger ton historique : pas de comparaison ni d'enregistrement possibles.</p>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  void perfsQuery.refetch();
+                }}
+              >
+                Réessayer
+              </Button>
+            </div>
+          )}
 
           {preview && (
-            <div className={cx(styles.prBox, preview.message.tone !== 'pr' && styles.prBoxMuted)} role="status" aria-live="polite">
+            <div
+              data-testid="pr-box"
+              className={cx(styles.prBox, preview.message.tone !== 'pr' && styles.prBoxMuted)}
+              role="status"
+              aria-live="polite"
+            >
               <span className={cx(styles.prBadge, preview.message.tone !== 'pr' && styles.prBadgeMuted)}>
                 {preview.message.badge}
               </span>
@@ -229,7 +264,14 @@ export function AddRecordScreen() {
 
           <div className={styles.grow} />
 
-          <Button type="submit" variant="accent" size="lg" fullWidth loading={addPerformances.isPending}>
+          <Button
+            type="submit"
+            variant="accent"
+            size="lg"
+            fullWidth
+            loading={addPerformances.isPending}
+            disabled={!historyReady}
+          >
             Enregistrer le PR
           </Button>
         </form>

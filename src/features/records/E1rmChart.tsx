@@ -84,12 +84,6 @@ export function E1rmChart({ points }: { points: DayPoint[] }) {
             onMouseLeave={() => {
               setActive(null);
             }}
-            onFocus={() => {
-              setActive(i);
-            }}
-            onBlur={() => {
-              setActive(null);
-            }}
           />
         ))}
       </svg>

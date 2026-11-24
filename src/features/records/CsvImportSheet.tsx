@@ -1,9 +1,9 @@
 import { useId, useState, type ChangeEvent } from 'react';
 import { importPerformances } from '@/domain/csv';
-import { todayIso } from '@/domain/dates';
 import type { Exercise } from '@/domain/model';
 import { useAddPerformances } from '@/data/queries';
 import { Sheet } from '@/ui';
+import { cx } from './format';
 import styles from './Records.module.css';
 
 interface Outcome {
@@ -29,21 +29,30 @@ function readText(file: File): Promise<string> {
 const lines = (n: number): string => `${String(n)} ligne${n > 1 ? 's' : ''}`;
 
 /** Menu « ⋯ » : import CSV des performances, avec retour ligne par ligne. */
-export function CsvImportSheet({ open, onClose, exercises }: { open: boolean; onClose: () => void; exercises: Exercise[] }) {
+interface CsvImportSheetProps {
+  open: boolean;
+  onClose: () => void;
+  exercises: Exercise[];
+  /** État du chargement des exercices : l'import exige le catalogue complet. */
+  exercisesStatus: 'pending' | 'error' | 'success';
+}
+
+export function CsvImportSheet({ open, onClose, exercises, exercisesStatus }: CsvImportSheetProps) {
   const inputId = useId();
   const addPerformances = useAddPerformances();
   const [busy, setBusy] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const ready = exercisesStatus === 'success';
 
   const onFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
-    if (!file) return;
+    if (!file || !ready) return;
     setBusy(true);
     setOutcome(null);
     try {
       const text = await readText(file);
-      const { rows, errors } = importPerformances(text, exercises, todayIso());
+      const { rows, errors } = importPerformances(text, exercises);
       if (rows.length === 0) {
         setOutcome({ summary: 'Aucune ligne importée.', kind: 'error', errors });
         return;
@@ -76,20 +85,30 @@ export function CsvImportSheet({ open, onClose, exercises }: { open: boolean; on
       title="Options"
     >
       <div className={styles.menu}>
-        <label htmlFor={inputId} className={styles.menuItem} aria-busy={busy || undefined}>
-          {busy ? 'Import en cours…' : 'Importer un CSV'}
-          <span className={styles.menuHint}>Colonnes : exercice, reps, poids, rpe, variante, date</span>
-        </label>
         <input
           id={inputId}
           type="file"
           accept=".csv,text/csv"
-          className={styles.srOnly}
-          disabled={busy}
+          className={cx(styles.srOnly, styles.fileInput)}
+          disabled={busy || !ready}
           onChange={(e) => {
             void onFile(e);
           }}
         />
+        <label
+          htmlFor={inputId}
+          className={cx(styles.menuItem, !ready && styles.menuItemDisabled)}
+          aria-busy={busy || undefined}
+        >
+          {busy ? 'Import en cours…' : 'Importer un CSV'}
+          <span className={styles.menuHint}>Colonnes : exercice, reps, poids, rpe, variante, date</span>
+        </label>
+        {exercisesStatus === 'pending' && <p className={styles.importSummary}>Chargement des exercices…</p>}
+        {exercisesStatus === 'error' && (
+          <p role="alert" className={styles.importError}>
+            Impossible de charger les exercices : import indisponible pour le moment.
+          </p>
+        )}
         {outcome && (
           <div role={outcome.kind === 'error' ? 'alert' : 'status'} className={styles.importResult}>
             <p className={outcome.kind === 'error' ? styles.importError : styles.importSummary}>{outcome.summary}</p>
