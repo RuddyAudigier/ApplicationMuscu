@@ -37,6 +37,7 @@ export interface WorkoutState {
 export type WorkoutAction =
   | { type: 'setField'; ex: number; serie: number; field: 'variantKey' | 'reps' | 'kg'; value: string }
   | { type: 'setField'; ex: number; serie: number; field: 'rpe'; value: number }
+  | { type: 'retarget'; ex: number; serie: number; target: SerieTarget | null }
   | { type: 'setTarget'; ex: number; serie: number; target: (SerieTarget & { variantKey: string }) | null }
   | { type: 'validate'; ex: number; serie: number; at: IsoDateTime }
   | { type: 'unlock'; ex: number; serie: number }
@@ -159,6 +160,9 @@ export function workoutReducer(state: WorkoutState, action: WorkoutAction): Work
       return updateSerie(state, action.ex, action.serie, editable((s) =>
         action.field === 'rpe' ? { ...s, rpe: action.value } : { ...s, [action.field]: action.value },
       ));
+    case 'retarget':
+      // Cible seule (déduite des reps saisies) : ne touche ni aux reps, ni au poids, ni à la variante.
+      return updateSerie(state, action.ex, action.serie, editable((s) => ({ ...s, target: action.target })));
     case 'setTarget': {
       const { target } = action;
       return updateSerie(state, action.ex, action.serie, editable((s) => {
@@ -258,6 +262,14 @@ export function recordsTable(perfs: Performance[], exerciseId: Id, variant: Vari
     rpe: p?.rpe ?? null,
     date: p?.performanceDate ?? null,
   }));
+}
+
+/** Cible liée aux reps saisies : le record exact à ce nombre de reps (même variante), sinon aucune. */
+export function targetForReps(perfs: Performance[], exerciseId: Id, variant: Variant, repsText: string): SerieTarget | null {
+  const reps = parseReps(repsText);
+  if (reps === null) return null;
+  const row = recordsTable(perfs, exerciseId, variant).find((r) => r.reps === reps);
+  return row?.weight == null ? null : { reps, weight: row.weight };
 }
 
 type Guard = (v: unknown) => boolean;

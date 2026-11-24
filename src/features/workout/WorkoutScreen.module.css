@@ -79,6 +79,19 @@
   font-weight: var(--weight-semibold);
 }
 
+.rowLabel {
+  margin-top: var(--space-4);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.rowLabel + .pills {
+  margin-top: var(--space-2);
+}
+
 .pills {
   display: flex;
   gap: 6px;

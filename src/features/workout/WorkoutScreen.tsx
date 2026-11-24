@@ -7,6 +7,7 @@ import { buildReport } from '@/domain/report';
 import { variantLabel } from '@/domain/variants';
 import {
   canValidate,
+  targetForReps,
   toPerformanceInputs,
   type SerieEntry,
   type WorkoutExercise,
@@ -426,11 +427,16 @@ function WorkoutView() {
   const activeKey = serie?.variantKey ?? lastSerie?.variantKey ?? (variants[0] ? variantKeyOf(variants[0]) : '');
   const coachNotes = exercise?.coachNotes.trim() ?? '';
 
-  /** Change la variante de la série en cours ; la cible (liée à une variante) est effacée. */
+  /** Change la variante de la série en cours ; la cible est recalculée pour les reps saisies. */
   const switchVariant = (v: Variant): void => {
     if (!serie || isSameVariant(v, serie.variantKey)) return;
-    dispatch({ type: 'setTarget', ex: current, serie: serieIdx, target: null });
     dispatch({ type: 'setField', ex: current, serie: serieIdx, field: 'variantKey', value: variantKeyOf(v) });
+    dispatch({
+      type: 'retarget',
+      ex: current,
+      serie: serieIdx,
+      target: targetForReps(perfs, we.exerciseId, v, serie.reps),
+    });
   };
 
   const stopExercise = async (): Promise<void> => {
@@ -458,14 +464,6 @@ function WorkoutView() {
 
       <h1 className={styles.title}>{name}</h1>
 
-      <FeelingChips
-        label={`Ressenti — ${name}`}
-        value={we.feeling}
-        onChange={(feeling) => {
-          dispatch({ type: 'setFeeling', ex: current, feeling });
-        }}
-      />
-
       {coachNotes !== '' && (
         <div className={styles.coach}>
           <Icon name="info" size={16} className={styles.coachIcon} />
@@ -476,20 +474,23 @@ function WorkoutView() {
       )}
 
       {exercise ? (
-        <div role="radiogroup" aria-label="Variante" className={styles.pills}>
-          {variants.map((v) => (
-            <Pill
-              key={variantKeyOf(v)}
-              selected={isSameVariant(v, activeKey)}
-              disabled={!serie}
-              onSelect={() => {
-                switchVariant(v);
-              }}
-            >
-              {variantLabel(v.name)}
-            </Pill>
-          ))}
-        </div>
+        <>
+          <p className={styles.rowLabel}>Variante</p>
+          <div role="radiogroup" aria-label="Variante" className={styles.pills}>
+            {variants.map((v) => (
+              <Pill
+                key={variantKeyOf(v)}
+                selected={isSameVariant(v, activeKey)}
+                disabled={!serie}
+                onSelect={() => {
+                  switchVariant(v);
+                }}
+              >
+                {variantLabel(v.name)}
+              </Pill>
+            ))}
+          </div>
+        </>
       ) : exercisesQuery.isPending ? (
         <div className={styles.pills} aria-busy="true">
           <span className="visually-hidden">Chargement des variantes…</span>
@@ -503,6 +504,16 @@ function WorkoutView() {
           </p>
         )
       )}
+
+      <FeelingChips
+        label={`Ressenti — ${name}`}
+        caption="Mon état"
+        spaced
+        value={we.feeling}
+        onChange={(feeling) => {
+          dispatch({ type: 'setFeeling', ex: current, feeling });
+        }}
+      />
 
       <WarmupSets
         we={we}
@@ -543,6 +554,15 @@ function WorkoutView() {
           }
           onChange={(field, value) => {
             dispatch({ type: 'setField', ex: current, serie: serieIdx, field, value });
+            if (field !== 'reps') return;
+            // La cible suit les reps saisies : record exact à ce nombre de reps pour la variante, sinon vide.
+            const variant = variants.find((v) => isSameVariant(v, serie.variantKey));
+            dispatch({
+              type: 'retarget',
+              ex: current,
+              serie: serieIdx,
+              target: variant ? targetForReps(perfs, we.exerciseId, variant, value) : null,
+            });
           }}
           onRpe={(value) => {
             dispatch({ type: 'setField', ex: current, serie: serieIdx, field: 'rpe', value });
