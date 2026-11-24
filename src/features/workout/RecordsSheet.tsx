@@ -91,17 +91,19 @@ function RecordsBody({
                 type="button"
                 className={cx(styles.row, selected && styles.rowSelected)}
                 aria-pressed={selected}
-                aria-label={label}
                 onClick={() => {
                   if (variant) onPick(row, variant);
                 }}
               >
-                <span className={styles.rowReps}>{repsLabel}</span>
-                <span className={row.weight === null ? styles.rowEmpty : styles.rowWeight}>
+                {/* Nom tiré du contenu (pas d'aria-label) : la phrase lue reprend le texte visible
+                    dans l'ordre (WCAG 2.5.3) ; les colonnes visibles ne sont pas lues en double. */}
+                <span className="visually-hidden">{label}</span>
+                <span className={styles.rowReps} aria-hidden="true">{repsLabel}</span>
+                <span className={row.weight === null ? styles.rowEmpty : styles.rowWeight} aria-hidden="true">
                   {row.weight === null ? 'à conquérir' : `${formatWeight(row.weight)} kg`}
                 </span>
-                <span className={styles.rowMeta}>{formatDecimal(row.rpe)}</span>
-                <span className={cx(styles.rowMeta, styles.right)}>{shortDate(row.date)}</span>
+                <span className={styles.rowMeta} aria-hidden="true">{formatDecimal(row.rpe)}</span>
+                <span className={cx(styles.rowMeta, styles.right)} aria-hidden="true">{shortDate(row.date)}</span>
               </button>
             </li>
           );
