@@ -61,6 +61,16 @@ export function formatPerf(s: Pick<ReportSerie, 'reps' | 'weight'>): string {
   return `${String(s.reps)} × ${formatWeight(s.weight)} kg`;
 }
 
+/** « 10 × 40 kg, 5 × 60 kg » ; sans poids : « 10 reps ». */
+export function formatWarmupSets(sets: Report['exercises'][number]['warmupSets']): string {
+  return sets
+    .map((w) => (w.weight === null ? `${String(w.reps)} reps` : `${String(w.reps)} × ${formatWeight(w.weight)} kg`))
+    .join(', ');
+}
+
+/** « Rotations d'épaules (2 × 15) » */
+export const warmupLabel = (w: Report['warmup'][number]): string => (w.detail === '' ? w.name : `${w.name} (${w.detail})`);
+
 const plural = (n: number, one: string, many: string): string => `${String(n)} ${n > 1 ? many : one}`;
 
 export function summaryLine(r: Report): string {
@@ -98,9 +108,11 @@ export function reportPdfModel(r: Report, generatedAt: Date = new Date()): PdfRe
     summary: summaryLine(r),
     columns: ['Série', 'Variante', 'Reps × Poids', 'RPE', 'PR'],
     widths: [12, 38, 24, 10, 26],
+    warmup: r.warmup.length > 0 ? { heading: 'Échauffement', lines: r.warmup.map(warmupLabel) } : null,
     sections: r.exercises.map((ex) => ({
       heading: ex.feeling ? `${ex.name} · ${feelingLabel(ex.feeling)}` : ex.name,
       caption: ex.seriesLabel,
+      note: ex.warmupSets.length > 0 ? `Chauffe : ${formatWarmupSets(ex.warmupSets)}` : null,
       rows: ex.series.map((s) => [
         `S${String(s.n)}`,
         s.variant,

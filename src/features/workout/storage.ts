@@ -39,19 +39,27 @@ const FORMS: readonly unknown[] = ['frais', 'fatigue'];
 const FEELING_IDS: readonly unknown[] = FEELINGS.map((f) => f.id);
 
 /** Comptes rendus enregistrés avant l'état du jour : champs absents → valeurs par défaut. */
+const isRec = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
+const isWarmupDone = (v: unknown): v is Report['warmup'][number] =>
+  isRec(v) && typeof v.name === 'string' && typeof v.detail === 'string';
+const isWarmupSetDone = (v: unknown): v is Report['exercises'][number]['warmupSets'][number] =>
+  isRec(v) && typeof v.reps === 'number' && (v.weight === null || typeof v.weight === 'number');
+
 const normalizeReport = (r: Report): Report => {
-  const loose = r as unknown as { logId?: unknown; form?: unknown; mood?: unknown };
+  const loose = r as unknown as { logId?: unknown; form?: unknown; mood?: unknown; warmup?: unknown };
   return {
     ...r,
     logId: typeof loose.logId === 'string' ? loose.logId : null,
     form: FORMS.includes(loose.form) ? (loose.form as Report['form']) : null,
     mood: typeof loose.mood === 'string' ? loose.mood : '',
+    warmup: Array.isArray(loose.warmup) ? (loose.warmup as unknown[]).filter(isWarmupDone) : [],
     exercises: r.exercises.map((e) => {
-      const ex = e as unknown as { exerciseId?: unknown; feeling?: unknown };
+      const ex = e as unknown as { exerciseId?: unknown; feeling?: unknown; warmupSets?: unknown };
       return {
         ...e,
         exerciseId: typeof ex.exerciseId === 'string' ? ex.exerciseId : '',
         feeling: FEELING_IDS.includes(ex.feeling) ? (ex.feeling as Report['exercises'][number]['feeling']) : null,
+        warmupSets: Array.isArray(ex.warmupSets) ? (ex.warmupSets as unknown[]).filter(isWarmupSetDone) : [],
       };
     }),
   };

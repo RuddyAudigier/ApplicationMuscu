@@ -1,4 +1,5 @@
 import type { CycleId, Id, IsoDate } from './model';
+import { parseReps, parseWeight } from './numbers';
 import type { Report } from './report';
 import type { WorkoutState } from './workout';
 
@@ -51,6 +52,31 @@ export function setBlockNote(j: Journal, blockStart: IsoDate, note: string): Jou
   return { ...j, blockNotes };
 }
 
+/** Séries de chauffe saisies → valides seulement (reps entier ≥ 1) ; poids absent ou invalide → `null`. */
+export function toWarmupSets(rows: { reps: string; kg: string }[]): WarmupSet[] {
+  const out: WarmupSet[] = [];
+  for (const r of rows) {
+    const reps = parseReps(r.reps);
+    if (reps !== null && reps >= 1) out.push({ reps, weight: r.kg.trim() === '' ? null : parseWeight(r.kg) });
+  }
+  return out;
+}
+
+/** Échauffements d'une séance : éléments du catalogue dans l'ordre choisi, ids inconnus ignorés. */
+export function warmupsForSession(j: Journal | null | undefined, sessionId: Id): WarmupItem[] {
+  if (!j) return [];
+  const byId = new Map(j.warmups.catalog.map((w) => [w.id, w]));
+  return (j.warmups.bySession[sessionId] ?? []).flatMap((id) => byId.get(id) ?? []);
+}
+
+/** Supprime un élément du catalogue et de toutes les listes de séance. */
+export function removeWarmupItem(j: Journal, id: Id): Journal {
+  const bySession = Object.fromEntries(
+    Object.entries(j.warmups.bySession).map(([sid, ids]) => [sid, ids.filter((x) => x !== id)]),
+  );
+  return { ...j, warmups: { catalog: j.warmups.catalog.filter((w) => w.id !== id), bySession } };
+}
+
 /** Compte rendu du journal tiré d'une séance terminée (exercices avec séries validées ou ressenti). */
 export function logFromWorkout(state: WorkoutState, id: Id): SessionLog {
   return {
@@ -58,8 +84,8 @@ export function logFromWorkout(state: WorkoutState, id: Id): SessionLog {
     form: state.form, mood: state.mood,
     exercises: state.exercises
       .filter((e) => e.feeling !== null || e.series.some((s) => s.validated))
-      .map((e) => ({ exerciseId: e.exerciseId, name: e.name, feeling: e.feeling, warmupSets: [] })),
-    warmupDone: [],
+      .map((e) => ({ exerciseId: e.exerciseId, name: e.name, feeling: e.feeling, warmupSets: toWarmupSets(e.warmupSets) })),
+    warmupDone: state.warmup.filter((w) => w.done).map((w) => ({ name: w.name, detail: w.detail })),
   };
 }
 
@@ -68,8 +94,8 @@ export function logFromReport(report: Report, id: Id): SessionLog {
   return {
     id, date: report.date, sessionId: null, sessionName: report.title, cycle: report.cycle,
     form: report.form, mood: report.mood,
-    exercises: report.exercises.map((e) => ({ exerciseId: e.exerciseId, name: e.name, feeling: e.feeling, warmupSets: [] })),
-    warmupDone: [],
+    exercises: report.exercises.map((e) => ({ exerciseId: e.exerciseId, name: e.name, feeling: e.feeling, warmupSets: e.warmupSets })),
+    warmupDone: report.warmup,
   };
 }
 

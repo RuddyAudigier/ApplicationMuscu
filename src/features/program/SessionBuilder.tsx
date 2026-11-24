@@ -1,9 +1,9 @@
 import { useId, useMemo, useState } from 'react';
-import { useDeleteSession, useExercises, useSaveSession, useSessions } from '@/data/queries';
+import { useDeleteSession, useExercises, useJournal, useSaveSession, useSessions } from '@/data/queries';
 import type { CycleId, Exercise, Id, Session } from '@/domain/model';
 import { normalizeSearch } from '@/domain/names';
 import { Button, ConfirmDialog, Field, Icon, IconButton, Segmented, Sheet, useToast } from '@/ui';
-import { loadActiveWorkout, saveActiveWorkout } from '@/features/workout';
+import { loadActiveWorkout, saveActiveWorkout, useJournalSync } from '@/features/workout';
 import { DEFAULT_SERIES, MAX_SERIES, MIN_SERIES, isDuplicateName } from './programModel';
 import styles from './SessionBuilder.module.css';
 
@@ -42,6 +42,8 @@ export function SessionBuilder({ session, defaultCycle, onClose }: SessionBuilde
   const sessionsQuery = useSessions();
   const save = useSaveSession();
   const remove = useDeleteSession();
+  const journalQuery = useJournal();
+  const syncJournal = useJournalSync();
   const [name, setName] = useState(session?.name ?? '');
   const [cycle, setCycle] = useState<CycleId>(session?.cycle ?? defaultCycle);
   const [items, setItems] = useState<Item[]>(
@@ -51,6 +53,29 @@ export function SessionBuilder({ session, defaultCycle, onClose }: SessionBuilde
   const [submitted, setSubmitted] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const ids = useId();
+
+  // Échauffement : `null` = non touché (valeur du journal), sinon sélection ordonnée de ids du catalogue.
+  const catalog = journalQuery.data?.warmups.catalog ?? [];
+  const storedWarmup = session ? (journalQuery.data?.warmups.bySession[session.id] ?? []) : [];
+  const [pickedWarmup, setPickedWarmup] = useState<Id[] | null>(null);
+  const warmupIds = pickedWarmup ?? storedWarmup.filter((id) => catalog.some((w) => w.id === id));
+  const warmupOrder = [
+    ...warmupIds.flatMap((id) => catalog.find((w) => w.id === id) ?? []),
+    ...catalog.filter((w) => !warmupIds.includes(w.id)),
+  ];
+
+  const toggleWarmup = (id: Id) => {
+    setPickedWarmup(warmupIds.includes(id) ? warmupIds.filter((x) => x !== id) : [...warmupIds, id]);
+  };
+  const moveWarmup = (index: number, delta: -1 | 1) => {
+    const next = [...warmupIds];
+    const a = next[index];
+    const b = next[index + delta];
+    if (a === undefined || b === undefined) return;
+    next[index] = b;
+    next[index + delta] = a;
+    setPickedWarmup(next);
+  };
 
   const library = exercisesQuery.data;
   const results = useMemo(() => (library ?? []).filter((e) => matches(e, query)), [library, query]);
@@ -104,9 +129,26 @@ export function SessionBuilder({ session, defaultCycle, onClose }: SessionBuilde
         draft: { name: name.trim(), cycle, exercises: items.map((i) => ({ exerciseId: i.exerciseId, series: i.series })) },
       },
       {
-        onSuccess: () => {
-          toast.show(session ? 'Séance modifiée.' : 'Séance créée.', 'success');
-          onClose();
+        onSuccess: (saved) => {
+          // Après la séance : un échec du journal ne la remet pas en cause.
+          const finish = (): void => {
+            toast.show(session ? 'Séance modifiée.' : 'Séance créée.', 'success');
+            onClose();
+          };
+          if (pickedWarmup === null) {
+            finish();
+            return;
+          }
+          void syncJournal((j) => ({
+            ...j,
+            warmups: { ...j.warmups, bySession: { ...j.warmups.bySession, [saved.id]: pickedWarmup } },
+          })).then((ok) => {
+            if (ok) finish();
+            else {
+              toast.show('Séance enregistrée, mais pas son échauffement. Modifie la séance pour réessayer.', 'error');
+              onClose();
+            }
+          });
         },
         onError: () => {
           toast.show('La séance n’a pas pu être enregistrée. Vérifie ta connexion et réessaie.', 'error');
@@ -206,6 +248,53 @@ export function SessionBuilder({ session, defaultCycle, onClose }: SessionBuilde
                   </li>
                 ))}
               </ol>
+            )}
+          </section>
+
+          <section className={styles.group} aria-labelledby={`${ids}-warmup`}>
+            <h3 className={styles.groupLabel} id={`${ids}-warmup`}>Échauffement ({warmupIds.length})</h3>
+            {catalog.length === 0 ? (
+              <p className={styles.muted}>Crée tes échauffements dans Programme → Échauffements.</p>
+            ) : (
+              <ul className={styles.items}>
+                {warmupOrder.map((w) => {
+                  const index = warmupIds.indexOf(w.id);
+                  const checked = index >= 0;
+                  return (
+                    <li key={w.id} className={styles.warmupRow}>
+                      <label className={styles.warmupLabel}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => { toggleWarmup(w.id); }}
+                        />
+                        <span className={styles.libraryText}>
+                          <span>{w.name}</span>
+                          {w.detail !== '' && <span className={styles.muscles}>{w.detail}</span>}
+                        </span>
+                      </label>
+                      {checked && (
+                        <>
+                          <IconButton
+                            icon="chevron"
+                            label={`Monter ${w.name}`}
+                            className={styles.up}
+                            disabled={index === 0}
+                            onClick={() => { moveWarmup(index, -1); }}
+                          />
+                          <IconButton
+                            icon="chevron"
+                            label={`Descendre ${w.name}`}
+                            className={styles.down}
+                            disabled={index === warmupIds.length - 1}
+                            onClick={() => { moveWarmup(index, 1); }}
+                          />
+                        </>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
             )}
           </section>
 

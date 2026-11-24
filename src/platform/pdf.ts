@@ -10,6 +10,8 @@ export interface PdfTableSection {
   caption: string;
   /** Lignes du tableau, une cellule par colonne. */
   rows: string[][];
+  /** Ligne atténuée sous le tableau (séries de chauffe), `null` si aucune. */
+  note?: string | null;
 }
 
 export interface PdfReportModel {
@@ -18,6 +20,8 @@ export interface PdfReportModel {
   meta: string[];
   /** Résumé (« 4 PR · 12 séries · 5 exercices »). */
   summary: string;
+  /** Échauffement général fait (liste atténuée avant les exercices), `null` si aucun. */
+  warmup?: { heading: string; lines: string[] } | null;
   columns: string[];
   /** Largeur relative de chaque colonne (somme quelconque). */
   widths: number[];
@@ -138,6 +142,25 @@ export async function buildPdf(model: PdfReportModel): Promise<Blob> {
     y += 5;
   };
 
+  if (model.warmup) {
+    ensure(14 + ROW_H);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(...INK);
+    doc.text(model.warmup.heading, MARGIN, y);
+    y += 6;
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(10);
+    doc.setTextColor(...MUTED);
+    for (const line of model.warmup.lines) {
+      const lines = split(`• ${line}`, CONTENT_W - 2);
+      ensure(LINE_H * lines.length + 2);
+      doc.text(lines, MARGIN + 1, y);
+      y += LINE_H * lines.length + 1;
+    }
+    y += 4;
+  }
+
   for (const section of model.sections) {
     ensure(14 + ROW_H * Math.min(section.rows.length, 2));
     sectionTitle(section.heading, section.caption);
@@ -164,6 +187,16 @@ export async function buildPdf(model: PdfReportModel): Promise<Blob> {
         doc.text(lines, (xs[i] ?? MARGIN) + 1, y);
       });
       y += height;
+    }
+    if (section.note) {
+      // Chauffe : italique atténué, clairement distinct des séries de travail.
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(9);
+      doc.setTextColor(...MUTED);
+      const lines = split(section.note, CONTENT_W - 2);
+      ensure(LINE_H * lines.length + 2);
+      doc.text(lines, MARGIN + 1, y + 1);
+      y += LINE_H * lines.length + 2;
     }
     y += 4;
   }

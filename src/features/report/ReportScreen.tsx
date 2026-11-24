@@ -20,10 +20,12 @@ import {
   PR_KIND_LONG,
   formatDuration,
   formatPerf,
+  formatWarmupSets,
   reportFileName,
   reportPdfModel,
   shortDate,
   summaryLine,
+  warmupLabel,
   type ReportSerie,
 } from './format';
 
@@ -187,6 +189,17 @@ function ReportView({ initial }: { initial: Report }) {
         />
       </section>
 
+      {report.warmup.length > 0 && (
+        <section className={styles.warmup} aria-label="Échauffement">
+          <h2 className={styles.warmupTitle}>Échauffement</h2>
+          <ul className={styles.warmupList}>
+            {report.warmup.map((w, i) => (
+              <li key={i}>{warmupLabel(w)}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {report.exercises.length === 0 ? (
         <p className={styles.none}>Aucune série validée pendant cette séance.</p>
       ) : (
@@ -204,6 +217,11 @@ function ReportView({ initial }: { initial: Report }) {
                   edit({ exercises: report.exercises.map((x, k) => (k === i ? { ...x, feeling } : x)) });
                 }}
               />
+              {ex.warmupSets.length > 0 && (
+                <p className={styles.warmupSets}>
+                  <span className={styles.warmupLabel}>Chauffe :</span> {formatWarmupSets(ex.warmupSets)}
+                </p>
+              )}
               <ul className={styles.series} aria-label={`Séries — ${ex.name}`}>
                 {ex.series.map((s) => (
                   <SerieRow key={s.n} s={s} />

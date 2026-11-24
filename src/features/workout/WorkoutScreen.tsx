@@ -260,6 +260,31 @@ function WorkoutView() {
     </section>
   );
 
+  const warmupSection = state.warmup.length > 0 && (
+    <section className={styles.warmup} aria-labelledby="warmup-title">
+      <h2 id="warmup-title" className={styles.warmupTitle}>Échauffement</h2>
+      <ul className={styles.warmupList}>
+        {state.warmup.map((w, i) => (
+          <li key={i}>
+            <label className={styles.warmupItem}>
+              <input
+                type="checkbox"
+                checked={w.done}
+                onChange={() => {
+                  dispatch({ type: 'toggleWarmup', index: i });
+                }}
+              />
+              <span className={styles.warmupText}>
+                <span>{w.name}</span>
+                {w.detail !== '' && <span className={styles.muted}>{w.detail}</span>}
+              </span>
+            </label>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+
   const optionsSheet = (
     <Sheet
       open={optionsOpen}
@@ -389,6 +414,8 @@ function WorkoutView() {
 
       {moodSection}
 
+      {warmupSection}
+
       <h1 className={styles.title}>{name}</h1>
 
       <FeelingChips
@@ -436,6 +463,19 @@ function WorkoutView() {
           </p>
         )
       )}
+
+      <WarmupSets
+        we={we}
+        onAdd={() => {
+          dispatch({ type: 'addWarmupSet', ex: current });
+        }}
+        onChange={(index, field, value) => {
+          dispatch({ type: 'setWarmupSet', ex: current, index, field, value });
+        }}
+        onRemove={(index) => {
+          dispatch({ type: 'removeWarmupSet', ex: current, index });
+        }}
+      />
 
       <DoneSeries
         we={we}
@@ -554,6 +594,63 @@ function WorkoutView() {
       />
       {bonusSheet}
       {optionsSheet}
+    </div>
+  );
+}
+
+interface WarmupSetsProps {
+  we: WorkoutExercise;
+  onAdd: () => void;
+  onChange: (index: number, field: 'reps' | 'kg', value: string) => void;
+  onRemove: (index: number) => void;
+}
+
+/** Séries de chauffe : atténuées, jamais validées ni classées (hors performances et PR). */
+function WarmupSets({ we, onAdd, onChange, onRemove }: WarmupSetsProps) {
+  return (
+    <div className={styles.warmupSets}>
+      {we.warmupSets.length > 0 && (
+        <ul className={styles.warmupSetList} aria-label={`Séries de chauffe — ${we.name}`}>
+          {we.warmupSets.map((w, i) => (
+            <li key={i} className={styles.warmupSet}>
+              <span className={styles.warmupSetN}>Chauffe</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="Reps"
+                aria-label={`Reps de la série de chauffe ${String(i + 1)}`}
+                value={w.reps}
+                className={styles.warmupInput}
+                onChange={(e) => {
+                  onChange(i, 'reps', e.target.value);
+                }}
+              />
+              <span aria-hidden="true">×</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                placeholder="kg"
+                aria-label={`Poids de la série de chauffe ${String(i + 1)}`}
+                value={w.kg}
+                className={styles.warmupInput}
+                onChange={(e) => {
+                  onChange(i, 'kg', e.target.value);
+                }}
+              />
+              <IconButton
+                icon="trash"
+                label={`Supprimer la série de chauffe ${String(i + 1)}`}
+                onClick={() => {
+                  onRemove(i);
+                }}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+      <Button variant="ghost" icon="plus" onClick={onAdd}>
+        Série de chauffe
+      </Button>
     </div>
   );
 }

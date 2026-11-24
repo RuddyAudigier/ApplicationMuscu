@@ -499,7 +499,7 @@ describe('WorkoutScreen', { timeout: 20_000 }, () => {
     expect(await screen.findByText(/Enregistrement impossible/)).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Compte rendu' })).toBeNull();
     expect(loadActiveWorkout()?.exercises[1]?.series[0]?.validated).toBe(true);
-    expect(loadLastReport()).toEqual({ ...previous, logId: null, form: null, mood: '' });
+    expect(loadLastReport()).toEqual({ ...previous, logId: null, form: null, mood: '', warmup: [] });
     expect(localStorage.getItem(MOCK_QUEUE_KEYS.queue)).toBeNull();
   });
 

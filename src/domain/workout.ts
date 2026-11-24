@@ -1,5 +1,5 @@
 import { todayIso } from './dates';
-import { FEELINGS, type Feeling, type Form } from './journal';
+import { FEELINGS, type Feeling, type Form, type WarmupItem } from './journal';
 import type { CycleId, Exercise, Id, IsoDate, IsoDateTime, Performance, PerformanceInput, Session, Variant } from './model';
 import { normalizeVariantName } from './names';
 import { parseReps, parseRpe, parseWeight } from './numbers';
@@ -16,7 +16,13 @@ export interface WorkoutExercise {
   exerciseId: Id; name: string; plannedSeries: number; stoppedEarly: boolean; series: SerieEntry[];
   /** Ressenti de l'exercice (`null` = non renseigné). */
   feeling: Feeling | null;
+  /** Séries de chauffe (jamais des performances : ni classées, ni envoyées). */
+  warmupSets: WarmupSetEntry[];
 }
+/** Série de chauffe en saisie (texte brut). */
+export interface WarmupSetEntry { reps: string; kg: string }
+/** Élément d'échauffement général de la séance, à cocher. */
+export interface WarmupEntry { name: string; detail: string; done: boolean }
 export interface WorkoutState {
   version: 2; sessionId: Id; sessionName: string; cycle: CycleId | null; date: IsoDate; startedAt: IsoDateTime;
   exercises: WorkoutExercise[];
@@ -24,6 +30,8 @@ export interface WorkoutState {
   form: Form | null;
   /** État général de la séance (texte libre). */
   mood: string;
+  /** Échauffement général de la séance (vide si aucun). */
+  warmup: WarmupEntry[];
 }
 
 export type WorkoutAction =
@@ -40,7 +48,11 @@ export type WorkoutAction =
   | { type: 'setDate'; date: IsoDate }
   | { type: 'setForm'; form: Form | null }
   | { type: 'setMood'; mood: string }
-  | { type: 'setFeeling'; ex: number; feeling: Feeling | null };
+  | { type: 'setFeeling'; ex: number; feeling: Feeling | null }
+  | { type: 'toggleWarmup'; index: number }
+  | { type: 'addWarmupSet'; ex: number }
+  | { type: 'setWarmupSet'; ex: number; index: number; field: 'reps' | 'kg'; value: string }
+  | { type: 'removeWarmupSet'; ex: number; index: number };
 
 const DEFAULT_RPE = 9;
 const DEFAULT_SERIES = 3;
@@ -61,6 +73,7 @@ const buildExercise = (exerciseId: Id, name: string, series: number, exercise: E
   plannedSeries: series,
   stoppedEarly: false,
   feeling: null,
+  warmupSets: [],
   series: Array.from({ length: series }, () => emptySerie(defaultKey(exercise))),
 });
 
@@ -75,7 +88,13 @@ export function resolveVariant(exercise: Exercise | undefined, key: string): { v
 /** Fatigué : une série de moins par exercice (jamais moins d'une). */
 const seriesFor = (planned: number, form: Form | null): number => (form === 'fatigue' ? Math.max(1, planned - 1) : planned);
 
-export function startWorkout(session: Session, exercises: Exercise[], now: Date, form: Form | null = null): WorkoutState {
+export function startWorkout(
+  session: Session,
+  exercises: Exercise[],
+  now: Date,
+  form: Form | null = null,
+  warmup: WarmupItem[] = [],
+): WorkoutState {
   return {
     version: 2,
     sessionId: session.id,
@@ -85,6 +104,7 @@ export function startWorkout(session: Session, exercises: Exercise[], now: Date,
     startedAt: now.toISOString(),
     form,
     mood: '',
+    warmup: warmup.map((w) => ({ name: w.name, detail: w.detail, done: false })),
     exercises: session.exercises.map((se) =>
       buildExercise(se.exerciseId, se.name, seriesFor(se.series, form), exercises.find((e) => e.id === se.exerciseId)),
     ),
@@ -188,6 +208,19 @@ export function workoutReducer(state: WorkoutState, action: WorkoutAction): Work
       return { ...state, mood: action.mood };
     case 'setFeeling':
       return updateExercise(state, action.ex, (e) => (e.feeling === action.feeling ? e : { ...e, feeling: action.feeling }));
+    case 'toggleWarmup':
+      if (!state.warmup[action.index]) return state;
+      return { ...state, warmup: state.warmup.map((w, i) => (i === action.index ? { ...w, done: !w.done } : w)) };
+    case 'addWarmupSet':
+      return updateExercise(state, action.ex, (e) => ({ ...e, warmupSets: [...e.warmupSets, { reps: '', kg: '' }] }));
+    case 'setWarmupSet':
+      return updateExercise(state, action.ex, (e) =>
+        e.warmupSets[action.index]
+          ? { ...e, warmupSets: e.warmupSets.map((w, i) => (i === action.index ? { ...w, [action.field]: action.value } : w)) }
+          : e);
+    case 'removeWarmupSet':
+      return updateExercise(state, action.ex, (e) =>
+        e.warmupSets[action.index] ? { ...e, warmupSets: e.warmupSets.filter((_, i) => i !== action.index) } : e);
   }
 }
 
@@ -244,6 +277,8 @@ const isSerie = shape({
 });
 const isFeeling: Guard = (v) => FEELINGS.some((f) => f.id === v);
 const isForm: Guard = (v) => v === 'frais' || v === 'fatigue';
+const isWarmupEntry: Guard = shape({ name: isString, detail: isString, done: isBoolean });
+const isWarmupSet: Guard = shape({ reps: isString, kg: isString });
 const isWorkoutState = shape({
   version: (v) => v === 2, sessionId: isString, sessionName: isString, cycle: orNull(isCycle), date: isString,
   startedAt: isString,
@@ -255,14 +290,20 @@ const isWorkoutState = shape({
 /** Relit une séance en cours sauvegardée (localStorage) : `null` si autre version ou invalide. */
 export function parseWorkoutState(raw: unknown): WorkoutState | null {
   if (!isWorkoutState(raw)) return null;
-  const r = raw as Omit<WorkoutState, 'form' | 'mood' | 'exercises'> & {
-    form?: unknown; mood?: unknown; exercises: (Omit<WorkoutExercise, 'feeling'> & { feeling?: unknown })[];
+  const r = raw as Omit<WorkoutState, 'form' | 'mood' | 'exercises' | 'warmup'> & {
+    form?: unknown; mood?: unknown; warmup?: unknown;
+    exercises: (Omit<WorkoutExercise, 'feeling' | 'warmupSets'> & { feeling?: unknown; warmupSets?: unknown })[];
   };
   // Séances sauvegardées avant l'état du jour : champs absents → valeurs par défaut.
   return {
     ...r,
     form: isForm(r.form) ? (r.form as Form) : null,
     mood: isString(r.mood) ? (r.mood as string) : '',
-    exercises: r.exercises.map((e) => ({ ...e, feeling: isFeeling(e.feeling) ? (e.feeling as Feeling) : null })),
+    warmup: Array.isArray(r.warmup) ? ((r.warmup as unknown[]).filter(isWarmupEntry) as WarmupEntry[]) : [],
+    exercises: r.exercises.map((e) => ({
+      ...e,
+      feeling: isFeeling(e.feeling) ? (e.feeling as Feeling) : null,
+      warmupSets: Array.isArray(e.warmupSets) ? ((e.warmupSets as unknown[]).filter(isWarmupSet) as WarmupSetEntry[]) : [],
+    })),
   };
 }

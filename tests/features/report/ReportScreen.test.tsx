@@ -100,7 +100,7 @@ describe('ReportScreen', () => {
   it('shows a bare PR badge when the kind is unknown', () => {
     saveLastReport({
       ...sampleReport,
-      exercises: [{ exerciseId: 'x', feeling: null, name: 'X', seriesLabel: '1 série', series: [{ n: 1, variant: 'Classique', reps: 1, weight: 1, rpe: 8, isPr: true, prKind: null }] }],
+      exercises: [{ exerciseId: 'x', feeling: null, warmupSets: [], name: 'X', seriesLabel: '1 série', series: [{ n: 1, variant: 'Classique', reps: 1, weight: 1, rpe: 8, isPr: true, prKind: null }] }],
     });
     renderScreen();
     expect(screen.getByRole('list', { name: 'Séries — X' })).toContainElement(screen.getByText('Record personnel'));

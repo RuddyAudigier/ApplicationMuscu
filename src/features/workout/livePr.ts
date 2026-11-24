@@ -23,8 +23,11 @@ export const variantsOf = (exercise: Exercise | undefined, exerciseId: string): 
 export function prSignature(state: WorkoutState): string {
   return JSON.stringify({
     ...state,
+    // Chauffe et échauffement n'influent jamais sur les PR : hors signature.
+    warmup: [],
     exercises: state.exercises.map((we) => ({
       ...we,
+      warmupSets: [],
       series: we.series.map((s) =>
         s.validated
           ? { ...s, target: null }

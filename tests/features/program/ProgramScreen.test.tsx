@@ -19,7 +19,7 @@ const daysAgo = (n: number) => todayIso(new Date(Date.now() - n * 86_400_000));
 
 const activeOf = (sessionId: string, sessionName: string) => ({
   version: 2 as const, sessionId, sessionName, cycle: 'A' as const, date: todayIso(),
-  startedAt: new Date().toISOString(), form: null, mood: '', exercises: [],
+  startedAt: new Date().toISOString(), form: null, mood: '', warmup: [], exercises: [],
 });
 
 function setup(backend: DataBackend = createMockBackend(localStorage)) {
@@ -127,7 +127,7 @@ describe('ProgramScreen', () => {
   it('demande confirmation avant d’abandonner une autre séance en cours', async () => {
     saveActiveWorkout({
       version: 2, sessionId: 'other', sessionName: 'Autre', cycle: 'B', date: todayIso(),
-      startedAt: new Date().toISOString(), form: null, mood: '', exercises: [],
+      startedAt: new Date().toISOString(), form: null, mood: '', warmup: [], exercises: [],
     });
     const { user } = setup();
     await user.click(await seedRow());
@@ -146,7 +146,7 @@ describe('ProgramScreen', () => {
     const [session] = await backend.sessions.list();
     saveActiveWorkout({
       version: 2, sessionId: session?.id ?? '', sessionName: SEED, cycle: 'A', date: todayIso(),
-      startedAt: new Date().toISOString(), form: null, mood: '', exercises: [],
+      startedAt: new Date().toISOString(), form: null, mood: '', warmup: [], exercises: [],
     });
     const { user } = setup(backend);
     const row = await screen.findByRole('button', { name: startName('Reprendre', `Cycle A : ${SEED}`) });

@@ -182,7 +182,7 @@ describe('toPerformanceInputs', () => {
           { ...filled(c.series[0] as SerieEntry, '12', '14'), variantKey: 'marteau', validated: true },
           { ...filled(c.series[1] as SerieEntry, '0', '14'), validated: true },
         ] },
-        { exerciseId: 'gone', name: 'Ancien', plannedSeries: 1, stoppedEarly: false, feeling: null, series: [
+        { exerciseId: 'gone', name: 'Ancien', plannedSeries: 1, stoppedEarly: false, feeling: null, warmupSets: [], series: [
           { variantKey: 'Pause', reps: '3', kg: '50', rpe: 9, target: null, validated: true, validatedAt: null },
         ] },
       ],

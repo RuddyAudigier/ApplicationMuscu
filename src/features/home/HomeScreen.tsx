@@ -7,10 +7,10 @@ import { normalizeVariantName } from '@/domain/names';
 import { formatWeight } from '@/domain/numbers';
 import { latestPrs } from '@/domain/records';
 import { DEFAULT_VARIANT, variantLabel } from '@/domain/variants';
-import type { Form } from '@/domain/journal';
+import { warmupsForSession, type Form } from '@/domain/journal';
 import { startWorkout, type WorkoutState } from '@/domain/workout';
 import { hasSchedule } from '@/domain/planning';
-import { useCycleState, useExercises, usePerformances, useSessions, useWeekPlan } from '@/data/queries';
+import { useCycleState, useExercises, useJournal, usePerformances, useSessions, useWeekPlan } from '@/data/queries';
 import { FormSheet, loadActiveWorkout, loadLastReport, saveActiveWorkout, saveLastReport } from '@/features/workout';
 import { Button, Icon, Skeleton } from '@/ui';
 import { nextPlannedSession, PR_LABEL, relativeDay, weekSegments, type WeekSegment } from './homeLogic';
@@ -227,6 +227,7 @@ export function HomeScreen() {
   const exercisesQuery = useExercises();
   const perfsQuery = usePerformances();
   const planQuery = useWeekPlan();
+  const journalQuery = useJournal();
   // Lus une seule fois par affichage de l'écran.
   const [active] = useState(loadActiveWorkout);
   const [lastReport] = useState(loadLastReport);
@@ -245,7 +246,9 @@ export function HomeScreen() {
   };
   const launch = (form: Form): void => {
     if (!pending) return;
-    saveActiveWorkout(startWorkout(pending.session, pending.exercises, new Date(), form));
+    saveActiveWorkout(
+      startWorkout(pending.session, pending.exercises, new Date(), form, warmupsForSession(journalQuery.data, pending.session.id)),
+    );
     setPending(null);
     // Le dernier compte rendu reste visible jusqu'à la séance suivante.
     saveLastReport(null);

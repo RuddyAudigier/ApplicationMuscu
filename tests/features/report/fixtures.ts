@@ -11,10 +11,12 @@ export const sampleReport: Report = {
   logId: null,
   form: null,
   mood: '',
+  warmup: [],
   exercises: [
     {
       exerciseId: 'bench',
       feeling: null,
+      warmupSets: [],
       name: 'Développé couché',
       seriesLabel: '2 séries',
       series: [
@@ -25,6 +27,7 @@ export const sampleReport: Report = {
     {
       exerciseId: 'curl',
       feeling: null,
+      warmupSets: [],
       name: 'Curl',
       seriesLabel: '1 série · fatigué',
       series: [{ n: 1, variant: 'Wide curl', reps: 8, weight: 20, rpe: 10, isPr: true, prKind: 'hybride' }],

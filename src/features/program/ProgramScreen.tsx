@@ -1,10 +1,10 @@
 import { useId, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router';
-import { useCycleState, useExercises, usePerformances, useSaveCycleState, useSessions } from '@/data/queries';
+import { useCycleState, useExercises, useJournal, usePerformances, useSaveCycleState, useSessions } from '@/data/queries';
 import { cycleStatus, defaultCycleState } from '@/domain/cycles';
 import { todayIso } from '@/domain/dates';
 import type { CycleId, Session } from '@/domain/model';
-import type { Form } from '@/domain/journal';
+import { warmupsForSession, type Form } from '@/domain/journal';
 import { startWorkout } from '@/domain/workout';
 import { FormSheet, loadActiveWorkout, saveActiveWorkout, saveLastReport } from '@/features/workout';
 import { Button, ConfirmDialog, EmptyState, IconButton, Segmented, Skeleton, useToast } from '@/ui';
@@ -22,6 +22,7 @@ import {
 } from './programModel';
 import styles from './ProgramScreen.module.css';
 import { SessionBuilder } from './SessionBuilder';
+import { WarmupSection } from './WarmupSection';
 import { WeekPlanSection } from './WeekPlanSection';
 
 const CYCLES: CycleId[] = ['A', 'B'];
@@ -43,6 +44,7 @@ export function ProgramScreen() {
   const sessionsQuery = useSessions();
   const exercisesQuery = useExercises();
   const perfsQuery = usePerformances();
+  const journalQuery = useJournal();
 
   // Défaut seulement si la lecture a réussi sans état enregistré ; jamais en attente ou en erreur (D8).
   const cycleState = cycleQuery.isSuccess ? (cycleQuery.data ?? defaultCycleState(today)) : null;
@@ -87,7 +89,9 @@ export function ProgramScreen() {
 
   const launch = (session: Session, form: Form) => {
     if (!exercisesQuery.isSuccess) return;
-    saveActiveWorkout(startWorkout(session, exercisesQuery.data, new Date(), form));
+    saveActiveWorkout(
+      startWorkout(session, exercisesQuery.data, new Date(), form, warmupsForSession(journalQuery.data, session.id)),
+    );
     // Le dernier compte rendu reste visible jusqu'au démarrage de la séance suivante.
     saveLastReport(null);
     void navigate('/workout');
@@ -297,6 +301,8 @@ export function ProgramScreen() {
       </div>
 
       {sessionsQuery.data && <WeekPlanSection sessions={sessionsQuery.data} cycle={shownCycle} />}
+
+      <WarmupSection />
 
       {builder && (
         <SessionBuilder
