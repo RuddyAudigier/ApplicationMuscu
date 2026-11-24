@@ -292,7 +292,7 @@ export function ProgramScreen() {
         )}
       </div>
 
-      {sessionsQuery.data && <WeekPlanSection sessions={sessionsQuery.data} />}
+      {sessionsQuery.data && <WeekPlanSection sessions={sessionsQuery.data} cycle={shownCycle} />}
 
       {builder && (
         <SessionBuilder

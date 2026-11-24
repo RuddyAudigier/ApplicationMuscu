@@ -7,7 +7,7 @@ export function createMockWeekPlanRepo(ctx: MockContext): WeekPlanRepo {
     get: () => task(() => parseWeekPlan(ctx.read().weekPlan ?? null)),
     save: (p) => task(() => {
       ctx.write((db) => {
-        db.weekPlan = { days: [...p.days], overrides: [...p.overrides] };
+        db.weekPlan = { days: { A: [...p.days.A], B: [...p.days.B] }, overrides: [...p.overrides] };
       });
     }),
   };

@@ -124,8 +124,9 @@ create table cycle_state (
 
 create table week_plan (
   id         int primary key default 1 check (id = 1),
-  -- 7 valeurs, lundi → dimanche : rang de séance dans le cycle (0 = A1/B1) ou null (repos).
-  days       jsonb not null default '[null,null,null,null,null,null,null]'::jsonb,
+  -- Une semaine type par cycle : {"A": [7 valeurs], "B": [7 valeurs]}, lundi → dimanche,
+  -- id de la séance du cycle ou null (repos). L'ancien format (tableau) est lu comme vide.
+  days       jsonb not null default '{"A":[null,null,null,null,null,null,null],"B":[null,null,null,null,null,null,null]}'::jsonb,
   -- Exceptions ponctuelles : {week, day, kind: 'moved', date} ou {week, day, kind: 'skipped'}.
   overrides  jsonb not null default '[]'::jsonb,
   updated_at timestamptz default now()

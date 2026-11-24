@@ -53,7 +53,7 @@ Le design est sombre, « noir & citron » : fond noir, accents jaune citron, typ
 - Onglets **A** / **B** : les séances de chaque cycle et leurs exercices.
 - Durée du cycle en cours : **2 semaines** ou **3 semaines** (après une semaine manquée).
 - Démarrage d’une séance depuis la liste.
-- **Ma semaine** : pour chaque jour (lundi → dimanche), repos ou « Séance N ». Un créneau vaut pour les deux cycles : Séance 1 = A1 en cycle A, B1 en cycle B. La bascule A/B est donc automatique.
+- **Ma semaine** : une semaine type par cycle, réglée sous l’onglet A ou B. Pour chaque jour (lundi → dimanche), repos ou une séance du cycle, par exemple lundi : Haut du corps, jeudi : Bas du corps, samedi : Full body. Un cycle compte autant de séances que voulu. Pendant les semaines A, l’accueil suit la semaine A, puis la semaine B après la bascule.
 
 ### Séance en cours
 
@@ -249,7 +249,7 @@ Si la RLS est activée sur `cycle_state`, ajouter des politiques de lecture, d�
 
 ### Migration du planning
 
-Exécuter `scripts/sql/2026-11-24_week_plan.sql` (additif, idempotent) : table `week_plan` (semaine type et décalages). Sans elle, le planning est gardé sur l’appareil (clé `mymuscle_week_plan_v1`). Le script `reset_complet.sql` l’inclut déjà.
+Exécuter `scripts/sql/2026-11-24_week_plan.sql` (additif, idempotent) : table `week_plan` (une semaine type par cycle, décalages). Le rejouer convertit l’ancien format (semaine commune aux deux cycles) en planning vide. Sans elle, le planning est gardé sur l’appareil (clé `mymuscle_week_plan_v1`). Le script `reset_complet.sql` l’inclut déjà.
 
 ### Attention
 

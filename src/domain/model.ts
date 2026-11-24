@@ -13,10 +13,10 @@ export type CycleId = 'A' | 'B';
 export interface CycleState { current: CycleId; startedOn: IsoDate; weeks: 2 | 3 }
 
 /**
- * Semaine type : `days[0]` = lundi … `days[6]` = dimanche ; valeur = rang de séance (0 → A1/B1)
- * dans le cycle actif ce jour-là, `null` = repos.
+ * Semaine type, une par cycle : `days.A[0]` = lundi … `days.A[6]` = dimanche pendant les semaines A ;
+ * valeur = id de la séance du cycle faite ce jour-là, `null` = repos.
  */
-export interface WeekPlan { days: (number | null)[]; overrides: PlanOverride[] }
+export interface WeekPlan { days: Record<CycleId, (Id | null)[]>; overrides: PlanOverride[] }
 /** Exception ponctuelle d'une semaine : `week` = lundi, `day` = jour prévu (0 = lundi). */
 export type PlanOverride =
   | { week: IsoDate; day: number; kind: 'moved'; date: IsoDate }

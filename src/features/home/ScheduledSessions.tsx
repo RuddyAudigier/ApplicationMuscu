@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { cycleOn } from '@/domain/cycles';
 import type { CycleState, Exercise, IsoDate, Performance, Session, WeekPlan } from '@/domain/model';
 import {
   dayLabel,
@@ -164,10 +165,19 @@ export function ScheduledSessions({
         </>
       ) : (
         missed.length === 0 && (
-          <div className={styles.empty}>
-            <h2 className={styles.emptyTitle}>Semaine bouclée</h2>
-            <p className={styles.emptyText}>Toutes les séances prévues cette semaine sont faites ou sautées.</p>
-          </div>
+          occurrences.length === 0 ? (
+            <div className={styles.empty}>
+              <h2 className={styles.emptyTitle}>Aucune séance prévue</h2>
+              <p className={styles.emptyText}>
+                Ta semaine du cycle {cycleOn(cycleState, today)} n’est pas réglée : choisis tes jours dans Programme.
+              </p>
+            </div>
+          ) : (
+            <div className={styles.empty}>
+              <h2 className={styles.emptyTitle}>Semaine bouclée</h2>
+              <p className={styles.emptyText}>Toutes les séances prévues cette semaine sont faites ou sautées.</p>
+            </div>
+          )
         )
       )}
 

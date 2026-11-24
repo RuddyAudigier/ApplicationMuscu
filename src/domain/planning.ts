@@ -1,6 +1,6 @@
 import { cycleOn } from './cycles';
 import { parseDateToIso } from './dates';
-import type { CycleState, IsoDate, Performance, PlanOverride, Session, WeekPlan } from './model';
+import type { CycleId, CycleState, Id, IsoDate, Performance, PlanOverride, Session, WeekPlan } from './model';
 import { normalizeSearch } from './names';
 import { sessionCode, sessionsOfCycle } from './sessions';
 
@@ -19,11 +19,12 @@ export const weekdayOf = (iso: IsoDate): number => (((toDays(iso) + 3) % 7) + 7)
 /** Lundi de la semaine de `iso`. */
 export const mondayOf = (iso: IsoDate): IsoDate => addDays(iso, -weekdayOf(iso));
 
-export const emptyWeekPlan = (): WeekPlan => ({ days: [null, null, null, null, null, null, null], overrides: [] });
+const restWeek = (): (Id | null)[] => [null, null, null, null, null, null, null];
+export const emptyWeekPlan = (): WeekPlan => ({ days: { A: restWeek(), B: restWeek() }, overrides: [] });
 
-/** Au moins un jour d'entraînement réglé. */
+/** Au moins un jour d'entraînement réglé, dans l'un ou l'autre cycle. */
 export const hasSchedule = (plan: WeekPlan | null | undefined): plan is WeekPlan =>
-  !!plan && plan.days.some((d) => d !== null);
+  !!plan && [...plan.days.A, ...plan.days.B].some((d) => d !== null);
 
 export type OccurrenceStatus = 'done' | 'skipped' | 'missed' | 'today' | 'upcoming';
 
@@ -69,19 +70,23 @@ export function weekOccurrences(
   for (const [k, days] of doneDays) doneCount.set(k, days.size);
 
   const raw: Omit<Occurrence, 'status'>[] = [];
-  plan.days.forEach((rank, day) => {
-    if (rank === null) return;
+  for (let day = 0; day < 7; day += 1) {
     const plannedDate = addDays(monday, day);
     // Cycle (re)démarré en milieu de semaine : les jours d'avant, dans cette même semaine,
     // suivent le cycle qui vient de démarrer (sinon le lundi basculerait sur l'autre cycle).
     const startsThisWeek = mondayOf(cycleState.startedOn) === monday && plannedDate < cycleState.startedOn;
     const cycle = cycleOn(cycleState, startsThisWeek ? cycleState.startedOn : plannedDate);
-    const session = sessionsOfCycle(sessions, cycle)[rank];
-    if (!session || session.exercises.length === 0) return;
+    const sessionId = plan.days[cycle][day] ?? null;
+    if (sessionId === null) continue;
+    const ofCycle = sessionsOfCycle(sessions, cycle);
+    const rank = ofCycle.findIndex((s) => s.id === sessionId);
+    const session = ofCycle[rank];
+    // Séance supprimée ou changée de cycle : jour traité comme repos.
+    if (!session || session.exercises.length === 0) continue;
     const ov = plan.overrides.find((o) => o.week === monday && o.day === day);
     const date = ov?.kind === 'moved' ? ov.date : plannedDate;
     raw.push({ day, plannedDate, date, moved: ov?.kind === 'moved', session, code: sessionCode(cycle, rank) });
-  });
+  }
   raw.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.day - b.day));
 
   return raw.map((o) => {
@@ -132,9 +137,15 @@ export const skipOccurrence = (plan: WeekPlan, today: IsoDate, day: number): Wee
 export const resetOccurrence = (plan: WeekPlan, today: IsoDate, day: number): WeekPlan =>
   withOverride(plan, today, null, day);
 
-/** Règle un jour de la semaine type ; les exceptions passées sont nettoyées au passage. */
-export function setPlanDay(plan: WeekPlan, today: IsoDate, day: number, rank: number | null): WeekPlan {
-  const days = plan.days.map((d, i) => (i === day ? rank : d));
+/** Règle un jour de la semaine type d'un cycle ; les exceptions passées sont nettoyées au passage. */
+export function setPlanDay(
+  plan: WeekPlan,
+  today: IsoDate,
+  cycle: CycleId,
+  day: number,
+  sessionId: Id | null,
+): WeekPlan {
+  const days = { ...plan.days, [cycle]: plan.days[cycle].map((d, i) => (i === day ? sessionId : d)) };
   return { days, overrides: plan.overrides.filter((o) => o.week >= mondayOf(today)) };
 }
 
