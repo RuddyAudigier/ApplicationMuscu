@@ -104,20 +104,22 @@ let syncGeneration = 0;
 /**
  * Annule les notifications en attente de l'appli puis programme `reminders`.
  * Appels sérialisés dans l'ordre ; seul le dernier appel en file s'exécute (les périmés sont ignorés).
+ * `stillValid` : ids des rappels encore d'actualité, y compris ceux d'aujourd'hui déjà affichés
+ * (absents de `reminders` une fois l'heure passée) ; les autres notifications affichées sont retirées.
  */
-export function syncReminders(reminders: Reminder[], time: string): Promise<void> {
+export function syncReminders(reminders: Reminder[], time: string, stillValid: number[] = reminders.map((r) => r.id)): Promise<void> {
   if (!isNative()) return Promise.resolve();
   const generation = ++syncGeneration;
   const run = syncChain.then(() => {
     if (generation !== syncGeneration) return;
-    return doSync(reminders, time);
+    return doSync(reminders, time, stillValid);
   });
   // Une erreur ne casse pas la chaîne ; elle reste visible pour l'appelant via `run`.
   syncChain = run.catch(() => undefined);
   return run;
 }
 
-async function doSync(reminders: Reminder[], time: string): Promise<void> {
+async function doSync(reminders: Reminder[], time: string, stillValid: number[]): Promise<void> {
   const { notifications } = await LocalNotifications.getPending();
   if (notifications.length > 0) await LocalNotifications.cancel({ notifications });
 
@@ -126,7 +128,7 @@ async function doSync(reminders: Reminder[], time: string): Promise<void> {
 
   // Retire du tiroir les rappels déjà affichés qui ne sont plus d'actualité (séance faite depuis).
   try {
-    const keep = new Set(reminders.map((r) => r.id));
+    const keep = new Set(stillValid);
     const { notifications: shown } = await LocalNotifications.getDeliveredNotifications();
     const stale = shown.filter((n) => !keep.has(n.id));
     if (stale.length > 0) await LocalNotifications.removeDeliveredNotifications({ notifications: stale });

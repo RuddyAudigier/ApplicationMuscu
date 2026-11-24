@@ -53,16 +53,18 @@ export function useReminderSync(): void {
       const today = todayIso();
       const now = new Date();
       const [hh = 0, mm = 0] = prefs.time.split(':').map(Number);
-      const reminders = planReminders({
+      const input = {
         plan: planData ?? emptyWeekPlan(),
         sessions: sessionsData,
         cycleState: cycleData ?? defaultCycleState(today),
         perfs: perfsData,
         today,
-        nowMinutes: now.getHours() * 60 + now.getMinutes(),
         timeMinutes: hh * 60 + mm,
-      });
-      await syncReminders(reminders, prefs.time);
+      };
+      const reminders = planReminders({ ...input, nowMinutes: now.getHours() * 60 + now.getMinutes() });
+      // Rappels d'aujourd'hui encore valables même si l'heure est passée (déjà affichés) : à garder dans le tiroir.
+      const stillValid = planReminders({ ...input, nowMinutes: -1 }).map((r) => r.id);
+      await syncReminders(reminders, prefs.time, stillValid);
     };
     run().catch((e: unknown) => { console.warn('[rappels] Synchronisation impossible :', e); });
   }, [available, ready, planData, sessionsData, cycleData, perfsData, prefs, resumeTick]);
