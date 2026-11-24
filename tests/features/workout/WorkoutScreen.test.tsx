@@ -20,6 +20,19 @@ import { UiProvider } from '@/ui';
 
 const SESSION = 'Séance test (mock)';
 
+/** Compteur d'appels à buildReport (implémentation réelle conservée). */
+const reportCalls = vi.hoisted(() => ({ n: 0 }));
+vi.mock('@/domain/report', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/domain/report')>();
+  return {
+    ...actual,
+    buildReport: (...args: Parameters<typeof actual.buildReport>) => {
+      reportCalls.n += 1;
+      return actual.buildReport(...args);
+    },
+  };
+});
+
 /** `Storage.prototype.setItem` d'origine, capturé avant l'espion. */
 function realSetItem(): (this: Storage, key: string, value: string) => void {
   return Object.getOwnPropertyDescriptor(Storage.prototype, 'setItem')?.value as (
@@ -90,7 +103,8 @@ async function doSerie(user: ReturnType<typeof userEvent.setup>, reps: string, k
   await user.click(screen.getByRole('button', { name: 'Valider la série' }));
 }
 
-describe('WorkoutScreen', () => {
+// Parcours utilisateur longs (plusieurs séries saisies) : marge contre la charge machine.
+describe('WorkoutScreen', { timeout: 20_000 }, () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -483,6 +497,38 @@ describe('WorkoutScreen', () => {
     expect(loadActiveWorkout()?.exercises[1]?.series[0]?.validated).toBe(true);
     expect(loadLastReport()).toEqual(previous);
     expect(localStorage.getItem(OFFLINE_QUEUE_KEY)).toBeNull();
+  });
+
+  it('badges PR : buildReport n’est pas rappelé quand seule la saisie non validée change', async () => {
+    const user = userEvent.setup();
+    const backend = makeBackend();
+    await seedWorkout(backend);
+    renderWorkout(backend);
+    await ready();
+    const before = reportCalls.n;
+    await user.type(screen.getByLabelText('Reps'), '5');
+    await user.type(screen.getByLabelText('Poids (kg)'), '80');
+    await user.click(within(screen.getByRole('radiogroup', { name: 'RPE' })).getByRole('radio', { name: '7' }));
+    expect(reportCalls.n).toBe(before);
+    await user.click(screen.getByRole('button', { name: 'Valider la série' }));
+    expect(reportCalls.n).toBeGreaterThan(before);
+  });
+
+  it('dernière série validée : le focus va sur l’exercice suivant, sinon sur « Ajouter une série »', async () => {
+    const user = userEvent.setup();
+    const backend = makeBackend();
+    await seedWorkout(backend);
+    renderWorkout(backend);
+    await ready();
+    await doSerie(user, '5', '80');
+    await doSerie(user, '5', '80');
+    await doSerie(user, '5', '80');
+    expect(screen.getByRole('button', { name: 'Exercice suivant ›' })).toHaveFocus();
+    await user.click(screen.getByRole('button', { name: 'Exercice suivant ›' }));
+    await doSerie(user, '5', '100');
+    await doSerie(user, '5', '100');
+    await doSerie(user, '5', '100');
+    expect(screen.getByRole('button', { name: 'Ajouter une série' })).toHaveFocus();
   });
 
   it('après « Valider la série », le focus revient sur les reps', async () => {

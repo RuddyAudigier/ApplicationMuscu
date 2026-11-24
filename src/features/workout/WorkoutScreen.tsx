@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router';
 import type { Exercise, Performance, Variant } from '@/domain/model';
 import { formatWeight } from '@/domain/numbers';
@@ -15,7 +15,7 @@ import { useAddPerformances, useExercises, usePerformances } from '@/data/querie
 import { Button, Icon, IconButton, Pill, useConfirm, useToast } from '@/ui';
 import { AddExerciseSheet } from './AddExerciseSheet';
 import { cx } from './cx';
-import { isSameVariant, livePrFlags, variantKeyOf, variantsOf } from './livePr';
+import { isSameVariant, livePrFlags, prSignature, variantKeyOf, variantsOf } from './livePr';
 import { RecordsSheet } from './RecordsSheet';
 import { loadActiveWorkout, loadLastReport, saveActiveWorkout, saveLastReport } from './storage';
 import { WorkoutProvider, useWorkout } from './WorkoutContext';
@@ -70,10 +70,21 @@ function WorkoutView() {
   // Jamais de compte rendu ni d'envoi à partir de données de repli vides.
   const dataReady = perfsQuery.isSuccess && exercisesQuery.isSuccess;
   const dataError = perfsQuery.isError || exercisesQuery.isError;
+  // Recalcul (buildReport) seulement quand les séries validées changent, pas à chaque frappe.
+  const signature = prSignature(state);
   const prFlags = useMemo(
-    () => (dataReady ? livePrFlags(state, perfs, exercises) : null),
-    [dataReady, state, perfs, exercises],
+    () => (dataReady ? livePrFlags(JSON.parse(signature) as WorkoutState, perfs, exercises) : null),
+    [dataReady, signature, perfs, exercises],
   );
+  const nextExId = useId();
+  const addSerieId = useId();
+  const focusAfterLast = useRef(false);
+  useEffect(() => {
+    if (!focusAfterLast.current) return;
+    focusAfterLast.current = false;
+    // Le formulaire de série vient de disparaître : focus sur la suite logique.
+    (document.getElementById(nextExId) ?? document.getElementById(addSerieId))?.focus();
+  }, [state, nextExId, addSerieId]);
   const total = state.exercises.length;
   const current = Math.min(exIdx, Math.max(0, total - 1));
   const we = state.exercises[current];
@@ -282,6 +293,7 @@ function WorkoutView() {
             dispatch({ type: 'setField', ex: current, serie: serieIdx, field: 'rpe', value });
           }}
           onValidate={() => {
+            focusAfterLast.current = we.series.every((s, i) => i === serieIdx || s.validated);
             dispatch({ type: 'validate', ex: current, serie: serieIdx, at: new Date().toISOString() });
           }}
           stopLabel={doneCount > 0 ? `Fatigué ? Arrêter à ${seriesWord(doneCount)}` : null}
@@ -296,6 +308,7 @@ function WorkoutView() {
             {we.stoppedEarly && ' · fatigué'}
           </p>
           <Button
+            id={addSerieId}
             variant="secondary"
             icon="plus"
             onClick={() => {
@@ -319,6 +332,7 @@ function WorkoutView() {
         </Button>
         {current < total - 1 ? (
           <Button
+            id={nextExId}
             variant="ghost"
             onClick={() => {
               setExIdx(current + 1);

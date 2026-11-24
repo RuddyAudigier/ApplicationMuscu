@@ -16,6 +16,25 @@ export const variantsOf = (exercise: Exercise | undefined, exerciseId: string): 
   exercise && exercise.variants.length > 0 ? exercise.variants : normalizeVariants([], exerciseId);
 
 /**
+ * Signature des seules séries validées (+ en-tête de séance utile au compte rendu).
+ * Les séries en cours de saisie y sont vidées : taper reps/kg ne la change pas.
+ * `JSON.parse` de la signature redonne un `WorkoutState` équivalent pour `livePrFlags`.
+ */
+export function prSignature(state: WorkoutState): string {
+  return JSON.stringify({
+    ...state,
+    exercises: state.exercises.map((we) => ({
+      ...we,
+      series: we.series.map((s) =>
+        s.validated
+          ? { ...s, target: null }
+          : { variantKey: '', reps: '', kg: '', rpe: 0, target: null, validated: false, validatedAt: null },
+      ),
+    })),
+  });
+}
+
+/**
  * Badges PR en direct : `flags[ex][serie]`.
  *
  * Calculés par `buildReport` lui-même (ordre réel de validation, séries précédentes de la séance,
