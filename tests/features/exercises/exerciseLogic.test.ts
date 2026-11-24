@@ -2,6 +2,10 @@ import type { Exercise, Performance, Session } from '../../../src/domain/model';
 import {
   createDraft,
   cyclesFor,
+  errorText,
+  hasExercisePerformances,
+  hasVariantPerformances,
+  infoDraft,
   draftWith,
   filterExercises,
   formatKg,
@@ -154,5 +158,40 @@ describe('drafts and formatting', () => {
     const stat = { variant: { id: 'v2', exerciseId: 'e1', name: 'Pausé', isDefault: false }, label: 'Pausé', records: 1, bestE1rm: null };
     expect(variantMeta(stat)).toBe('1 record');
     expect(variantMeta({ ...stat, records: 4 })).toBe('4 records');
+  });
+});
+
+describe('deletion safety (C2)', () => {
+  const e = ex();
+  const [classic, pause] = e.variants;
+  it('detects performances of an exercise', () => {
+    expect(hasExercisePerformances('e1', [perf({ exerciseId: 'e1' })])).toBe(true);
+    expect(hasExercisePerformances('e1', [perf({ exerciseId: 'e2' })])).toBe(false);
+    expect(hasExercisePerformances('e1', [])).toBe(false);
+  });
+  it('detects performances of a variant (id, or name without id)', () => {
+    if (!classic || !pause) throw new Error('fixture');
+    expect(hasVariantPerformances('e1', pause, [perf({ variantId: 'v2', variantName: 'Pausé' })])).toBe(true);
+    expect(hasVariantPerformances('e1', pause, [perf({ variantId: null, variantName: 'pausé' })])).toBe(true);
+    expect(hasVariantPerformances('e1', pause, [perf({ variantId: 'v1', variantName: 'Touch and Go' })])).toBe(false);
+    expect(hasVariantPerformances('e1', pause, [perf({ exerciseId: 'e2', variantId: 'v2', variantName: 'Pausé' })])).toBe(false);
+    expect(hasVariantPerformances('e1', classic, [perf({ variantId: 'v1' })])).toBe(true);
+  });
+});
+
+describe('info draft and errors', () => {
+  it('keeps variants and trims name and description', () => {
+    const e = ex();
+    expect(infoDraft(e, { name: ' Row ', description: ' Dos ', muscleGroups: ['Grand dorsal'] })).toEqual({
+      name: 'Row',
+      description: 'Dos',
+      muscleGroups: ['Grand dorsal'],
+      variants: e.variants,
+    });
+    expect(createDraft('Row', ['Grand dorsal'], ' Dos ').description).toBe('Dos');
+  });
+  it('prefixes a raw error in French', () => {
+    expect(errorText('Suppression impossible', new Error('boom'))).toBe('Suppression impossible : boom');
+    expect(errorText('Suppression impossible', new Error(''))).toBe('Suppression impossible.');
   });
 });

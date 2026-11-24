@@ -4,7 +4,7 @@ import { matchesQuery, muscleKey, muscleKeys } from '@/domain/muscles';
 import { normalizeSearch } from '@/domain/names';
 import { formatWeight } from '@/domain/numbers';
 import { bestByReps, paretoMask } from '@/domain/perfTable';
-import { DEFAULT_VARIANT, variantLabel } from '@/domain/variants';
+import { DEFAULT_VARIANT, sameVariant, variantLabel } from '@/domain/variants';
 
 /** Cycles (A puis B) des séances qui contiennent l'exercice. Un exercice peut être dans les deux. */
 export function cyclesFor(exerciseId: Id, sessions: Session[]): CycleId[] {
@@ -105,13 +105,50 @@ export function newVariant(exercise: Exercise, name: string): Variant {
 }
 
 /** Brouillon de création : la variante par défaut (« Classique ») est créée d'office. */
-export function createDraft(name: string, muscleGroups: string[]): ExerciseDraft {
+export function createDraft(name: string, muscleGroups: string[], description = ''): ExerciseDraft {
   return {
     name: name.trim(),
-    description: '',
+    description: description.trim(),
     muscleGroups,
     variants: [{ id: null, exerciseId: null, name: DEFAULT_VARIANT, isDefault: true }],
   };
+}
+
+export interface ExerciseInfo {
+  name: string;
+  description: string;
+  muscleGroups: string[];
+}
+
+/** Brouillon complet de la fiche modifiée : les variantes restent celles de l'exercice. */
+export function infoDraft(exercise: Exercise, info: ExerciseInfo): ExerciseDraft {
+  return {
+    name: info.name.trim(),
+    description: info.description.trim(),
+    muscleGroups: info.muscleGroups,
+    variants: exercise.variants,
+  };
+}
+
+/*
+ * C2 : on ne sait pas si la base supprime en cascade les performances d'un exercice ou d'une
+ * variante supprimés. Tant que ce n'est pas vérifié, la suppression est refusée dès qu'il existe
+ * une performance (identité perf ↔ variante identique au tableau des records).
+ */
+
+/** L'exercice a au moins une performance enregistrée. */
+export function hasExercisePerformances(exerciseId: Id, perfs: Performance[]): boolean {
+  return perfs.some((p) => p.exerciseId === exerciseId);
+}
+
+/** La variante de cet exercice a au moins une performance enregistrée. */
+export function hasVariantPerformances(exerciseId: Id, variant: Variant, perfs: Performance[]): boolean {
+  return perfs.some((p) => p.exerciseId === exerciseId && sameVariant(p, variant));
+}
+
+/** Erreur brute précédée d'un contexte en français : « Suppression impossible : … ». */
+export function errorText(prefix: string, error: Error): string {
+  return error.message ? `${prefix} : ${error.message}` : `${prefix}.`;
 }
 
 /** « 27,5 kg » ; « — » sans perf. */
