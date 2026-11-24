@@ -1,6 +1,6 @@
 import { FEELINGS, type Feeling } from '@/domain/journal';
 import { Chip } from '@/ui';
-import styles from './FormSheet.module.css';
+import styles from './FeelingChips.module.css';
 
 export interface FeelingChipsProps {
   /** Nom accessible du groupe (ex. « Ressenti — Squat »). */

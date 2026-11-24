@@ -75,12 +75,19 @@ export function logFromReport(report: Report, id: Id): SessionLog {
 
 /** Reporte les modifications du compte rendu (forme, état général, ressentis) ; échauffements intacts. */
 export function applyReportEdits(log: SessionLog, report: Report): SessionLog {
+  const sameLength = log.exercises.length === report.exercises.length;
+  const rank = (list: SessionLog['exercises'], i: number): number =>
+    list.slice(0, i).filter((x) => x.exerciseId === list[i]?.exerciseId).length;
   return {
     ...log,
     form: report.form,
     mood: report.mood,
-    exercises: log.exercises.map((e) => {
-      const r = report.exercises.find((x) => x.exerciseId === e.exerciseId);
+    exercises: log.exercises.map((e, i) => {
+      // Même nombre d'exercices : appariés par position (comptes rendus anciens sans exerciseId) ;
+      // sinon par exerciseId et rang d'occurrence.
+      const r = sameLength
+        ? report.exercises[i]
+        : report.exercises.filter((x) => x.exerciseId === e.exerciseId)[rank(log.exercises, i)];
       return r ? { ...e, feeling: r.feeling } : e;
     }),
   };

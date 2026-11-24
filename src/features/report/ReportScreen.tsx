@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { applyReportEdits, logFromReport, upsertLog, type Feeling, type Form } from '@/domain/journal';
 import { formatDecimal } from '@/domain/numbers';
 import type { Report } from '@/domain/report';
 import { buildPdf, preloadPdf } from '@/platform/pdf';
 import { shareFile } from '@/platform/share';
-import { Button, EmptyState, Field, Segmented, StatTile, useToast } from '@/ui';
+import { Button, EmptyState, Field, Segmented, StatTile, type SegmentedOption, useToast } from '@/ui';
 import {
   FeelingChips,
   JOURNAL_NOT_SYNCED_MESSAGE,
@@ -58,7 +58,10 @@ function SerieRow({ s }: { s: ReportSerie }) {
   );
 }
 
-const FORM_OPTIONS = (['frais', 'fatigue'] as const).map((value) => ({ value, label: FORM_LABEL[value] }));
+const FORM_OPTIONS: SegmentedOption<Form | ''>[] = (['frais', 'fatigue'] as const).map((value) => ({
+  value,
+  label: FORM_LABEL[value],
+}));
 
 function ReportView({ initial }: { initial: Report }) {
   const toast = useToast();
@@ -79,6 +82,22 @@ function ReportView({ initial }: { initial: Report }) {
       if (!ok) toast.show(JOURNAL_NOT_SYNCED_MESSAGE, 'error');
     });
   };
+
+  const flushMood = (): void => {
+    if (mood !== report.mood) edit({ mood });
+  };
+  // Quitter l'écran sans quitter le champ : le texte est quand même gardé (compte rendu local).
+  const pending = useRef({ mood, report });
+  useEffect(() => {
+    pending.current = { mood, report };
+  });
+  useEffect(
+    () => () => {
+      const { mood: m, report: r } = pending.current;
+      if (m !== r.mood) saveLastReport({ ...r, mood: m });
+    },
+    [],
+  );
 
   const [sending, setSending] = useState(false);
 
@@ -140,12 +159,12 @@ function ReportView({ initial }: { initial: Report }) {
 
       <section className={styles.state} aria-label="État du jour">
         <h2 className={styles.stateTitle}>Forme du jour</h2>
-        <Segmented<Form>
+        <Segmented<Form | ''>
           label="Forme du jour"
           options={FORM_OPTIONS}
-          value={report.form ?? ('' as Form)}
+          value={report.form ?? ''}
           onChange={(form) => {
-            edit({ form });
+            if (form !== '') edit({ form });
           }}
         />
         <Field
@@ -156,9 +175,7 @@ function ReportView({ initial }: { initial: Report }) {
           onChange={(e) => {
             setMood(e.target.value);
           }}
-          onBlur={() => {
-            if (mood !== report.mood) edit({ mood });
-          }}
+          onBlur={flushMood}
         />
       </section>
 
