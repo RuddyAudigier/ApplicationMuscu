@@ -6,13 +6,14 @@ const mocks = vi.hoisted(() => ({
   writeFile: vi.fn(),
   getUri: vi.fn(),
   deleteFile: vi.fn(),
+  readdir: vi.fn(),
 }));
 
 vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: mocks.isNative } }));
 vi.mock('@capacitor/share', () => ({ Share: { share: mocks.share } }));
 vi.mock('@capacitor/filesystem', () => ({
   Directory: { Cache: 'CACHE' },
-  Filesystem: { writeFile: mocks.writeFile, getUri: mocks.getUri, deleteFile: mocks.deleteFile },
+  Filesystem: { writeFile: mocks.writeFile, getUri: mocks.getUri, deleteFile: mocks.deleteFile, readdir: mocks.readdir },
 }));
 
 import { shareFile } from '@/platform/share';
@@ -30,6 +31,7 @@ function nativeOk(): void {
   mocks.writeFile.mockResolvedValue({ uri: 'x' });
   mocks.getUri.mockResolvedValue({ uri: 'file:///cr.pdf' });
   mocks.deleteFile.mockResolvedValue(undefined);
+  mocks.readdir.mockResolvedValue({ files: [] });
 }
 
 describe('shareFile', () => {
@@ -55,25 +57,48 @@ describe('shareFile', () => {
     click.mockRestore();
   });
 
-  it('shares natively with the given dialog title, then deletes the cache file', async () => {
+  it('shares natively with the given dialog title and keeps the shared file', async () => {
     nativeOk();
     mocks.share.mockResolvedValue({});
     expect(await shareFile(file, meta)).toBe('shared');
     expect(mocks.share).toHaveBeenCalledWith({ title: 'CR', text: 'Texte', url: 'file:///cr.pdf', dialogTitle: 'Envoyer au coach' });
     const written = mocks.writeFile.mock.calls[0]?.[0] as { path: string };
-    expect(mocks.deleteFile).toHaveBeenCalledWith({ path: written.path, directory: 'CACHE' });
+    // L'appli cible peut lire l'URI après la résolution de Share.share : pas de suppression immédiate.
+    expect(mocks.deleteFile).not.toHaveBeenCalledWith(expect.objectContaining({ path: written.path }));
     expect(anchors).toHaveLength(0);
   });
 
-  it('defaults the native dialog title to the title and ignores cleanup errors', async () => {
+  it('purges shared files older than 1 hour before writing, ignoring errors', async () => {
     nativeOk();
-    mocks.deleteFile.mockRejectedValue(new Error('gone'));
+    const now = Date.now();
+    mocks.readdir.mockResolvedValue({
+      files: [
+        { name: 'old.pdf', type: 'file', mtime: now - 2 * 3600_000 },
+        { name: 'locked.png', type: 'file', mtime: now - 3 * 3600_000 },
+        { name: 'recent.pdf', type: 'file', mtime: now - 10 * 60_000 },
+        { name: 'sub', type: 'directory', mtime: now - 5 * 3600_000 },
+      ],
+    });
+    mocks.deleteFile.mockImplementation(({ path }: { path: string }) =>
+      path.endsWith('locked.png') ? Promise.reject(new Error('busy')) : Promise.resolve(),
+    );
+    mocks.share.mockResolvedValue({});
+    expect(await shareFile(file, meta)).toBe('shared');
+    expect(mocks.readdir).toHaveBeenCalledWith({ path: 'shares', directory: 'CACHE' });
+    const deleted = mocks.deleteFile.mock.calls.map((c) => (c[0] as { path: string }).path);
+    expect(deleted).toEqual(['shares/old.pdf', 'shares/locked.png']);
+    expect(mocks.deleteFile.mock.invocationCallOrder[0]).toBeLessThan(mocks.writeFile.mock.invocationCallOrder[0] ?? 0);
+  });
+
+  it('still shares when the shares folder cannot be listed', async () => {
+    nativeOk();
+    mocks.readdir.mockRejectedValue(new Error('Directory does not exist'));
     mocks.share.mockResolvedValue({});
     expect(await shareFile(file, { title: 'CR', text: 'T' })).toBe('shared');
     expect(mocks.share).toHaveBeenCalledWith(expect.objectContaining({ dialogTitle: 'CR' }));
   });
 
-  it('stops on native cancel and still cleans up', async () => {
+  it('stops on native cancel', async () => {
     nativeOk();
     mocks.share.mockRejectedValue(new Error('Share canceled'));
     const web = vi.fn();
@@ -81,7 +106,6 @@ describe('shareFile', () => {
     expect(await shareFile(file, meta)).toBe('cancelled');
     expect(web).not.toHaveBeenCalled();
     expect(anchors).toHaveLength(0);
-    expect(mocks.deleteFile).toHaveBeenCalledTimes(1);
   });
 
   it('throws on other native errors instead of a no-op download in the WebView', async () => {

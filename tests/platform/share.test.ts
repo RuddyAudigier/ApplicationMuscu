@@ -5,13 +5,15 @@ const mocks = vi.hoisted(() => ({
   share: vi.fn(),
   writeFile: vi.fn(),
   getUri: vi.fn(),
+  readdir: vi.fn(),
+  deleteFile: vi.fn(),
 }));
 
 vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: mocks.isNative } }));
 vi.mock('@capacitor/share', () => ({ Share: { share: mocks.share } }));
 vi.mock('@capacitor/filesystem', () => ({
   Directory: { Cache: 'CACHE' },
-  Filesystem: { writeFile: mocks.writeFile, getUri: mocks.getUri },
+  Filesystem: { writeFile: mocks.writeFile, getUri: mocks.getUri, readdir: mocks.readdir, deleteFile: mocks.deleteFile },
 }));
 
 import { shareImage } from '@/platform/share';
@@ -28,6 +30,24 @@ describe('shareImage', () => {
     vi.resetAllMocks();
     mocks.isNative.mockReturnValue(false);
     setWebShare(undefined);
+  });
+
+  it('purges stale shared files before writing, never the new one', async () => {
+    mocks.isNative.mockReturnValue(true);
+    const now = Date.now();
+    mocks.readdir.mockResolvedValue({
+      files: [
+        { name: 'old.png', type: 'file', mtime: now - 90 * 60_000 },
+        { name: 'new.png', type: 'file', mtime: now - 5 * 60_000 },
+      ],
+    });
+    mocks.deleteFile.mockResolvedValue(undefined);
+    mocks.writeFile.mockResolvedValue({ uri: 'x' });
+    mocks.getUri.mockResolvedValue({ uri: 'file:///x' });
+    mocks.share.mockResolvedValue({});
+    expect(await shareImage(file, meta)).toBe('shared');
+    expect(mocks.deleteFile).toHaveBeenCalledTimes(1);
+    expect(mocks.deleteFile).toHaveBeenCalledWith({ path: 'shares/old.png', directory: 'CACHE' });
   });
 
   it('returns cancelled on native "Share canceled" and stops', async () => {

@@ -26,29 +26,44 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
+const SHARES_DIR = 'shares';
+/** Âge au-delà duquel un fichier partagé est purgé du cache. */
+const SHARE_TTL_MS = 60 * 60 * 1000;
+
+/** Supprime les fichiers partagés de plus d'une heure ; toute erreur est ignorée. */
+async function pruneSharedFiles(now: number = Date.now()): Promise<void> {
+  try {
+    const { files } = await Filesystem.readdir({ path: SHARES_DIR, directory: Directory.Cache });
+    for (const f of files) {
+      if (f.type !== 'file' || now - f.mtime <= SHARE_TTL_MS) continue;
+      try {
+        await Filesystem.deleteFile({ path: `${SHARES_DIR}/${f.name}`, directory: Directory.Cache });
+      } catch {
+        // fichier verrouillé ou déjà supprimé : on passe au suivant
+      }
+    }
+  } catch {
+    // dossier absent (premier partage) ou plugin indisponible
+  }
+}
+
 async function nativeShare(
   file: File,
   meta: { title: string; text: string },
   dialogTitle = 'Partager la séance',
 ): Promise<void> {
-  const path = `shares/${String(Date.now())}-${file.name}`;
+  await pruneSharedFiles();
+  const path = `${SHARES_DIR}/${String(Date.now())}-${file.name}`;
   await Filesystem.writeFile({
     path,
     data: await blobToBase64(file),
     directory: Directory.Cache,
     recursive: true,
   });
-  try {
-    const { uri } = await Filesystem.getUri({ path, directory: Directory.Cache });
-    await Share.share({ title: meta.title, text: meta.text, url: uri, dialogTitle });
-  } finally {
-    // Nettoyage du cache ; un échec ici ne doit pas masquer le résultat du partage.
-    try {
-      await Filesystem.deleteFile({ path, directory: Directory.Cache });
-    } catch {
-      // fichier déjà supprimé ou plugin indisponible
-    }
-  }
+  const { uri } = await Filesystem.getUri({ path, directory: Directory.Cache });
+  // Pas de suppression ici : Share.share peut se résoudre avant que l'appli cible
+  // (Gmail…) ait lu l'URI ; le fichier est purgé lors d'un partage ultérieur.
+  await Share.share({ title: meta.title, text: meta.text, url: uri, dialogTitle });
 }
 
 export async function shareImage(
