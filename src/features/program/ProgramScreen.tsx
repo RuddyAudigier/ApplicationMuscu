@@ -13,6 +13,7 @@ import {
   lastDoneOn,
   revertSwitchesNow,
   seriesLabel,
+  sessionCode,
   sessionsOfCycle,
   tabCaption,
   upcomingHint,
@@ -244,7 +245,7 @@ export function ProgramScreen() {
           />
         ) : (
           <ul className={styles.sessions} aria-label={`Séances du cycle ${shownCycle}`}>
-            {list.map((s, i) => renderSession(s, `${shownCycle}${String(i + 1)}`))}
+            {list.map((s, i) => renderSession(s, sessionCode(shownCycle, i)))}
           </ul>
         )}
 

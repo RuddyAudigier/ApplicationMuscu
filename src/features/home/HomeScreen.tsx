@@ -5,12 +5,13 @@ import { todayIso } from '@/domain/dates';
 import type { CycleId, Exercise, Performance, Session } from '@/domain/model';
 import { normalizeVariantName } from '@/domain/names';
 import { formatWeight } from '@/domain/numbers';
+import { latestPrs } from '@/domain/records';
 import { DEFAULT_VARIANT, variantLabel } from '@/domain/variants';
 import { startWorkout, type WorkoutState } from '@/domain/workout';
 import { useCycleState, useExercises, usePerformances, useSessions } from '@/data/queries';
 import { loadActiveWorkout, loadLastReport, saveActiveWorkout, saveLastReport } from '@/features/workout';
 import { Button, Icon, Skeleton } from '@/ui';
-import { latestPrs, PR_LABEL, relativeDay, sessionOfDay, weekSegments, type WeekSegment } from './homeLogic';
+import { nextPlannedSession, PR_LABEL, relativeDay, weekSegments, type WeekSegment } from './homeLogic';
 import styles from './HomeScreen.module.css';
 
 const plural = (n: number, one: string, many: string): string => `${String(n)} ${n > 1 ? many : one}`;
@@ -136,7 +137,7 @@ function SessionCard({
     );
   }
 
-  const day = sessionOfDay(sessionsQuery.data, cycle.data, perfsQuery.data, today);
+  const day = nextPlannedSession(sessionsQuery.data, cycle.data, perfsQuery.data, today);
   if (day.kind !== 'next') {
     return (
       <div className={styles.empty}>

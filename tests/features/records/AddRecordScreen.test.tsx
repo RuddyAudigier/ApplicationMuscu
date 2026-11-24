@@ -259,6 +259,27 @@ describe('AddRecordScreen', () => {
     expect(add).toHaveBeenCalledWith([expect.objectContaining({ sessionName: 'A1 Haut du corps', performanceDate: '2026-11-22' })]);
   });
 
+  it('prefers the planned session of the cycle active that day over a more frequent name', async () => {
+    const user = userEvent.setup();
+    const backend = createMockBackend(localStorage);
+    const add = vi.spyOn(backend.performances, 'add');
+    const { bench, squat } = await exerciseIds(backend);
+    await backend.cycles.save({ current: 'A', startedOn: '2026-11-16', weeks: 2 });
+    await backend.sessions.create({ name: 'Haut A', cycle: 'A', exercises: [{ exerciseId: bench, series: 3 }] });
+    await backend.performances.add([
+      benchPerf(bench, { reps: 6, weight: 80, performanceDate: '2026-11-22', sessionName: 'Autre' }),
+      benchPerf(squat, { reps: 5, weight: 100, performanceDate: '2026-11-22', sessionName: 'Autre' }),
+      benchPerf(bench, { reps: 1, weight: 60, performanceDate: '2026-11-22', sessionName: 'Haut A' }),
+    ]);
+    add.mockClear();
+    renderAt(`/records/add?exerciseId=${bench}`, backend);
+    await fill('6', '95');
+    await user.click(screen.getByRole('radio', { name: 'Hier' }));
+    expect(await screen.findByText(/rattaché à/)).toHaveTextContent('rattaché à Haut A');
+    await user.click(screen.getByRole('button', { name: 'Enregistrer le PR' }));
+    expect(add).toHaveBeenCalledWith([expect.objectContaining({ sessionName: 'Haut A' })]);
+  });
+
   it('blocks the PR box and saving until the history is loaded, with a retry on error', async () => {
     const user = userEvent.setup();
     const backend = createMockBackend(localStorage);

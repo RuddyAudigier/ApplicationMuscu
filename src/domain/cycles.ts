@@ -45,6 +45,17 @@ export function cycleStatus(
   };
 }
 
+/**
+ * Cycle actif le jour `day`, passé compris : avant `startedOn`, on remonte par blocs standard
+ * de 2 semaines en alternant (même hypothèse que la frise).
+ */
+export function cycleOn(state: CycleState, day: IsoDate): CycleId {
+  const back = dayNumber(state.startedOn) - dayNumber(day);
+  if (back <= 0) return resolveBlock(state, day).cycle;
+  const blocks = Math.ceil(back / (STANDARD_WEEKS * 7));
+  return blocks % 2 === 1 ? other(state.current) : state.current;
+}
+
 /** Prolonge à 3 semaines le bloc en cours à `today` (résolu, pas le bloc stocké périmé). */
 export function extendCycle(state: CycleState, today: IsoDate): CycleState {
   const b = resolveBlock(state, today);

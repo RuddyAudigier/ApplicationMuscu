@@ -12,12 +12,8 @@ export function seriesLabel(series: number): string {
   return `${String(series - 1)}–${String(series)} séries`;
 }
 
-/** Séances d'un cycle, de la plus ancienne à la plus récente (A1, A2…) ; égalité départagée par id. */
-export function sessionsOfCycle(sessions: Session[], cycle: CycleId | null): Session[] {
-  return sessions
-    .filter((s) => s.cycle === cycle)
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
-}
+/** Séances d'un cycle (A1, A2…) et leur code : implémentation unique du domaine. */
+export { sessionCode, sessionsOfCycle } from '@/domain/sessions';
 
 /** Une autre séance du même cycle porte déjà ce nom (trimé, sans casse ni accents). */
 export function isDuplicateName(sessions: Session[], name: string, cycle: CycleId | null, selfId: Id | null): boolean {
