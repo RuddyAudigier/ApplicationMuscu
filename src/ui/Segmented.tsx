@@ -13,6 +13,8 @@ export interface SegmentedProps<T extends string> {
   options: SegmentedOption<T>[];
   value: T;
   onChange: (value: T) => void;
+  /** Choix indisponible (ex. valeur pas encore chargée). */
+  disabled?: boolean;
   className?: string;
 }
 
@@ -22,6 +24,7 @@ export function Segmented<T extends string>({
   options,
   value,
   onChange,
+  disabled = false,
   className,
 }: SegmentedProps<T>) {
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -64,6 +67,7 @@ export function Segmented<T extends string>({
             type="button"
             role="radio"
             aria-checked={checked}
+            disabled={disabled}
             tabIndex={index === tabbableIndex ? 0 : -1}
             onClick={() => {
               select(index);
