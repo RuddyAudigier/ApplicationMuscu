@@ -18,6 +18,8 @@ const idAndName = (row: unknown): { id: string; name: string } | null => {
 };
 
 const PAGE_SIZE = 1000;
+/** Insert non idempotent : une réponse 502/504 perdue n'est pas rejouée (doublons), comme les perfs. */
+const INSERT_ONCE = { idempotent: false } as const;
 /** Taille des lots `in('id', …)` (longueur d'URL PostgREST). */
 const ID_CHUNK = 200;
 
@@ -65,7 +67,7 @@ export function createExercisesRepo(db: Db, coachNotes: CoachNotesRepo): Exercis
 
   async function writeMuscles(id: Id, p: PreparedExercise, ctx: string): Promise<void> {
     if (p.muscleGroups.length === 0) return;
-    await must(db.from('muscle_groups').insert(p.muscleGroups.map((m) => ({ exercise_id: id, muscle_group: m }))), ctx);
+    await must(db.from('muscle_groups').insert(p.muscleGroups.map((m) => ({ exercise_id: id, muscle_group: m }))), ctx, INSERT_ONCE);
   }
 
   /**
@@ -92,7 +94,8 @@ export function createExercisesRepo(db: Db, coachNotes: CoachNotesRepo): Exercis
     for (let i = 0; i < legacyIds.length; i += ID_CHUNK) {
       await must(db.from('performances').update({ variant_id: variantId }).in('id', legacyIds.slice(i, i + ID_CHUNK)), ctx);
     }
-    await must(db.from('performances').update({ variant_name: newName }).eq('variant_id', variantId), ctx);
+    await must(
+      db.from('performances').update({ variant_name: newName }).eq('exercise_id', exerciseId).eq('variant_id', variantId), ctx);
   }
 
   /** Synchro des variantes (supprime les absentes, met à jour, insère). Non transactionnel, comme l'existant. */
@@ -117,7 +120,7 @@ export function createExercisesRepo(db: Db, coachNotes: CoachNotesRepo): Exercis
         if (oldName !== undefined && oldName !== v.name) await relabelPerformances(id, v.id, oldName, v.name);
         await must(db.from('exercise_variants').update({ name: v.name, is_default: v.isDefault }).eq('id', v.id), ctx);
       } else {
-        await must(db.from('exercise_variants').insert([{ exercise_id: id, name: v.name, is_default: v.isDefault }]), ctx);
+        await must(db.from('exercise_variants').insert([{ exercise_id: id, name: v.name, is_default: v.isDefault }]), ctx, INSERT_ONCE);
       }
     }
   }
@@ -140,12 +143,12 @@ export function createExercisesRepo(db: Db, coachNotes: CoachNotesRepo): Exercis
       const ctx = "Création de l'exercice";
       const p = prepareExercise(draft, null);
       const row = await must(
-        db.from('exercises').insert([{ name: p.name, description: p.description, is_custom: true }]).select('id').single(), ctx);
+        db.from('exercises').insert([{ name: p.name, description: p.description, is_custom: true }]).select('id').single(), ctx, INSERT_ONCE);
       const id = idOf(row);
       if (id === null) throw new Error(`${ctx} : id manquant.`);
       await writeMuscles(id, p, ctx);
       const { error, status } = await run(
-        db.from('exercise_variants').insert(p.variants.map((v) => ({ exercise_id: id, name: v.name, is_default: v.isDefault }))), ctx);
+        db.from('exercise_variants').insert(p.variants.map((v) => ({ exercise_id: id, name: v.name, is_default: v.isDefault }))), ctx, INSERT_ONCE);
       if (error && !isSchemaGap(error, 'exercise_variants')) fail(error, ctx, status);
       return readOne(id);
     },

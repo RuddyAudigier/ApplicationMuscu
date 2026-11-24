@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEFAULT_VARIANT, getDefaultVariant, hasDuplicateVariantNames, normalizeVariants, variantLabel, variantMatches,
+  DEFAULT_VARIANT, getDefaultVariant, hasDuplicateVariantNames, normalizeVariants, sameVariant, variantLabel, variantMatches,
 } from '@/domain/variants';
 import type { Variant } from '@/domain/model';
 
@@ -57,6 +57,17 @@ describe('variantMatches', () => {
     expect(variantMatches(v('Pause  Haute'), { variantId: null, variantName: ' pause haute' })).toBe(true);
     expect(variantMatches(v('Pause'), { variantId: 'v2', variantName: 'Tempo' })).toBe(false);
     expect(variantMatches(v('Touch and Go'), { variantId: null, variantName: '' })).toBe(true);
+  });
+});
+
+describe('sameVariant (identité unique : tableau des records et détection de PR)', () => {
+  it('compares ids when both have one, otherwise normalised names', () => {
+    expect(sameVariant({ variantId: 'v1', variantName: 'Ancien' }, { id: 'v1', name: 'Nouveau' })).toBe(true);
+    expect(sameVariant({ variantId: 'v1', variantName: 'Pause' }, { id: 'v3', name: 'Pause' })).toBe(false);
+    expect(sameVariant({ variantId: null, variantName: 'pause' }, { id: 'v1', name: 'Pause' })).toBe(true);
+    expect(sameVariant({ variantId: 'v1', variantName: ' PAUSE ' }, { id: null, name: 'pause' })).toBe(true);
+    expect(sameVariant({ variantId: null, variantName: '' }, { id: null, name: 'Touch and Go' })).toBe(true);
+    expect(sameVariant({ variantId: null, variantName: 'Tempo' }, { id: null, name: 'Pause' })).toBe(false);
   });
 });
 

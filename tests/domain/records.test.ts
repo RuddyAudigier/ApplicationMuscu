@@ -167,6 +167,21 @@ describe('buildHistoryIndex identity keys', () => {
     expect(findPreviousBest(buildHistoryIndex([a, cur]), 'bench', cur)).toMatchObject({ weight: 100 });
   });
 
+  it('rename then recreate the same name: the new variant has no previous best', () => {
+    // v1 « Pause » renommée (ses perfs gardent v1), puis nouvelle variante v3 « Pause ».
+    const old = perf({ variantId: 'v1', variantName: 'Pause', reps: 5, weight: 100 });
+    const cur = perf({ variantId: 'v3', variantName: 'Pause', reps: 5, weight: 90, performanceDate: '2026-03-04' });
+    expect(findPreviousBest(buildHistoryIndex([old, cur]), 'bench', cur)).toBeNull();
+  });
+
+  it('legacy rows without id match by normalised name, also for a query with an id', () => {
+    const legacy = perf({ variantId: null, variantName: 'pause', reps: 5, weight: 100 });
+    const cur = perf({ variantId: 'v1', variantName: 'Pause', reps: 5, weight: 90, performanceDate: '2026-03-04' });
+    expect(findPreviousBest(buildHistoryIndex([legacy, cur]), 'bench', cur)).toMatchObject({ weight: 100 });
+    const curNoId = perf({ variantId: null, variantName: 'PAUSE ', reps: 5, weight: 90, performanceDate: '2026-03-04' });
+    expect(findPreviousBest(buildHistoryIndex([legacy, curNoId]), 'bench', curNoId)).toMatchObject({ weight: 100 });
+  });
+
   it('excludes invalid rows', () => {
     const rows = [
       perf({ exerciseId: null, exerciseName: '' }),

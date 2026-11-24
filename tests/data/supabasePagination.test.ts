@@ -319,10 +319,32 @@ describe('exercises (Supabase)', () => {
     expect(op(perfCalls[1] as FakeCall, 'update')).toEqual([{ variant_id: 'v2' }]);
     expect(op(perfCalls[1] as FakeCall, 'in')).toEqual(['id', ['p1', '7']]);
     expect(op(perfCalls[2] as FakeCall, 'update')).toEqual([{ variant_name: 'Pause 2 s' }]);
-    expect(op(perfCalls[2] as FakeCall, 'eq')).toEqual(['variant_id', 'v2']);
+    expect((perfCalls[2] as FakeCall).ops.filter((o) => o.m === 'eq').map((o) => o.args)).toEqual([
+      ['exercise_id', 'e1'],
+      ['variant_id', 'v2'],
+    ]);
     expect(calls.some((c) => has(c, 'delete') && c.table === 'performances')).toBe(false);
     const renameIdx = calls.findIndex((c) => isOp(c, 'update', 'exercise_variants') && op(c, 'eq')?.[1] === 'v2');
     expect(renameIdx).toBeGreaterThan(calls.indexOf(perfCalls[2] as FakeCall));
+  });
+
+  it.each([
+    ['muscle_groups', 'create'],
+    ['exercise_variants', 'create'],
+    ['exercises', 'create'],
+    ['muscle_groups', 'update'],
+    ['exercise_variants', 'update'],
+  ] as const)('a 504 on the %s insert (%s) is not retried as a NetworkError', async (table, action) => {
+    const gateway = { data: null, error: { message: 'Gateway Timeout' }, status: 504 };
+    const { client } = backend((c) => (isOp(c, 'insert', table) ? gateway : undefined));
+    const b = createSupabaseBackend(client);
+    const draft = {
+      name: 'Bench', description: 'd', muscleGroups: ['Dos'],
+      variants: [{ id: null, exerciseId: 'e1', name: 'Tempo', isDefault: true }],
+    };
+    const err = await (action === 'create' ? b.exercises.create(draft) : b.exercises.update('e1', draft)).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(BackendError);
+    expect(err).not.toBeInstanceOf(NetworkError);
   });
 
   it('update() skips the relabel when performances lack variant columns', async () => {

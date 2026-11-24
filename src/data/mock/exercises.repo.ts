@@ -28,7 +28,7 @@ function relabel(db: MockDb, exerciseId: Id, variantId: Id, oldName: string, new
     }
   }
   for (const row of db.performances) {
-    if (row['variant_id'] === variantId) row['variant_name'] = newName;
+    if (row['exercise_id'] === exerciseId && row['variant_id'] === variantId) row['variant_name'] = newName;
   }
 }
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Performance, Variant } from '@/domain/model';
 import { bestByReps, excelExport, exerciseFooter, globalStats, paretoMask } from '@/domain/perfTable';
+import { buildHistoryIndex, findPreviousBest } from '@/domain/records';
 
 let seq = 0;
 const perf = (over: Partial<Performance>): Performance => ({
@@ -42,7 +43,8 @@ describe('bestByReps', () => {
     const withIdSameName = perf({ variantId: 'v9', variantName: 'Touch and Go', reps: 4, weight: 1 });
     const cells = bestByReps([byEmptyName, byOtherCase, pause, withIdSameName], tng);
     expect(cells[4]).toBe(byEmptyName);
-    expect(cells[1]).toBeNull();
+    // Nom normalisé (même règle que la détection de PR) : « touch and go » = « Touch and Go ».
+    expect(cells[1]).toBe(byOtherCase);
     expect(cells[2]).toBeNull();
     expect(cells[3]).toBe(withIdSameName);
 
@@ -61,6 +63,20 @@ describe('bestByReps', () => {
     const pause: Variant = { id: 'v1', exerciseId: 'bench', name: 'Pause', isDefault: false };
     const legacy = perf({ variantId: null, variantName: 'Pause', reps: 3 });
     expect(bestByReps([legacy], pause)[2]).toBe(legacy);
+  });
+
+  it('agrees with findPreviousBest on legacy « pause » vs « Pause » and on rename/recreate', () => {
+    const pause: Variant = { id: 'v1', exerciseId: 'bench', name: 'Pause', isDefault: false };
+    const legacy = perf({ variantId: null, variantName: 'pause', reps: 5, weight: 100, performanceDate: '2026-03-01' });
+    const cur = perf({ variantId: 'v1', variantName: 'Pause', reps: 5, weight: 90, performanceDate: '2026-03-04' });
+    expect(bestByReps([legacy], pause)[4]).toBe(legacy);
+    expect(findPreviousBest(buildHistoryIndex([legacy, cur]), 'bench', cur)).toMatchObject({ weight: 100 });
+
+    const recreated: Variant = { id: 'v3', exerciseId: 'bench', name: 'Pause', isDefault: false };
+    const old = perf({ variantId: 'v1', variantName: 'Pause', reps: 5, weight: 100, performanceDate: '2026-03-01' });
+    const fresh = perf({ variantId: 'v3', variantName: 'Pause', reps: 5, weight: 90, performanceDate: '2026-03-04' });
+    expect(bestByReps([old], recreated).filter(Boolean)).toEqual([]);
+    expect(findPreviousBest(buildHistoryIndex([old, fresh]), 'bench', fresh)).toBeNull();
   });
 
   it('rename then recreate with the same name: old records stay with the old variant id', () => {
