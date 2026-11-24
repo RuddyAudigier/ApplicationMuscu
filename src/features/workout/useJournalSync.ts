@@ -59,11 +59,16 @@ export function useJournalSync(): (edit: (j: Journal) => Journal) => Promise<boo
       const result = chain.then(async () => {
         if (stale) {
           // Après un délai dépassé : relire le serveur avant d'écrire, pour construire sur la vérité serveur.
-          const fresh = await withTimeout(client.refetchQueries({ queryKey: queryKeys.journal }), TIMEOUT_MS).catch(
-            () => undefined,
-          );
+          // `refetchQueries` résout `void` : `true` distingue la fin de la relecture d'un délai dépassé.
+          const refetched = await withTimeout(
+            client.refetchQueries({ queryKey: queryKeys.journal }).then(() => true),
+            TIMEOUT_MS,
+          ).catch(() => undefined);
           const state = client.getQueryState(queryKeys.journal);
-          if (fresh === undefined || state?.status === 'error' || state?.fetchStatus === 'fetching') return false;
+          if (
+            refetched === undefined || state?.status === 'error' || state?.fetchStatus === 'fetching'
+            || state?.data === undefined
+          ) return false;
           stale = false;
         }
         const done = await withTimeout(run(), TIMEOUT_MS);
