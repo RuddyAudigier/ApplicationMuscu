@@ -1,4 +1,4 @@
-import { render, renderHook, screen } from '@testing-library/react';
+import { render, renderHook, screen, within } from '@testing-library/react';
 import { RouterProvider } from 'react-router';
 import { ErrorBoundary } from '../../src/app/ErrorBoundary';
 import { BackendProvider, Providers, useBackend } from '../../src/app/providers';
@@ -112,7 +112,7 @@ describe('layout navigation', () => {
       renderRoute(path);
       const nav = screen.getByRole('navigation', { name: 'Navigation principale' });
       expect(nav).toBeInTheDocument();
-      expect(screen.getAllByRole('link').map((l) => l.getAttribute('aria-label'))).toEqual([
+      expect(within(nav).getAllByRole('link').map((l) => l.getAttribute('aria-label'))).toEqual([
         'Accueil',
         'Programme',
         'Records',
