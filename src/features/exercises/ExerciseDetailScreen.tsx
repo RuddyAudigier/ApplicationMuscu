@@ -4,10 +4,11 @@ import { useDeleteExercise, useExercises, usePerformances, useSessions } from '@
 import type { Exercise } from '@/domain/model';
 import { Button, Icon, Sheet, Skeleton, useToast } from '@/ui';
 import { CoachNotesField } from './CoachNotesField';
-import { CycleBadges } from './CycleBadges';
+import { CycleBadgesFor } from './CycleBadges';
+import { SessionsError } from './SessionsError';
 import { cyclesFor } from './exerciseLogic';
 import { MuscleMap } from './MuscleMap';
-import { VariantsSection } from './VariantsSection';
+import { VariantsSection, type PerfState } from './VariantsSection';
 import styles from './ExerciseDetailScreen.module.css';
 
 function TopBar({ exerciseId }: { exerciseId?: string }) {
@@ -73,7 +74,17 @@ function ExerciseDetail({ exercise }: { exercise: Exercise }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const cycles = cyclesFor(exercise.id, sessions.data ?? []);
+  const cycles = sessions.isSuccess ? cyclesFor(exercise.id, sessions.data) : [];
+  const perfs: PerfState = performances.isSuccess
+    ? { status: 'success', data: performances.data }
+    : performances.isError
+      ? {
+          status: 'error',
+          retry: () => {
+            void performances.refetch();
+          },
+        }
+      : { status: 'pending' };
 
   const doDelete = () => {
     setDeleteError(null);
@@ -95,18 +106,25 @@ function ExerciseDetail({ exercise }: { exercise: Exercise }) {
       <div className={styles.head}>
         <h1 className={styles.title}>{exercise.name}</h1>
         <div className={styles.tags}>
-          <CycleBadges cycles={cycles} />
+          <CycleBadgesFor state={sessions.status} cycles={cycles} />
           {exercise.muscleGroups.map((m) => (
             <span key={m} className={styles.muscle}>
               {m}
             </span>
           ))}
         </div>
+        {sessions.isError && (
+          <SessionsError
+            onRetry={() => {
+              void sessions.refetch();
+            }}
+          />
+        )}
       </div>
 
       <CoachNotesField exercise={exercise} />
 
-      <VariantsSection exercise={exercise} performances={performances.data ?? []} />
+      <VariantsSection exercise={exercise} perfs={perfs} />
 
       <MuscleMap muscles={exercise.muscleGroups} />
 

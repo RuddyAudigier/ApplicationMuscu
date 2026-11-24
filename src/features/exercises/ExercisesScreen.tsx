@@ -4,7 +4,8 @@ import { useExercises, useSessions } from '@/data/queries';
 import { MUSCLE_CATALOG } from '@/domain/muscles';
 import { Chip, EmptyState, Icon, IconButton, Skeleton } from '@/ui';
 import { CreateExerciseSheet } from './CreateExerciseSheet';
-import { CycleBadges } from './CycleBadges';
+import { CycleBadgesFor } from './CycleBadges';
+import { SessionsError } from './SessionsError';
 import { cyclesFor, filterExercises } from './exerciseLogic';
 import styles from './ExercisesScreen.module.css';
 
@@ -86,6 +87,13 @@ export function ExercisesScreen() {
           <Skeleton height={52} />
         </div>
       )}
+      {exercises.data && sessions.isError && (
+        <SessionsError
+          onRetry={() => {
+            void sessions.refetch();
+          }}
+        />
+      )}
       {exercises.isError && (
         <p role="alert" className={styles.error}>
           Impossible de charger les exercices. Vérifie ta connexion puis réessaie.
@@ -111,7 +119,7 @@ export function ExercisesScreen() {
                     </span>
                   </span>
                   <span>
-                    <CycleBadges cycles={cyclesFor(e.id, sessionList)} compact />
+                    <CycleBadgesFor state={sessions.status} cycles={cyclesFor(e.id, sessionList)} compact />
                   </span>
                   <Icon name="chevron" size={16} className={styles.chevron} />
                 </Link>

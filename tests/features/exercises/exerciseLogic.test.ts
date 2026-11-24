@@ -6,6 +6,9 @@ import {
   filterExercises,
   formatKg,
   newVariant,
+  removeVariant,
+  renameVariant,
+  variantKey,
   variantMeta,
   variantNameError,
   variantStats,
@@ -117,9 +120,22 @@ describe('variant names (D11)', () => {
     expect(variantNameError('touch and go', variants)).toBe('Une variante porte déjà ce nom.');
     expect(variantNameError('Tempo', variants)).toBeNull();
   });
-  it('ignores the renamed variant itself', () => {
-    expect(variantNameError('Pausé', variants, 1)).toBeNull();
-    expect(variantNameError('Classique', variants, 1)).toBe('Une variante porte déjà ce nom.');
+  it('ignores the renamed variant itself (by id)', () => {
+    expect(variantNameError('Pausé', variants, 'v2')).toBeNull();
+    expect(variantNameError('Classique', variants, 'v2')).toBe('Une variante porte déjà ce nom.');
+  });
+
+  it('renames and removes variants by id, never the default one', () => {
+    expect(renameVariant(variants, 'v2', ' Tempo ').map((v) => v.name)).toEqual(['Touch and Go', 'Tempo']);
+    expect(removeVariant(variants, 'v2').map((v) => v.id)).toEqual(['v1']);
+    expect(removeVariant(variants, 'v1')).toHaveLength(2);
+  });
+
+  it('falls back to the name when a variant has no id', () => {
+    const noIds = variants.map((v) => ({ ...v, id: null }));
+    expect(variantKey({ id: null, exerciseId: 'e1', name: 'Pausé', isDefault: false })).toBe('name:Pausé');
+    expect(variantKey({ id: 'v2', exerciseId: 'e1', name: 'Pausé', isDefault: false })).toBe('v2');
+    expect(renameVariant(noIds, 'name:Pausé', 'Lent').map((v) => v.name)).toEqual(['Touch and Go', 'Lent']);
   });
 });
 

@@ -60,17 +60,32 @@ export function variantStats(exercise: Exercise, perfs: Performance[]): VariantS
 
 const nameKey = (name: string): string => normalizeSearch(variantLabel(name.trim())).replace(/\s+/g, ' ');
 
+/** Identité stable d'une variante : son id, sinon son nom (base sans table de variantes). */
+export function variantKey(v: Variant): string {
+  return v.id ?? `name:${v.name}`;
+}
+
 /**
  * Valide un nom de variante (D11 : un nom déjà pris est refusé avec message).
  * « Classique » et « Touch and Go » désignent la variante par défaut.
- * `exceptIndex` : la variante renommée (son propre nom ne compte pas).
+ * `exceptKey` : la variante renommée (son propre nom ne compte pas).
  */
-export function variantNameError(name: string, variants: Variant[], exceptIndex: number | null = null): string | null {
+export function variantNameError(name: string, variants: Variant[], exceptKey: string | null = null): string | null {
   const trimmed = name.trim();
   if (!trimmed) return 'Donne un nom à la variante.';
   const key = nameKey(trimmed);
-  const taken = variants.some((v, i) => i !== exceptIndex && nameKey(v.name) === key);
+  const taken = variants.some((v) => variantKey(v) !== exceptKey && nameKey(v.name) === key);
   return taken ? 'Une variante porte déjà ce nom.' : null;
+}
+
+/** Renomme la variante `key` (les autres restent inchangées). */
+export function renameVariant(variants: Variant[], key: string, name: string): Variant[] {
+  return variants.map((v) => (variantKey(v) === key ? { ...v, name: name.trim() } : v));
+}
+
+/** Retire la variante `key` ; la variante par défaut n'est jamais retirée. */
+export function removeVariant(variants: Variant[], key: string): Variant[] {
+  return variants.filter((v) => v.isDefault || variantKey(v) !== key);
 }
 
 /** Brouillon complet à envoyer au repo : seules les variantes changent. */

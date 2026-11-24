@@ -19,11 +19,15 @@ export function useCreateExercise(): UseMutationResult<Exercise, Error, Exercise
 
 export interface UpdateExerciseVars { id: Id; draft: ExerciseDraft }
 
-/** Séances et performances embarquent le nom des exercices : elles sont rechargées aussi. */
-export function useUpdateExercise(): UseMutationResult<Exercise, Error, UpdateExerciseVars> {
+/**
+ * Séances et performances embarquent le nom des exercices : elles sont rechargées aussi.
+ * `exerciseId` : les mises à jour d'un même exercice passent l'une après l'autre (scope).
+ */
+export function useUpdateExercise(exerciseId?: Id): UseMutationResult<Exercise, Error, UpdateExerciseVars> {
   const { exercises } = useBackend();
   const client = useQueryClient();
   return useMutation({
+    scope: exerciseId ? { id: `exercise:${exerciseId}` } : undefined,
     mutationFn: ({ id, draft }: UpdateExerciseVars) => exercises.update(id, draft),
     onSuccess: () => Promise.all([
       client.invalidateQueries({ queryKey: queryKeys.exercises }),

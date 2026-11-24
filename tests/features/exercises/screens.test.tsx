@@ -1,7 +1,9 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
-import { Providers } from '../../../src/app/providers';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BackendProvider } from '../../../src/data/queries';
+import { UiProvider } from '../../../src/ui';
 import { createMockBackend } from '../../../src/data/mock';
 import type { DataBackend } from '../../../src/data/ports';
 import { ExerciseDetailScreen, ExercisesScreen } from '../../../src/features/exercises';
@@ -15,10 +17,16 @@ function setup(path: string, backend: DataBackend = createMockBackend(localStora
     ],
     { initialEntries: [path] },
   );
+  // Pas de nouvelle tentative automatique : les états d'erreur s'affichent tout de suite.
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
-    <Providers backend={backend}>
-      <RouterProvider router={router} />
-    </Providers>,
+    <QueryClientProvider client={client}>
+      <BackendProvider backend={backend}>
+        <UiProvider>
+          <RouterProvider router={router} />
+        </UiProvider>
+      </BackendProvider>
+    </QueryClientProvider>,
   );
   return { router, backend, user: userEvent.setup() };
 }
@@ -128,12 +136,108 @@ describe('ExerciseDetailScreen', () => {
   it('shows an error when coach notes fail to save', async () => {
     const backend = createMockBackend(localStorage);
     const id = await benchId(backend);
-    vi.spyOn(backend.coachNotes, 'save').mockRejectedValue(new Error('réseau'));
+    const saveSpy = vi.spyOn(backend.coachNotes, 'save').mockRejectedValue(new Error('réseau'));
     const { user } = setup(`/exercises/${id}`, backend);
     const notes = await screen.findByRole('textbox', { name: /Remarques du coach/ });
     await user.type(notes, 'x');
     await user.tab();
-    expect(await screen.findByText(/Remarques non enregistrées/)).toHaveAttribute('role', 'alert');
+    const alert = (await screen.findByText(/Remarques non enregistrées/)).closest('[role="alert"]');
+    expect(alert).not.toBeNull();
+    saveSpy.mockResolvedValue(undefined);
+    await user.click(within(alert as HTMLElement).getByRole('button', { name: 'Réessayer' }));
+    expect(await screen.findByText('Remarques enregistrées.')).toBeInTheDocument();
+    expect(saveSpy).toHaveBeenLastCalledWith(id, 'x');
+  });
+
+  it('serialises coach note saves: only the latest request marks them saved', async () => {
+    const backend = createMockBackend(localStorage);
+    const id = await benchId(backend);
+    const calls: string[] = [];
+    let releaseFirst: () => void = () => undefined;
+    const real = backend.coachNotes.save.bind(backend.coachNotes);
+    vi.spyOn(backend.coachNotes, 'save').mockImplementation(async (exId, notes) => {
+      calls.push(`start:${notes}`);
+      if (notes === 'a') await new Promise<void>((r) => { releaseFirst = r; });
+      await real(exId, notes);
+      calls.push(`end:${notes}`);
+    });
+    const { user } = setup(`/exercises/${id}`, backend);
+    const notes = await screen.findByRole('textbox', { name: /Remarques du coach/ });
+    await user.type(notes, 'a');
+    await user.tab();
+    await user.type(notes, 'b');
+    await user.tab();
+    await waitFor(() => { expect(calls).toEqual(['start:a']); });
+    expect(screen.getByText('Enregistrement…')).toBeInTheDocument();
+    releaseFirst();
+    expect(await screen.findByText('Remarques enregistrées.')).toBeInTheDocument();
+    expect(calls).toEqual(['start:a', 'end:a', 'start:ab', 'end:ab']);
+    expect((await backend.coachNotes.listAll())[id]).toBe('ab');
+  });
+
+  it('still reports a coach note failure with a toast after leaving the page', async () => {
+    const backend = createMockBackend(localStorage);
+    const id = await benchId(backend);
+    let reject: (e: Error) => void = () => undefined;
+    vi.spyOn(backend.coachNotes, 'save').mockImplementation(() => new Promise<void>((_, r) => { reject = r; }));
+    const { user } = setup(`/exercises/${id}`, backend);
+    const notes = await screen.findByRole('textbox', { name: /Remarques du coach/ });
+    await user.type(notes, 'perdu ?');
+    await user.click(screen.getByRole('link', { name: 'Retour aux exercices' }));
+    await screen.findByRole('heading', { level: 1, name: 'Exercices' });
+    reject(new Error('réseau'));
+    expect(await screen.findByText(/Remarques du coach de « Développé couché » non enregistrées/)).toBeInTheDocument();
+  });
+
+  it('shows skeletons then a retry message when sessions or performances fail', async () => {
+    const backend = createMockBackend(localStorage);
+    const id = await benchId(backend);
+    const sessions = vi.spyOn(backend.sessions, 'list').mockRejectedValue(new Error('réseau'));
+    const perfs = vi.spyOn(backend.performances, 'list').mockRejectedValue(new Error('réseau'));
+    const { user } = setup(`/exercises/${id}`, backend);
+    await screen.findByRole('heading', { level: 1, name: 'Développé couché' });
+    const perfAlert = (await screen.findByText(/Records indisponibles/)).closest('[role="alert"]') as HTMLElement;
+    expect(screen.queryByText(/Aucun record/)).toBeNull();
+    expect(screen.getByRole('button', { name: /^Classique, par défaut\. Gérer/ })).toBeInTheDocument();
+    const sessionAlert = (await screen.findByText(/Cycles indisponibles/)).closest('[role="alert"]') as HTMLElement;
+    expect(screen.queryByText('Cycle A')).toBeNull();
+
+    sessions.mockRestore();
+    perfs.mockRestore();
+    await user.click(within(sessionAlert).getByRole('button', { name: 'Réessayer' }));
+    expect(await screen.findByText('Cycle A')).toBeInTheDocument();
+    await user.click(within(perfAlert).getByRole('button', { name: 'Réessayer' }));
+    expect(await screen.findByRole('button', { name: /^Classique, Par défaut · 1 record/ })).toBeInTheDocument();
+  });
+
+  it('list: hides cycle badges and offers a retry when sessions fail', async () => {
+    const backend = createMockBackend(localStorage);
+    const sessions = vi.spyOn(backend.sessions, 'list').mockRejectedValue(new Error('réseau'));
+    const { user } = setup('/exercises', backend);
+    const alert = (await screen.findByText(/Cycles indisponibles/)).closest('[role="alert"]') as HTMLElement;
+    expect(screen.getByRole('link', { name: /Squat/ })).not.toHaveTextContent('Cycle');
+    sessions.mockRestore();
+    await user.click(within(alert).getByRole('button', { name: 'Réessayer' }));
+    await waitFor(() => { expect(screen.getByRole('link', { name: /Squat/ })).toHaveTextContent('Cycle A'); });
+  });
+
+  it('disables variant actions while an update is pending', async () => {
+    const backend = createMockBackend(localStorage);
+    const id = await benchId(backend);
+    let release: () => void = () => undefined;
+    const real = backend.exercises.update.bind(backend.exercises);
+    const updateSpy = vi.spyOn(backend.exercises, 'update').mockImplementation(async (exId, draft) => {
+      await new Promise<void>((r) => { release = r; });
+      return real(exId, draft);
+    });
+    const { user } = setup(`/exercises/${id}`, backend);
+    const input = await screen.findByRole('textbox', { name: 'Nom de la nouvelle variante' });
+    await user.type(input, 'Tempo{Enter}');
+    await waitFor(() => { expect(screen.getByRole('button', { name: 'Ajouter la variante' })).toBeDisabled(); });
+    expect(screen.getByRole('button', { name: /^Pause,/ })).toBeDisabled();
+    release();
+    expect(await screen.findByRole('button', { name: /^Tempo,/ })).toBeEnabled();
+    expect(updateSpy).toHaveBeenCalledTimes(1);
   });
 
   it('adds a variant and refuses a duplicate name (D11)', async () => {
@@ -161,7 +265,8 @@ describe('ExerciseDetailScreen', () => {
     const { user } = setup(`/exercises/${id}`, backend);
     await user.click(await screen.findByRole('button', { name: /^Classique,/ }));
     const dialog = screen.getByRole('dialog', { name: 'Classique' });
-    expect(within(dialog).getByText(/ne peut être ni renommée ni supprimée/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/n’est pas renommable : ses records.*« Touch and Go »/)).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText('Nom de la variante')).toBeNull();
     expect(within(dialog).queryByRole('button', { name: 'Supprimer la variante' })).toBeNull();
     expect(within(dialog).getByRole('link', { name: 'Voir le tableau des records' })).toHaveAttribute('href', `/records/${id}`);
   });

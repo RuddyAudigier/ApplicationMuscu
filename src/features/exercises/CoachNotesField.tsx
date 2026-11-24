@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSaveCoachNotes } from '@/data/queries';
-import type { Exercise } from '@/domain/model';
+import type { Exercise, Id } from '@/domain/model';
+import { Button, useToast } from '@/ui';
 import styles from './ExerciseDetailScreen.module.css';
 
 type Status = 'idle' | 'saving' | 'saved' | 'error';
@@ -8,29 +9,54 @@ type Status = 'idle' | 'saving' | 'saved' | 'error';
 /** CRLF / CR → LF, comme le repo (INV §3.16) : un texte inchangé n'est pas renvoyé. */
 const normalize = (s: string): string => s.replace(/\r\n?/g, '\n');
 
+/** File des sauvegardes par exercice (survit au démontage) : elles partent l'une après l'autre. */
+const chains = new Map<Id, Promise<unknown>>();
+
+function enqueue<T>(exerciseId: Id, run: () => Promise<T>): Promise<T> {
+  const previous = chains.get(exerciseId) ?? Promise.resolve();
+  const next = previous.catch(() => undefined).then(run);
+  chains.set(exerciseId, next);
+  const cleanup = () => {
+    if (chains.get(exerciseId) === next) chains.delete(exerciseId);
+  };
+  next.then(cleanup, cleanup);
+  return next;
+}
+
 /** Remarques du coach : sauvegarde à la sortie du champ, état enregistré / erreur. */
 export function CoachNotesField({ exercise }: { exercise: Exercise }) {
   const save = useSaveCoachNotes();
+  const toast = useToast();
   const [text, setText] = useState(exercise.coachNotes);
   const [status, setStatus] = useState<Status>('idle');
   const saved = useRef(normalize(exercise.coachNotes));
+  const latest = useRef(0);
+  const mounted = useRef(true);
 
-  const onBlur = () => {
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  const persist = async () => {
     const notes = normalize(text);
     if (notes === saved.current) return;
+    latest.current += 1;
+    const request = latest.current;
     setStatus('saving');
-    save.mutate(
-      { exerciseId: exercise.id, notes },
-      {
-        onSuccess: () => {
-          saved.current = notes;
-          setStatus('saved');
-        },
-        onError: () => {
-          setStatus('error');
-        },
-      },
-    );
+    try {
+      await enqueue(exercise.id, () => save.mutateAsync({ exerciseId: exercise.id, notes }));
+      saved.current = notes;
+      if (mounted.current && request === latest.current) setStatus('saved');
+    } catch {
+      if (!mounted.current) {
+        toast.show(`Remarques du coach de « ${exercise.name} » non enregistrées. Vérifie ta connexion.`, 'error');
+      } else if (request === latest.current) {
+        setStatus('error');
+      }
+    }
   };
 
   return (
@@ -51,7 +77,9 @@ export function CoachNotesField({ exercise }: { exercise: Exercise }) {
             setText(e.target.value);
             if (status !== 'saving') setStatus('idle');
           }}
-          onBlur={onBlur}
+          onBlur={() => {
+            void persist();
+          }}
         />
       </label>
       <p role="status" className={styles.notesStatus}>
@@ -59,9 +87,17 @@ export function CoachNotesField({ exercise }: { exercise: Exercise }) {
         {status === 'saved' && 'Remarques enregistrées.'}
       </p>
       {status === 'error' && (
-        <p role="alert" className={styles.notesError}>
-          Remarques non enregistrées. Vérifie ta connexion : ton texte reste ici, quitte le champ pour réessayer.
-        </p>
+        <div role="alert" className={styles.inlineError}>
+          <span>Remarques non enregistrées. Vérifie ta connexion : ton texte reste ici.</span>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              void persist();
+            }}
+          >
+            Réessayer
+          </Button>
+        </div>
       )}
     </div>
   );

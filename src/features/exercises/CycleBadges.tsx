@@ -1,6 +1,18 @@
 import type { CycleId } from '@/domain/model';
-import { cx } from '@/ui/cx';
+import { Skeleton } from '@/ui';
 import styles from './CycleBadges.module.css';
+
+const cx = (...names: (string | false | undefined)[]): string => names.filter(Boolean).join(' ');
+
+/** Séances chargées ou non : jamais de pastilles déduites d'une liste de repli vide. */
+export type CyclesState = 'pending' | 'error' | 'success';
+
+/** Pastilles d'après l'état des séances : squelette en attente, rien en erreur (message ailleurs). */
+export function CycleBadgesFor({ state, cycles, compact = false }: { state: CyclesState; cycles: CycleId[]; compact?: boolean }) {
+  if (state === 'pending') return <Skeleton width={compact ? 24 : 64} height={24} circle={compact} />;
+  if (state === 'error') return null;
+  return <CycleBadges cycles={cycles} compact={compact} />;
+}
 
 /** Pastilles citron « Cycle A » / « Cycle B » (maquette Exercice) ; `compact` : « A » / « B ». */
 export function CycleBadges({ cycles, compact = false }: { cycles: CycleId[]; compact?: boolean }) {

@@ -52,8 +52,25 @@ describe('bestByReps', () => {
     const other = perf({ variantId: 'v2', variantName: 'pause', reps: 8 });
     const cells2 = bestByReps([byId, byName, other], withId);
     expect(cells2[5]).toBe(byId);
-    expect(cells2[6]).toBe(byName);
+    // Une perf portant un variantId n'est rattachée que par id, jamais par nom.
+    expect(cells2[6]).toBeNull();
     expect(cells2[7]).toBeNull();
+  });
+
+  it('matches by name only when the performance has no variantId', () => {
+    const pause: Variant = { id: 'v1', exerciseId: 'bench', name: 'Pause', isDefault: false };
+    const legacy = perf({ variantId: null, variantName: 'Pause', reps: 3 });
+    expect(bestByReps([legacy], pause)[2]).toBe(legacy);
+  });
+
+  it('rename then recreate with the same name: old records stay with the old variant id', () => {
+    // v1 « Pause » renommée « Pause 2 s » (relabel : ses perfs gardent v1), puis nouvelle « Pause » v3.
+    const renamed: Variant = { id: 'v1', exerciseId: 'bench', name: 'Pause 2 s', isDefault: false };
+    const recreated: Variant = { id: 'v3', exerciseId: 'bench', name: 'Pause', isDefault: false };
+    const old = perf({ variantId: 'v1', variantName: 'Pause', reps: 5, weight: 80 });
+    const fresh = perf({ variantId: 'v3', variantName: 'Pause', reps: 6, weight: 70 });
+    expect(bestByReps([old, fresh], renamed).filter(Boolean)).toEqual([old]);
+    expect(bestByReps([old, fresh], recreated).filter(Boolean)).toEqual([fresh]);
   });
 
   it('treats null weight as 0 and ignores non-finite reps', () => {

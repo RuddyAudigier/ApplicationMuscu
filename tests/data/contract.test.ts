@@ -50,6 +50,30 @@ function contract(name: string, make: () => DataBackend): void {
       expect((await b.exercises.list()).some((e) => e.id === created.id)).toBe(false);
     });
 
+    it('renaming a variant relabels its performances, legacy null-id rows included (no deletion)', async () => {
+      const ex = await b.exercises.create({
+        name: 'Rowing', description: '', muscleGroups: [],
+        variants: [{ id: null, exerciseId: null, name: 'Touch and Go', isDefault: true }, { id: null, exerciseId: null, name: 'Pause', isDefault: false }],
+      });
+      const pause = ex.variants.find((v) => v.name === 'Pause');
+      if (!pause?.id) throw new Error('variant expected');
+      await b.performances.add([
+        perf({ exerciseId: ex.id, variantId: null, variantName: ' pause ', reps: 3 }),
+        perf({ exerciseId: ex.id, variantId: pause.id, variantName: 'Pause', reps: 4 }),
+        perf({ exerciseId: ex.id, variantId: null, variantName: 'Touch and Go', reps: 5 }),
+        perf({ exerciseId: 'other', variantId: null, variantName: 'Pause', reps: 6 }),
+      ]);
+      const before = (await b.performances.list()).length;
+      await b.exercises.update(ex.id, { name: 'Rowing', description: '', muscleGroups: [], variants: ex.variants.map((v) => (v.id === pause.id ? { ...v, name: 'Pause 2 s' } : v)) });
+      const perfs = await b.performances.list();
+      expect(perfs).toHaveLength(before);
+      const byReps = (r: number) => perfs.find((p) => p.reps === r);
+      expect(byReps(3)).toMatchObject({ variantId: pause.id, variantName: 'Pause 2 s' });
+      expect(byReps(4)).toMatchObject({ variantId: pause.id, variantName: 'Pause 2 s' });
+      expect(byReps(5)).toMatchObject({ variantId: null, variantName: 'Touch and Go' });
+      expect(byReps(6)).toMatchObject({ variantId: null, variantName: 'Pause' });
+    });
+
     it('defaults to a single Touch and Go variant', async () => {
       const e = await b.exercises.create({ name: 'Curl', description: '', muscleGroups: [], variants: [] });
       expect(e.variants).toEqual([expect.objectContaining({ name: 'Touch and Go', isDefault: true })]);

@@ -287,6 +287,57 @@ describe('exercises (Supabase)', () => {
     expect(calls.some((c) => isOp(c, 'insert', 'muscle_groups'))).toBe(false);
   });
 
+  it('update() skips the muscle_groups rewrite when muscles are unchanged', async () => {
+    const { client, calls } = backend();
+    await createSupabaseBackend(client).exercises.update('e1', {
+      name: 'Bench', description: 'd', muscleGroups: ['Pecs'], variants: [{ id: 'v1', exerciseId: 'e1', name: 'Touch and Go', isDefault: true }],
+    });
+    expect(calls.some((c) => c.table === 'muscle_groups')).toBe(false);
+    expect(calls.some((c) => c.table === 'performances')).toBe(false);
+  });
+
+  it('update() relabels performances before renaming a variant (legacy null ids first)', async () => {
+    const pauseRows = [{ id: 'v1', name: 'Touch and Go' }, { id: 'v2', name: 'Pause' }];
+    const perfRows = [
+      { id: 'p1', variant_id: null, variant_name: ' pause ' },
+      { id: 'p2', variant_id: 'v2', variant_name: 'Pause' },
+      { id: 'p3', variant_id: null, variant_name: 'Touch and Go' },
+      { id: 7, variant_id: null, variant_name: 'PAUSE' },
+    ];
+    const { client, calls } = backend((c) => {
+      if (c.table === 'exercise_variants' && has(c, 'select') && !has(c, 'in')) return ok(pauseRows);
+      if (c.table === 'performances' && has(c, 'select')) return ok(perfRows);
+      return undefined;
+    });
+    await createSupabaseBackend(client).exercises.update('e1', {
+      name: 'Bench', description: 'd', muscleGroups: ['Pecs'],
+      variants: [{ id: 'v1', exerciseId: 'e1', name: 'Touch and Go', isDefault: true }, { id: 'v2', exerciseId: 'e1', name: 'Pause 2 s', isDefault: false }],
+    });
+    const perfCalls = calls.filter((c) => c.table === 'performances');
+    expect(perfCalls).toHaveLength(3);
+    expect(op(perfCalls[0] as FakeCall, 'eq')).toEqual(['exercise_id', 'e1']);
+    expect(op(perfCalls[1] as FakeCall, 'update')).toEqual([{ variant_id: 'v2' }]);
+    expect(op(perfCalls[1] as FakeCall, 'in')).toEqual(['id', ['p1', '7']]);
+    expect(op(perfCalls[2] as FakeCall, 'update')).toEqual([{ variant_name: 'Pause 2 s' }]);
+    expect(op(perfCalls[2] as FakeCall, 'eq')).toEqual(['variant_id', 'v2']);
+    expect(calls.some((c) => has(c, 'delete') && c.table === 'performances')).toBe(false);
+    const renameIdx = calls.findIndex((c) => isOp(c, 'update', 'exercise_variants') && op(c, 'eq')?.[1] === 'v2');
+    expect(renameIdx).toBeGreaterThan(calls.indexOf(perfCalls[2] as FakeCall));
+  });
+
+  it('update() skips the relabel when performances lack variant columns', async () => {
+    const { client, calls } = backend((c) => {
+      if (c.table === 'exercise_variants' && has(c, 'select') && !has(c, 'in')) return ok([{ id: 'v2', name: 'Pause' }]);
+      if (c.table === 'performances') return { data: null, error: { code: '42703', message: 'column variant_id does not exist' } };
+      return undefined;
+    });
+    await createSupabaseBackend(client).exercises.update('e1', {
+      name: 'Bench', description: 'd', muscleGroups: ['Pecs'], variants: [{ id: 'v2', exerciseId: 'e1', name: 'Tempo', isDefault: true }],
+    });
+    expect(calls.filter((c) => c.table === 'performances')).toHaveLength(1);
+    expect(calls.some((c) => isOp(c, 'update', 'exercise_variants'))).toBe(true);
+  });
+
   it('remove() deletes the exercise row', async () => {
     const { client, calls } = backend();
     await createSupabaseBackend(client).exercises.remove('e1');

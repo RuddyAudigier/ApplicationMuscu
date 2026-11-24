@@ -2,11 +2,15 @@ import { useState, type SyntheticEvent } from 'react';
 import { Link } from 'react-router';
 import { useUpdateExercise } from '@/data/queries';
 import type { Exercise, Performance, Variant } from '@/domain/model';
-import { Button, Field, Icon, Sheet, useToast } from '@/ui';
+import { variantLabel } from '@/domain/variants';
+import { Button, Field, Icon, Sheet, Skeleton, useToast } from '@/ui';
 import {
   draftWith,
   formatKg,
   newVariant,
+  removeVariant,
+  renameVariant,
+  variantKey,
   variantMeta,
   variantNameError,
   variantStats,
@@ -14,20 +18,29 @@ import {
 } from './exerciseLogic';
 import styles from './ExerciseDetailScreen.module.css';
 
+/** État de la requête des performances : les stats ne s'affichent qu'une fois chargées. */
+export type PerfState =
+  | { status: 'pending' }
+  | { status: 'error'; retry: () => void }
+  | { status: 'success'; data: Performance[] };
+
 interface Props {
   exercise: Exercise;
-  performances: Performance[];
+  perfs: PerfState;
 }
 
 /** Variantes : meilleur e1RM, ajout sans limite, renommage, suppression (sauf « Classique »). */
-export function VariantsSection({ exercise, performances }: Props) {
-  const update = useUpdateExercise();
+export function VariantsSection({ exercise, perfs }: Props) {
+  const update = useUpdateExercise(exercise.id);
   const toast = useToast();
   const [newName, setNewName] = useState('');
   const [addError, setAddError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<number | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
+  const busy = update.isPending;
 
-  const stats = variantStats(exercise, performances);
+  const stats: VariantStat[] | null = perfs.status === 'success' ? variantStats(exercise, perfs.data) : null;
+  const current = selected === null ? null : (exercise.variants.find((v) => variantKey(v) === selected) ?? null);
+  const currentStat = current && stats ? (stats.find((s) => variantKey(s.variant) === selected) ?? null) : null;
 
   const saveVariants = (variants: Variant[], onDone: () => void, onFail: (message: string) => void) => {
     update.mutate(
@@ -43,6 +56,7 @@ export function VariantsSection({ exercise, performances }: Props) {
 
   const add = (event: SyntheticEvent) => {
     event.preventDefault();
+    if (busy) return;
     const error = variantNameError(newName, exercise.variants);
     setAddError(error);
     if (error) return;
@@ -56,10 +70,8 @@ export function VariantsSection({ exercise, performances }: Props) {
     );
   };
 
-  const current = selected === null ? null : (stats[selected] ?? null);
-
   return (
-    <section className={styles.variants} aria-labelledby="variants-title">
+    <section className={styles.variants} aria-labelledby="variants-title" aria-busy={busy || undefined}>
       <div className={styles.variantsHead}>
         <h2 id="variants-title" className={styles.sectionLabel}>
           Variantes · records séparés
@@ -68,26 +80,55 @@ export function VariantsSection({ exercise, performances }: Props) {
           Meilleur e1RM
         </span>
       </div>
+      {perfs.status === 'error' && (
+        <div role="alert" className={styles.inlineError}>
+          <span>Records indisponibles : impossible de charger les performances.</span>
+          <Button variant="ghost" onClick={perfs.retry}>
+            Réessayer
+          </Button>
+        </div>
+      )}
       <ul className={styles.variantList}>
-        {stats.map((s, i) => (
-          <li key={s.variant.id ?? s.variant.name}>
-            <button
-              type="button"
-              className={styles.variantRow}
-              aria-label={`${s.label}, ${variantMeta(s)}, meilleur e1RM ${formatKg(s.bestE1rm)}. Gérer la variante`}
-              onClick={() => {
-                setSelected(i);
-              }}
-            >
-              <span className={styles.variantText}>
-                <span className={styles.variantName}>{s.label}</span>
-                <span className={styles.variantMeta}>{variantMeta(s)}</span>
-              </span>
-              <span className={styles.variantBest}>{formatKg(s.bestE1rm)}</span>
-              <Icon name="chevron" size={16} className={styles.chevron} />
-            </button>
-          </li>
-        ))}
+        {exercise.variants.map((v) => {
+          const stat = stats?.find((s) => variantKey(s.variant) === variantKey(v)) ?? null;
+          const label = variantLabel(v.name);
+          return (
+            <li key={variantKey(v)}>
+              <button
+                type="button"
+                className={styles.variantRow}
+                disabled={busy}
+                aria-label={
+                  stat
+                    ? `${label}, ${variantMeta(stat)}, meilleur e1RM ${formatKg(stat.bestE1rm)}. Gérer la variante`
+                    : `${label}${v.isDefault ? ', par défaut' : ''}. Gérer la variante`
+                }
+                onClick={() => {
+                  setSelected(variantKey(v));
+                }}
+              >
+                <span className={styles.variantText}>
+                  <span className={styles.variantName}>{label}</span>
+                  {stat ? (
+                    <span className={styles.variantMeta}>{variantMeta(stat)}</span>
+                  ) : perfs.status === 'pending' ? (
+                    <Skeleton width={96} height={12} />
+                  ) : (
+                    <span className={styles.variantMeta}>{v.isDefault ? 'Par défaut' : ''}</span>
+                  )}
+                </span>
+                {stat ? (
+                  <span className={styles.variantBest}>{formatKg(stat.bestE1rm)}</span>
+                ) : perfs.status === 'pending' ? (
+                  <Skeleton width={56} height={20} />
+                ) : (
+                  <span className={styles.variantBest}>—</span>
+                )}
+                <Icon name="chevron" size={16} className={styles.chevron} />
+              </button>
+            </li>
+          );
+        })}
       </ul>
 
       <form className={styles.addRow} onSubmit={add} noValidate>
@@ -106,7 +147,7 @@ export function VariantsSection({ exercise, performances }: Props) {
             }}
           />
         </label>
-        <button type="submit" className={styles.addButton} aria-label="Ajouter la variante" disabled={update.isPending}>
+        <button type="submit" className={styles.addButton} aria-label="Ajouter la variante" disabled={busy}>
           <Icon name="plus" size={22} />
         </button>
       </form>
@@ -116,13 +157,13 @@ export function VariantsSection({ exercise, performances }: Props) {
         </p>
       )}
 
-      {current && selected !== null && (
+      {current && (
         <VariantSheet
-          key={current.variant.id ?? current.variant.name}
+          key={variantKey(current)}
           exercise={exercise}
-          stat={current}
-          index={selected}
-          pending={update.isPending}
+          variant={current}
+          stat={currentStat}
+          busy={busy}
           onClose={() => {
             setSelected(null);
           }}
@@ -144,42 +185,40 @@ export function VariantsSection({ exercise, performances }: Props) {
 
 interface SheetProps {
   exercise: Exercise;
-  stat: VariantStat;
-  index: number;
-  pending: boolean;
+  variant: Variant;
+  stat: VariantStat | null;
+  busy: boolean;
   onClose: () => void;
   onSave: (variants: Variant[], message: string, onFail: (message: string) => void) => void;
 }
 
-function VariantSheet({ exercise, stat, index, pending, onClose, onSave }: SheetProps) {
-  const [name, setName] = useState(stat.variant.name);
+function VariantSheet({ exercise, variant, stat, busy, onClose, onSave }: SheetProps) {
+  const key = variantKey(variant);
+  const label = variantLabel(variant.name);
+  const [name, setName] = useState(variant.name);
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
-  const isDefault = stat.variant.isDefault;
   const records = `/records/${exercise.id}`;
 
   const rename = (event: SyntheticEvent) => {
     event.preventDefault();
-    const err = variantNameError(name, exercise.variants, index);
+    if (busy) return;
+    const err = variantNameError(name, exercise.variants, key);
     setError(err);
     if (err) return;
-    if (name.trim() === stat.variant.name) {
+    if (name.trim() === variant.name) {
       onClose();
       return;
     }
-    const variants = exercise.variants.map((v, i) => (i === index ? { ...v, name: name.trim() } : v));
-    onSave(variants, 'Variante renommée.', setError);
+    onSave(renameVariant(exercise.variants, key, name), 'Variante renommée.', setError);
   };
 
   const remove = () => {
-    onSave(
-      exercise.variants.filter((_, i) => i !== index),
-      'Variante supprimée. Ses records sont conservés.',
-      (message) => {
-        setConfirming(false);
-        setError(message);
-      },
-    );
+    if (busy) return;
+    onSave(removeVariant(exercise.variants, key), 'Variante supprimée. Ses records sont conservés.', (message) => {
+      setConfirming(false);
+      setError(message);
+    });
   };
 
   if (confirming) {
@@ -187,7 +226,7 @@ function VariantSheet({ exercise, stat, index, pending, onClose, onSave }: Sheet
       <Sheet
         open
         role="alertdialog"
-        title={`Supprimer « ${stat.label} » ?`}
+        title={`Supprimer « ${label} » ?`}
         aria-describedby="delete-variant-text"
         onClose={() => {
           setConfirming(false);
@@ -198,13 +237,14 @@ function VariantSheet({ exercise, stat, index, pending, onClose, onSave }: Sheet
               variant="secondary"
               size="lg"
               fullWidth
+              disabled={busy}
               onClick={() => {
                 setConfirming(false);
               }}
             >
               Annuler
             </Button>
-            <Button variant="danger" size="lg" fullWidth loading={pending} onClick={remove}>
+            <Button variant="danger" size="lg" fullWidth loading={busy} onClick={remove}>
               Supprimer
             </Button>
           </div>
@@ -212,22 +252,26 @@ function VariantSheet({ exercise, stat, index, pending, onClose, onSave }: Sheet
       >
         <p id="delete-variant-text" className={styles.sheetText}>
           La variante disparaît de la fiche et de la séance. Ses records
-          {stat.records > 0 ? ` (${String(stat.records)})` : ''} ne sont pas effacés : l’historique est conservé,
-          mais ils ne s’afficheront plus, sauf si tu recrées une variante du même nom.
+          {stat && stat.records > 0 ? ` (${String(stat.records)})` : ''} ne sont pas effacés : l’historique est
+          conservé en base, mais ils ne seront plus affichés dans l’application.
         </p>
       </Sheet>
     );
   }
 
   return (
-    <Sheet open title={stat.label} onClose={onClose}>
+    <Sheet open title={label} onClose={onClose}>
       <div className={styles.sheetBody}>
-        <p className={styles.sheetText}>
-          {variantMeta(stat)} · meilleur e1RM {formatKg(stat.bestE1rm)}
-        </p>
-        {isDefault ? (
+        {stat && (
           <p className={styles.sheetText}>
-            « Classique » est la variante par défaut : elle ne peut être ni renommée ni supprimée.
+            {variantMeta(stat)} · meilleur e1RM {formatKg(stat.bestE1rm)}
+          </p>
+        )}
+        {variant.isDefault ? (
+          <p className={styles.sheetText}>
+            « Classique » est la variante par défaut, elle ne peut pas être supprimée. Elle n’est pas renommable :
+            ses records, dont les plus anciens, sont aussi rattachés à son nom d’origine « Touch and Go », qui doit
+            rester stable pour les retrouver.
           </p>
         ) : (
           <form className={styles.renameForm} onSubmit={rename} noValidate>
@@ -241,7 +285,7 @@ function VariantSheet({ exercise, stat, index, pending, onClose, onSave }: Sheet
                 setError(null);
               }}
             />
-            <Button type="submit" variant="accent" size="lg" fullWidth loading={pending}>
+            <Button type="submit" variant="accent" size="lg" fullWidth loading={busy}>
               Renommer
             </Button>
           </form>
@@ -250,11 +294,12 @@ function VariantSheet({ exercise, stat, index, pending, onClose, onSave }: Sheet
           <Icon name="table" size={18} />
           Voir le tableau des records
         </Link>
-        {!isDefault && (
+        {!variant.isDefault && (
           <Button
             variant="danger"
             icon="trash"
             fullWidth
+            disabled={busy}
             onClick={() => {
               setConfirming(true);
             }}
