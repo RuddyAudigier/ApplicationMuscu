@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { isoToShortFr, todayIso } from '@/domain/dates';
 import type { Performance, Variant } from '@/domain/model';
 import { formatWeight } from '@/domain/numbers';
@@ -15,8 +14,10 @@ export interface RecordsSheetProps {
   exerciseId: string;
   exerciseName: string;
   variants: Variant[];
-  /** Variante de la série en cours (sélection initiale). */
+  /** Variante de la série en cours (pastille sélectionnée). */
   variantKey: string;
+  /** Pastille touchée : la série passe sur cette variante (cible effacée). */
+  onSelectVariant: (variant: Variant) => void;
   /** Reps de la cible actuelle (ligne surlignée). */
   targetReps: number | null;
   perfs: Performance[];
@@ -34,11 +35,18 @@ export function RecordsSheet(props: RecordsSheetProps) {
 
 const shortDate = (iso: string | null): string => (iso === null ? '' : iso === todayIso() ? 'auj.' : isoToShortFr(iso));
 
-function RecordsBody({ exerciseId, exerciseName, variants, variantKey, targetReps, perfs, onPick }: RecordsSheetProps) {
-  const initial = variants.find((v) => isSameVariant(v, variantKey)) ?? variants[0];
-  const [selectedKey, setSelectedKey] = useState(initial ? variantKeyOf(initial) : variantKey);
-  const variant = variants.find((v) => variantKeyOf(v) === selectedKey) ?? initial;
-  const sameAsSerie = variant !== undefined && isSameVariant(variant, variantKey);
+function RecordsBody({
+  exerciseId,
+  exerciseName,
+  variants,
+  variantKey,
+  onSelectVariant,
+  targetReps,
+  perfs,
+  onPick,
+}: RecordsSheetProps) {
+  // Comme la maquette (pickInSheet) : le tableau suit la variante de la série en cours.
+  const variant = variants.find((v) => isSameVariant(v, variantKey)) ?? variants[0];
   const rows = variant ? recordsTable(perfs, exerciseId, variant) : [];
 
   return (
@@ -51,7 +59,7 @@ function RecordsBody({ exerciseId, exerciseName, variants, variantKey, targetRep
             tone="accent"
             selected={variant !== undefined && variantKeyOf(v) === variantKeyOf(variant)}
             onSelect={() => {
-              setSelectedKey(variantKeyOf(v));
+              onSelectVariant(v);
             }}
           >
             {variantLabel(v.name)}
@@ -66,7 +74,7 @@ function RecordsBody({ exerciseId, exerciseName, variants, variantKey, targetRep
       </div>
       <ul className={styles.table} aria-label={`Records ${variant ? variantLabel(variant.name) : ''}`}>
         {rows.map((row) => {
-          const selected = sameAsSerie && targetReps === row.reps;
+          const selected = targetReps === row.reps;
           const repsLabel = `${String(row.reps)} rep${row.reps > 1 ? 's' : ''}`;
           const label =
             row.weight === null

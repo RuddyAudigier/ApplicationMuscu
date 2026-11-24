@@ -415,3 +415,16 @@
 .bonusItem:hover {
   background: var(--color-surface);
 }
+
+/* Données indisponibles : « Terminer » bloqué tant que l'historique n'est pas chargé. */
+.dataError {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-danger-soft);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+}

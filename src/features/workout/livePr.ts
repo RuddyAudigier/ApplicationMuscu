@@ -1,9 +1,8 @@
-import type { Exercise, IsoDate, Variant } from '@/domain/model';
+import type { Exercise, Performance, Variant } from '@/domain/model';
 import { normalizeVariantName } from '@/domain/names';
-import { parseReps, parseWeight } from '@/domain/numbers';
-import { PR_EPSILON, classify, findPreviousBest, type HistoryIndex } from '@/domain/records';
+import { buildReport } from '@/domain/report';
 import { normalizeVariants } from '@/domain/variants';
-import { canValidate, resolveVariant, type SerieEntry, type WorkoutExercise } from '@/domain/workout';
+import { canValidate, type WorkoutState } from '@/domain/workout';
 
 /** Clé de variante d'une série (même règle que le domaine) : id si connu, sinon nom. */
 export const variantKeyOf = (v: Variant): string => v.id ?? v.name;
@@ -16,46 +15,26 @@ export const isSameVariant = (v: Variant, key: string): boolean =>
 export const variantsOf = (exercise: Exercise | undefined, exerciseId: string): Variant[] =>
   exercise && exercise.variants.length > 0 ? exercise.variants : normalizeVariants([], exerciseId);
 
-const sameKey = (a: string, b: string): boolean => normalizeVariantName(a) === normalizeVariantName(b);
-
 /**
- * Badge PR en direct pour chaque série validée d'un exercice.
+ * Badges PR en direct : `flags[ex][serie]`.
  *
- * Référence = historique (`useHistoryIndex`, séries antérieures à la validation) via
- * `findPreviousBest` + `classify`. Une série déjà faite dans cette séance, même variante, avec
- * au moins autant de reps et de charge, retire le badge : il n'y a qu'un PR par niveau.
+ * Calculés par `buildReport` lui-même (ordre réel de validation, séries précédentes de la séance,
+ * historique antérieur au début de séance) : le badge en direct et le compte rendu concordent
+ * toujours. `history` ne contient pas encore cette séance (elle n'est envoyée qu'à « Terminer »).
  */
-export function livePrFlags(
-  index: HistoryIndex,
-  we: WorkoutExercise,
-  exercise: Exercise | undefined,
-  date: IsoDate,
-): boolean[] {
-  const done: { key: string; reps: number; weight: number }[] = [];
-  return we.series.map((s: SerieEntry) => {
-    if (!s.validated || !canValidate(s)) return false;
-    const reps = parseReps(s.reps) ?? 0;
-    const weight = parseWeight(s.kg) ?? 0;
-    const at = s.validatedAt === null ? Number.NaN : Date.parse(s.validatedAt);
-    const ref = findPreviousBest(
-      index,
-      we.exerciseId,
-      {
-        exerciseId: we.exerciseId,
-        exerciseName: exercise?.name ?? we.name,
-        ...resolveVariant(exercise, s.variantKey),
-        reps,
-        weight,
-        performanceDate: date,
-        createdAt: s.validatedAt,
-      },
-      { atTimestamp: Number.isFinite(at) ? at : Date.now() },
-    );
-    const improved = classify({ reps, weight }, ref).improvementStatus === 'improved';
-    const beatenHere = done.some(
-      (d) => sameKey(d.key, s.variantKey) && d.reps >= reps && d.weight >= weight - PR_EPSILON,
-    );
-    done.push({ key: s.variantKey, reps, weight });
-    return improved && !beatenHere;
+export function livePrFlags(state: WorkoutState, history: Performance[], exercises: Exercise[]): boolean[][] {
+  const report = buildReport(state, history, exercises);
+  const flags = state.exercises.map((we) => we.series.map(() => false));
+  // buildReport ne garde, dans l'ordre de la séance, que les exercices ayant une série valide.
+  let k = 0;
+  state.exercises.forEach((we, ex) => {
+    if (!we.series.some((s) => s.validated && canValidate(s))) return;
+    const reported = report.exercises[k];
+    k += 1;
+    for (const s of reported?.series ?? []) {
+      const row = flags[ex];
+      if (row && s.isPr) row[s.n - 1] = true;
+    }
   });
+  return flags;
 }

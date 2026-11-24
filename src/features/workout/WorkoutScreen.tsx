@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router';
 import type { Exercise, Performance, Variant } from '@/domain/model';
 import { formatWeight } from '@/domain/numbers';
@@ -11,13 +11,13 @@ import {
   type WorkoutExercise,
   type WorkoutState,
 } from '@/domain/workout';
-import { useAddPerformances, useExercises, useHistoryIndex, usePerformances } from '@/data/queries';
+import { useAddPerformances, useExercises, usePerformances } from '@/data/queries';
 import { Button, Icon, IconButton, Pill, useConfirm, useToast } from '@/ui';
 import { AddExerciseSheet } from './AddExerciseSheet';
 import { cx } from './cx';
 import { isSameVariant, livePrFlags, variantKeyOf, variantsOf } from './livePr';
 import { RecordsSheet } from './RecordsSheet';
-import { loadActiveWorkout, saveActiveWorkout, saveLastReport } from './storage';
+import { loadActiveWorkout, loadLastReport, saveActiveWorkout, saveLastReport } from './storage';
 import { WorkoutProvider, useWorkout } from './WorkoutContext';
 import styles from './WorkoutScreen.module.css';
 
@@ -27,6 +27,9 @@ const NO_EXERCISES: Exercise[] = [];
 
 const QUEUED_MESSAGE =
   'Connexion instable… Ta séance est gardée sur cet appareil et sera envoyée au retour du réseau.';
+const DATA_ERROR_MESSAGE =
+  'Impossible de charger tes exercices ou ton historique : la séance ne peut pas encore être terminée.';
+const DATA_NOT_READY_MESSAGE = 'Données pas encore chargées : réessaie dans un instant.';
 const ERROR_MESSAGE =
   'Enregistrement impossible. Ta séance est conservée sur cet appareil : réessaie « Terminer ».';
 
@@ -56,7 +59,6 @@ function WorkoutView() {
   const confirm = useConfirm();
   const exercisesQuery = useExercises();
   const perfsQuery = usePerformances();
-  const index = useHistoryIndex();
   const addPerformances = useAddPerformances();
   const [exIdx, setExIdx] = useState(() => firstPendingIndex(state));
   const [recordsOpen, setRecordsOpen] = useState(false);
@@ -65,11 +67,27 @@ function WorkoutView() {
 
   const exercises = exercisesQuery.data ?? NO_EXERCISES;
   const perfs = perfsQuery.data ?? NO_PERFS;
+  // Jamais de compte rendu ni d'envoi à partir de données de repli vides.
+  const dataReady = perfsQuery.isSuccess && exercisesQuery.isSuccess;
+  const dataError = perfsQuery.isError || exercisesQuery.isError;
+  const prFlags = useMemo(
+    () => (dataReady ? livePrFlags(state, perfs, exercises) : null),
+    [dataReady, state, perfs, exercises],
+  );
   const total = state.exercises.length;
   const current = Math.min(exIdx, Math.max(0, total - 1));
   const we = state.exercises[current];
 
+  const retryData = (): void => {
+    if (perfsQuery.isError) void perfsQuery.refetch();
+    if (exercisesQuery.isError) void exercisesQuery.refetch();
+  };
+
   const finish = async (): Promise<void> => {
+    if (!dataReady) {
+      toast.show(dataError ? DATA_ERROR_MESSAGE : DATA_NOT_READY_MESSAGE, 'error');
+      return;
+    }
     const inputs = toPerformanceInputs(state, exercises);
     if (inputs.length === 0) {
       const ok = await confirm({
@@ -97,6 +115,7 @@ function WorkoutView() {
       if (!ok) return;
     }
     setFinishing(true);
+    const previousReport = loadLastReport();
     try {
       // Historique lu AVANT l'envoi : il ne contient pas encore les séries de cette séance.
       saveLastReport(buildReport(state, perfs, exercises));
@@ -105,8 +124,11 @@ function WorkoutView() {
       saveActiveWorkout(null);
       if (result.queued) toast.show(QUEUED_MESSAGE, 'info');
       void navigate('/report');
-    } catch {
-      // Rien n'est effacé : la séance reste en mémoire et en localStorage.
+    } catch (e) {
+      console.error('[workout] Enregistrement de la séance impossible :', e);
+      // Rien n'est effacé : la séance reste en mémoire et en localStorage ; pas de compte rendu
+      // d'une séance non enregistrée.
+      saveLastReport(previousReport);
       toast.show(ERROR_MESSAGE, 'error');
       setFinishing(false);
     }
@@ -129,7 +151,7 @@ function WorkoutView() {
       <Button
         variant="secondary"
         loading={finishing}
-        disabled={perfsQuery.isPending || exercisesQuery.isPending}
+        disabled={!dataReady}
         onClick={() => {
           void finish();
         }}
@@ -137,6 +159,14 @@ function WorkoutView() {
         Terminer
       </Button>
     </header>
+  );
+  const dataBanner = dataError && (
+    <div role="alert" className={styles.dataError}>
+      <p>{DATA_ERROR_MESSAGE}</p>
+      <Button variant="secondary" onClick={retryData}>
+        Réessayer
+      </Button>
+    </div>
   );
 
   const bonusSheet = (
@@ -158,6 +188,7 @@ function WorkoutView() {
     return (
       <div className={styles.screen}>
         {header}
+        {dataBanner}
         <p className={styles.muted}>Aucun exercice dans cette séance.</p>
         <Button
           variant="secondary"
@@ -175,18 +206,39 @@ function WorkoutView() {
 
   const exercise = exercises.find((e) => e.id === we.exerciseId);
   const variants = variantsOf(exercise, we.exerciseId);
-  const prs = livePrFlags(index, we, exercise, state.date);
+  const prs = prFlags?.[current] ?? [];
   const serieIdx = we.series.findIndex((s) => !s.validated);
   const serie = serieIdx >= 0 ? we.series[serieIdx] : undefined;
   const doneCount = we.series.filter((s) => s.validated).length;
   const lastSerie = we.series[we.series.length - 1];
   const activeKey = serie?.variantKey ?? lastSerie?.variantKey ?? (variants[0] ? variantKeyOf(variants[0]) : '');
   const coachNotes = exercise?.coachNotes.trim() ?? '';
+
+  /** Change la variante de la série en cours ; la cible (liée à une variante) est effacée. */
+  const switchVariant = (v: Variant): void => {
+    if (!serie || isSameVariant(v, serie.variantKey)) return;
+    dispatch({ type: 'setTarget', ex: current, serie: serieIdx, target: null });
+    dispatch({ type: 'setField', ex: current, serie: serieIdx, field: 'variantKey', value: variantKeyOf(v) });
+  };
+
+  const stopExercise = async (): Promise<void> => {
+    if (serie && (serie.reps.trim() !== '' || serie.kg.trim() !== '')) {
+      const ok = await confirm({
+        title: 'Arrêter l’exercice ?',
+        message: `La série ${String(serieIdx + 1)} est saisie mais pas validée : elle ne sera pas enregistrée.`,
+        confirmLabel: 'Arrêter',
+      });
+      if (!ok) return;
+    }
+    dispatch({ type: 'stopExercise', ex: current });
+    if (current < total - 1) setExIdx(current + 1);
+  };
   const name = exercise?.name ?? we.name;
 
   return (
     <div className={styles.screen}>
       {header}
+      {dataBanner}
 
       <h1 className={styles.title}>{name}</h1>
 
@@ -206,9 +258,7 @@ function WorkoutView() {
             selected={isSameVariant(v, activeKey)}
             disabled={!serie}
             onSelect={() => {
-              if (!serie || isSameVariant(v, serie.variantKey)) return;
-              dispatch({ type: 'setTarget', ex: current, serie: serieIdx, target: null });
-              dispatch({ type: 'setField', ex: current, serie: serieIdx, field: 'variantKey', value: variantKeyOf(v) });
+              switchVariant(v);
             }}
           >
             {variantLabel(v.name)}
@@ -236,8 +286,7 @@ function WorkoutView() {
           }}
           stopLabel={doneCount > 0 ? `Fatigué ? Arrêter à ${seriesWord(doneCount)}` : null}
           onStop={() => {
-            dispatch({ type: 'stopExercise', ex: current });
-            if (current < total - 1) setExIdx(current + 1);
+            void stopExercise();
           }}
         />
       ) : (
@@ -301,6 +350,7 @@ function WorkoutView() {
         variantKey={activeKey}
         targetReps={serie?.target?.reps ?? null}
         perfs={perfs}
+        onSelectVariant={switchVariant}
         onPick={(row, variant) => {
           if (serieIdx >= 0) {
             dispatch({
@@ -363,6 +413,7 @@ function targetText(serie: SerieEntry): string {
 }
 
 function SerieForm({ serie, n, onOpenRecords, onChange, onRpe, onValidate, stopLabel, onStop }: SerieFormProps) {
+  const repsRef = useRef<HTMLInputElement>(null);
   return (
     <section className={styles.form} aria-labelledby="serie-title">
       <div className={styles.serieHead}>
@@ -385,6 +436,7 @@ function SerieForm({ serie, n, onOpenRecords, onChange, onRpe, onValidate, stopL
           <span className={styles.inputLabel}>Reps</span>
           <input
             type="text"
+            ref={repsRef}
             inputMode="numeric"
             placeholder="0"
             value={serie.reps}
@@ -428,7 +480,17 @@ function SerieForm({ serie, n, onOpenRecords, onChange, onRpe, onValidate, stopL
 
       <div className={styles.spacer} />
 
-      <Button variant="accent" icon="check" fullWidth disabled={!canValidate(serie)} onClick={onValidate}>
+      <Button
+        variant="accent"
+        icon="check"
+        fullWidth
+        disabled={!canValidate(serie)}
+        onClick={() => {
+          onValidate();
+          // Série suivante : la saisie reprend directement sur les reps.
+          repsRef.current?.focus();
+        }}
+      >
         Valider la série
       </Button>
       {stopLabel && (

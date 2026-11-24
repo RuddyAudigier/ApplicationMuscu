@@ -15,17 +15,21 @@ const read = (key: string): unknown => {
   }
 };
 
-const write = (key: string, value: unknown): void => {
+/** `false` si le stockage est indisponible (navigation privée, quota) : l'appelant prévient. */
+const write = (key: string, value: unknown): boolean => {
   try {
     if (value === null) localStorage.removeItem(key);
     else localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // stockage indisponible (navigation privée) : la séance reste en mémoire.
+    return true;
+  } catch (e) {
+    console.error(`[workout] Écriture de ${key} impossible :`, e);
+    return false;
   }
 };
 
 export const loadActiveWorkout = (): WorkoutState | null => parseWorkoutState(read(ACTIVE_WORKOUT_KEY));
-export const saveActiveWorkout = (state: WorkoutState | null): void => { write(ACTIVE_WORKOUT_KEY, state); };
+/** `true` si la séance est bien écrite sur l'appareil. */
+export const saveActiveWorkout = (state: WorkoutState | null): boolean => write(ACTIVE_WORKOUT_KEY, state);
 
 const isReport = (v: unknown): v is Report =>
   typeof v === 'object' && v !== null && Array.isArray((v as { exercises?: unknown }).exercises);
@@ -34,4 +38,4 @@ export const loadLastReport = (): Report | null => {
   const v = read(LAST_REPORT_KEY);
   return isReport(v) ? v : null;
 };
-export const saveLastReport = (report: Report | null): void => { write(LAST_REPORT_KEY, report); };
+export const saveLastReport = (report: Report | null): boolean => write(LAST_REPORT_KEY, report);

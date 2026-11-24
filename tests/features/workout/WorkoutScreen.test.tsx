@@ -1,15 +1,33 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryRouter, RouterProvider } from 'react-router';
-import { describe, expect, it } from 'vitest';
-import { Providers } from '@/app/providers';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createMockBackend } from '@/data/mock';
 import { OFFLINE_QUEUE_KEY } from '@/data/offlineQueue';
 import { NetworkError, ValidationError, type DataBackend } from '@/data/ports';
+import { BackendProvider } from '@/data/queries';
+import type { Report } from '@/domain/report';
 import { startWorkout, type WorkoutState } from '@/domain/workout';
-import { WorkoutScreen, loadActiveWorkout, loadLastReport, saveActiveWorkout } from '@/features/workout';
+import {
+  WorkoutScreen,
+  loadActiveWorkout,
+  loadLastReport,
+  saveActiveWorkout,
+  saveLastReport,
+} from '@/features/workout';
+import { UiProvider } from '@/ui';
 
 const SESSION = 'Séance test (mock)';
+
+/** `Storage.prototype.setItem` d'origine, capturé avant l'espion. */
+function realSetItem(): (this: Storage, key: string, value: string) => void {
+  return Object.getOwnPropertyDescriptor(Storage.prototype, 'setItem')?.value as (
+    this: Storage,
+    key: string,
+    value: string,
+  ) => void;
+}
 
 function makeBackend(): DataBackend {
   let n = 0;
@@ -42,10 +60,16 @@ function renderWorkout(backend: DataBackend) {
     ],
     { initialEntries: ['/workout'] },
   );
+  // Pas de nouvelle tentative automatique : les erreurs de requête sont visibles tout de suite.
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
-    <Providers backend={backend}>
-      <RouterProvider router={router} />
-    </Providers>,
+    <QueryClientProvider client={client}>
+      <BackendProvider backend={backend}>
+        <UiProvider>
+          <RouterProvider router={router} />
+        </UiProvider>
+      </BackendProvider>
+    </QueryClientProvider>,
   );
   return router;
 }
@@ -67,6 +91,10 @@ async function doSerie(user: ReturnType<typeof userEvent.setup>, reps: string, k
 }
 
 describe('WorkoutScreen', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('redirige vers l’accueil sans séance en cours', async () => {
     renderWorkout(makeBackend());
     expect(await screen.findByRole('heading', { name: 'Accueil' })).toBeInTheDocument();
@@ -277,6 +305,7 @@ describe('WorkoutScreen', () => {
   });
 
   it('Terminer en erreur : la séance est conservée et un toast d’erreur s’affiche', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const user = userEvent.setup();
     const backend = makeBackend();
     backend.performances.add = () => Promise.reject(new ValidationError('refusé'));
@@ -293,6 +322,7 @@ describe('WorkoutScreen', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Squat' })).toBeInTheDocument();
     expect(loadActiveWorkout()?.exercises[1]?.series[0]?.validated).toBe(true);
     expect(screen.getByRole('button', { name: 'Terminer' })).toBeEnabled();
+    expect(loadLastReport()).toBeNull();
   });
 
   it('Terminer sans série validée : quitter sans rien enregistrer', async () => {
@@ -324,5 +354,164 @@ describe('WorkoutScreen', () => {
     await user.click(screen.getByRole('button', { name: 'Ajouter un exercice' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: /Squat/ }));
     expect(screen.getByRole('heading', { level: 1, name: 'Squat' })).toBeInTheDocument();
+  });
+
+  it('« Mes records » : une pastille change la variante de la série et efface la cible', async () => {
+    const user = userEvent.setup();
+    const backend = makeBackend();
+    await seedWorkout(backend);
+    renderWorkout(backend);
+    await ready();
+    await user.click(screen.getByRole('button', { name: 'Mes records' }));
+    await user.click(screen.getByRole('button', { name: /^6 reps : 92,5 kg/ }));
+    expect(screen.getByText('Cible : battre 6 × 92,5 kg')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Mes records' }));
+    const dialog = screen.getByRole('dialog', { name: 'Mes records' });
+    await user.click(within(dialog).getByRole('radio', { name: 'Pause' }));
+    expect(within(dialog).getByRole('radio', { name: 'Pause' })).toHaveAttribute('aria-checked', 'true');
+    expect(within(dialog).getByRole('button', { name: /^6 reps : vide/ })).toHaveAttribute('aria-pressed', 'false');
+    await user.click(within(dialog).getByRole('button', { name: 'Fermer' }));
+    const variants = screen.getByRole('radiogroup', { name: 'Variante' });
+    expect(within(variants).getByRole('radio', { name: 'Pause' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByText('Pas encore de cible · ouvre « Mes records »')).toBeInTheDocument();
+    const serie = loadActiveWorkout()?.exercises[0]?.series[0];
+    expect(serie?.variantKey).toBe('variant-4');
+    expect(serie?.target).toBeNull();
+  });
+
+  it('données non chargées : Terminer bloqué, message et Réessayer', async () => {
+    const user = userEvent.setup();
+    const backend = makeBackend();
+    const list = backend.performances.list.bind(backend.performances);
+    let fail = true;
+    backend.performances.list = () => (fail ? Promise.reject(new NetworkError('offline')) : list());
+    await seedWorkout(backend);
+    renderWorkout(backend);
+    const alert = await screen.findByText(/Impossible de charger tes exercices ou ton historique/);
+    expect(screen.getByRole('button', { name: 'Terminer' })).toBeDisabled();
+    // La saisie reste possible.
+    await doSerie(user, '7', '92,5');
+    expect(screen.getByRole('heading', { name: 'Série 2' })).toBeInTheDocument();
+    fail = false;
+    await user.click(screen.getByRole('button', { name: 'Réessayer' }));
+    await ready();
+    expect(alert).not.toBeInTheDocument();
+    expect(within(screen.getByRole('list', { name: 'Séries faites' })).getByText('PR')).toBeInTheDocument();
+  });
+
+  it('badge PR en direct = compte rendu (ordre réel de validation)', async () => {
+    const user = userEvent.setup();
+    const backend = makeBackend();
+    const state = await seedWorkout(backend);
+    const now = Date.now();
+    const at = (minAgo: number): string => new Date(now - minAgo * 60_000).toISOString();
+    const bench = state.exercises[0];
+    if (!bench) throw new Error('seed');
+    const [s0, s1, s2] = bench.series;
+    if (!s0 || !s1 || !s2) throw new Error('seed');
+    // Historique : 5×90, 6×90, 6×92,5. S1 = 6×100 validée en second, S2 = 8×100 validée en premier :
+    // 8×100 domine 6×100, donc seule S2 est un PR (en direct comme dans le compte rendu).
+    saveActiveWorkout({
+      ...state,
+      startedAt: at(10),
+      exercises: [
+        {
+          ...bench,
+          series: [
+            { ...s0, reps: '6', kg: '100', validated: true, validatedAt: at(2) },
+            { ...s1, reps: '8', kg: '100', validated: true, validatedAt: at(5) },
+            s2,
+          ],
+        },
+        ...state.exercises.slice(1),
+      ],
+    });
+    renderWorkout(backend);
+    await ready();
+    const rows = within(screen.getByRole('list', { name: 'Séries faites' })).getAllByRole('listitem');
+    expect(rows[0]).not.toHaveTextContent('PR');
+    expect(rows[1]).toHaveTextContent('PR');
+    await user.click(screen.getByRole('button', { name: 'Terminer' }));
+    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Terminer' }));
+    await screen.findByRole('heading', { name: 'Compte rendu' });
+    const series = loadLastReport()?.exercises[0]?.series;
+    expect(series?.map((x) => [x.n, x.isPr])).toEqual([
+      [1, false],
+      [2, true],
+    ]);
+  });
+
+  it('sauvegarde de la séance impossible : un seul toast d’erreur', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const user = userEvent.setup();
+    const backend = makeBackend();
+    await seedWorkout(backend);
+    const setItem = realSetItem();
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key: string, value: string) {
+      if (key === 'workout_state_v2') throw new Error('QuotaExceededError');
+      setItem.call(this, key, value);
+    });
+    renderWorkout(backend);
+    await ready();
+    expect(await screen.findByText(/Impossible de sauvegarder la séance sur cet appareil…/)).toBeInTheDocument();
+    await doSerie(user, '7', '92,5');
+    expect(screen.getAllByText(/Impossible de sauvegarder la séance/)).toHaveLength(1);
+  });
+
+  it('écriture de la file hors-ligne impossible : séance gardée, ancien compte rendu restauré', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const user = userEvent.setup();
+    const backend = makeBackend();
+    backend.performances.add = () => Promise.reject(new NetworkError('offline'));
+    await seedWorkout(backend);
+    const previous = { title: 'Ancienne', exercises: [] } as unknown as Report;
+    saveLastReport(previous);
+    const setItem = realSetItem();
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key: string, value: string) {
+      if (key.startsWith(OFFLINE_QUEUE_KEY)) throw new Error('QuotaExceededError');
+      setItem.call(this, key, value);
+    });
+    renderWorkout(backend);
+    await ready();
+    await doSerie(user, '5', '80');
+    await user.click(screen.getByRole('button', { name: 'Fatigué ? Arrêter à 1 série' }));
+    await doSerie(user, '5', '100');
+    await user.click(screen.getByRole('button', { name: 'Fatigué ? Arrêter à 1 série' }));
+    await user.click(screen.getByRole('button', { name: 'Terminer' }));
+    expect(await screen.findByText(/Enregistrement impossible/)).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Compte rendu' })).toBeNull();
+    expect(loadActiveWorkout()?.exercises[1]?.series[0]?.validated).toBe(true);
+    expect(loadLastReport()).toEqual(previous);
+    expect(localStorage.getItem(OFFLINE_QUEUE_KEY)).toBeNull();
+  });
+
+  it('après « Valider la série », le focus revient sur les reps', async () => {
+    const user = userEvent.setup();
+    const backend = makeBackend();
+    await seedWorkout(backend);
+    renderWorkout(backend);
+    await ready();
+    await doSerie(user, '5', '80');
+    expect(screen.getByLabelText('Reps')).toHaveFocus();
+  });
+
+  it('« Fatigué » avec une série saisie non validée : confirmation', async () => {
+    const user = userEvent.setup();
+    const backend = makeBackend();
+    await seedWorkout(backend);
+    renderWorkout(backend);
+    await ready();
+    await doSerie(user, '5', '80');
+    await user.type(screen.getByLabelText('Reps'), '4');
+    await user.click(screen.getByRole('button', { name: 'Fatigué ? Arrêter à 1 série' }));
+    const dialog = await screen.findByRole('alertdialog', { name: 'Arrêter l’exercice ?' });
+    expect(dialog).toHaveTextContent('La série 2 est saisie mais pas validée');
+    await user.click(within(dialog).getByRole('button', { name: 'Annuler' }));
+    expect(screen.getByRole('heading', { name: 'Série 2' })).toBeInTheDocument();
+    expect(loadActiveWorkout()?.exercises[0]?.stoppedEarly).toBe(false);
+    await user.click(screen.getByRole('button', { name: 'Fatigué ? Arrêter à 1 série' }));
+    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Arrêter' }));
+    expect(screen.getByRole('heading', { level: 1, name: 'Squat' })).toBeInTheDocument();
+    expect(loadActiveWorkout()?.exercises[0]?.series).toHaveLength(1);
   });
 });
