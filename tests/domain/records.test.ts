@@ -99,8 +99,9 @@ describe('findPreviousBest — steps', () => {
     const dom = perf({ reps: 6, weight: 100, performanceDate: '2026-03-02' });
     const cur = perf({ reps: 5, weight: 99, performanceDate: '2026-03-03' });
     const ref = findPreviousBest(buildHistoryIndex([old, dom, cur]), 'bench', cur);
-    // 5x100 est obsolète (6x100) → pas de même reps, pas de rep inférieure → référence dominante.
-    expect(ref).toMatchObject({ reps: 6, weight: 100, comparisonType: 'higher-reps' });
+    // Série dominée : la référence à mêmes reps plus lourde reste la comparaison (« en dessous »).
+    expect(ref).toMatchObject({ reps: 5, weight: 100, comparisonType: 'same-reps' });
+    expect(classify({ reps: 5, weight: 99 }, ref).improvementStatus).toBe('below');
   });
 
   it('step 2: epsilon in obsolescence (weight − 0.01 still dominates)', () => {
@@ -119,11 +120,13 @@ describe('findPreviousBest — steps', () => {
     expect(ref).toMatchObject({ weight: 100, date: '2026-03-03', comparisonType: 'same-reps' });
   });
 
-  it('step 3: strictly heavier wins even within epsilon (legacy reduce order)', () => {
+  it('step 3: within epsilon of the max, the most recent wins whatever the input order', () => {
+    // Écart assumé au legacy : son `reduce` dépendait de l'ordre d'entrée dans ce cas.
     const a = perf({ reps: 5, weight: 100, performanceDate: '2026-03-02' });
     const b = perf({ reps: 5, weight: 100.005, performanceDate: '2026-03-01' });
     const cur = perf({ reps: 5, weight: 90, performanceDate: '2026-03-04' });
-    expect(findPreviousBest(buildHistoryIndex([a, b, cur]), 'bench', cur)).toMatchObject({ weight: 100.005 });
+    expect(findPreviousBest(buildHistoryIndex([a, b, cur]), 'bench', cur)).toMatchObject({ weight: 100 });
+    expect(findPreviousBest(buildHistoryIndex([b, a, cur]), 'bench', cur)).toMatchObject({ weight: 100 });
   });
 
   it('step 4: nearest lower reps, heaviest there', () => {
@@ -148,6 +151,55 @@ describe('findPreviousBest — steps', () => {
     const a = perf({ reps: 8, weight: 80, performanceDate: '2026-03-01' });
     const cur = perf({ reps: 6, weight: 95, performanceDate: '2026-03-04' });
     expect(findPreviousBest(buildHistoryIndex([a, cur]), 'bench', cur)).toBeNull();
+  });
+});
+
+describe('findPreviousBest — règle PR utilisateur (prime sur la parité legacy)', () => {
+  const statusOf = (history: Performance[], cur: Performance) =>
+    classify({ reps: cur.reps, weight: cur.weight ?? 0 }, findPreviousBest(buildHistoryIndex([...history, cur]), 'bench', cur));
+
+  it('plus de reps à charge égale : 3x100 puis 4x100 → PR reps', () => {
+    const a = perf({ reps: 3, weight: 100, performanceDate: '2026-03-01' });
+    const cur = perf({ reps: 4, weight: 100, performanceDate: '2026-03-04' });
+    expect(statusOf([a], cur)).toMatchObject({ improvementStatus: 'improved', isRepsPr: true });
+  });
+
+  it('C4 : la référence à mêmes reps n’est pas écartée par la frontière (12x100 + 10x100, 10x105)', () => {
+    const a = perf({ reps: 12, weight: 100, performanceDate: '2026-03-01' });
+    const b = perf({ reps: 10, weight: 100, performanceDate: '2026-03-02' });
+    const cur = perf({ reps: 10, weight: 105, performanceDate: '2026-03-04' });
+    const ref = findPreviousBest(buildHistoryIndex([a, b, cur]), 'bench', cur);
+    expect(ref).toMatchObject({ reps: 10, weight: 100, comparisonType: 'same-reps' });
+    expect(statusOf([a, b], cur)).toMatchObject({ improvementStatus: 'improved', improvementDelta: 5 });
+  });
+
+  it('Q2 : une série antérieure qui domine → « en dessous » (10x100 + 5x110, 8x100)', () => {
+    const a = perf({ reps: 10, weight: 100, performanceDate: '2026-03-01' });
+    const b = perf({ reps: 5, weight: 110, performanceDate: '2026-03-02' });
+    const cur = perf({ reps: 8, weight: 100, performanceDate: '2026-03-04' });
+    const ref = findPreviousBest(buildHistoryIndex([a, b, cur]), 'bench', cur);
+    expect(ref).toMatchObject({ reps: 10, weight: 100, comparisonType: 'higher-reps' });
+    expect(statusOf([a, b], cur).improvementStatus).toBe('below');
+  });
+
+  it('Q2 : dominée même avec une référence à mêmes reps plus légère', () => {
+    const a = perf({ reps: 10, weight: 90, performanceDate: '2026-03-01' });
+    const b = perf({ reps: 12, weight: 100, performanceDate: '2026-03-02' });
+    const cur = perf({ reps: 10, weight: 95, performanceDate: '2026-03-04' });
+    expect(statusOf([a, b], cur).improvementStatus).toBe('below');
+  });
+
+  it('égalité à ε près : pas dominée, « égalé »', () => {
+    const a = perf({ reps: 5, weight: 100, performanceDate: '2026-03-01' });
+    const cur = perf({ reps: 5, weight: 99.995, performanceDate: '2026-03-04' });
+    expect(statusOf([a], cur).improvementStatus).toBe('equaled');
+  });
+
+  it('variantes séparées : une autre variante ne domine pas', () => {
+    const a = perf({ reps: 10, weight: 120, variantName: 'Pause', performanceDate: '2026-03-01' });
+    const b = perf({ reps: 3, weight: 100, performanceDate: '2026-03-02' });
+    const cur = perf({ reps: 4, weight: 100, performanceDate: '2026-03-04' });
+    expect(statusOf([a, b], cur)).toMatchObject({ improvementStatus: 'improved', isRepsPr: true });
   });
 });
 

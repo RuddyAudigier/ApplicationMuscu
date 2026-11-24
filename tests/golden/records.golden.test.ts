@@ -8,11 +8,22 @@
  * - horodatage : le legacy compare `createdAt.slice(0, 10)` (jour UTC), la réécriture le jour
  *   LOCAL (D3). `createdAt` est généré à une heure locale de journée (10h–13h) ; si son jour UTC
  *   diffère de son jour local (fuseau extrême du process), il est remplacé par `null`.
+ *
+ * Écarts VOLONTAIRES (règle PR de l'utilisateur, prioritaire sur la parité legacy) :
+ * - Q2 : si une série antérieure domine la série (reps ≥, charge ≥, un axe strictement > à ε près),
+ *   le résultat est « en dessous » quel que soit l'ordre des étapes. Le legacy pouvait renvoyer une
+ *   référence à reps inférieures (→ « prise de données »), ex. 10x100 + 5x110 puis 8x100.
+ * - C4 : la référence à mêmes reps est cherchée dans tout l'historique, pas seulement sur la frontière
+ *   de Pareto. Le legacy l'écartait si elle était dominée (ex. 12x100 + 10x100, puis 10x105 : le
+ *   legacy ne trouvait aucune référence, la réécriture compare à 10x100 → PR charge).
+ * - Départage à ε près indépendant de l'ordre d'entrée (le `reduce` legacy en dépendait) : non
+ *   exercé ici (charges multiples de 2,5).
+ * Dans ces cas, le test vérifie la règle (statut attendu) au lieu de l'égalité avec le legacy.
  */
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import type { Performance } from '@/domain/model';
-import { buildHistoryIndex, findPreviousBest } from '@/domain/records';
+import { buildHistoryIndex, classify, findPreviousBest, PR_EPSILON } from '@/domain/records';
 import * as legacy from './legacyRecords';
 
 const EXERCISES: { id: string | null; name: string }[] = [
@@ -76,6 +87,10 @@ function toPerformance(g: Gen, i: number): Performance {
   };
 }
 
+interface Point { reps: number; weight: number }
+const dominates = (o: Point, c: Point): boolean =>
+  o.reps >= c.reps && o.weight >= c.weight - PR_EPSILON && (o.reps > c.reps || o.weight > c.weight + PR_EPSILON);
+
 const view = (r: { reps: number; weight: number; date: string; comparisonType: string } | null) =>
   r === null ? null : { reps: r.reps, weight: r.weight, date: r.date, comparisonType: r.comparisonType };
 
@@ -83,17 +98,38 @@ describe('findPreviousBest golden vs legacy', () => {
   it('matches legacy on 300 random histories', () => {
     let compared = 0;
     let nonNull = 0;
+    const divergences = { q2: 0, c4: 0 };
     fc.assert(
       fc.property(fc.array(perfArb, { minLength: 1, maxLength: 30 }), (gens) => {
         const history = gens.map(toPerformance);
         const index = buildHistoryIndex(history);
         const legacyIndex = legacy.buildHistoryIndex(history);
         for (const p of history) {
-          const actual = view(findPreviousBest(index, p.exerciseId, p));
+          const ref = findPreviousBest(index, p.exerciseId, p);
+          const actual = view(ref);
           const expected = view(legacy.findPreviousBest(legacyIndex, p.exerciseId, p));
-          expect(actual).toEqual(expected);
           compared += 1;
           if (expected !== null) nonNull += 1;
+          const now = legacy.getPerformanceTimestamp(p);
+          if (p.weight === null || now === null) {
+            expect(actual).toEqual(expected);
+            continue;
+          }
+          const cur = { reps: p.reps, weight: p.weight };
+          const previous = legacy.findAllCandidates(legacyIndex, p.exerciseId, p).filter((c) => c.timestamp < now);
+          const frontier = previous.filter((c) => !legacy.isObsoleteReference(c, previous));
+          if (previous.some((c) => dominates(c, cur))) {
+            // Q2 : dominée → « en dessous ».
+            expect(classify(cur, ref).improvementStatus).toBe('below');
+            if (actual?.comparisonType !== expected?.comparisonType || actual?.reps !== expected?.reps) divergences.q2 += 1;
+          } else if (previous.some((c) => c.reps === p.reps) && !frontier.some((c) => c.reps === p.reps)) {
+            // C4 : référence à mêmes reps hors frontière : la plus lourde de tout l'historique.
+            const heaviest = Math.max(...previous.filter((c) => c.reps === p.reps).map((c) => c.weight));
+            expect(actual).toMatchObject({ reps: p.reps, weight: heaviest, comparisonType: 'same-reps' });
+            divergences.c4 += 1;
+          } else {
+            expect(actual).toEqual(expected);
+          }
         }
       }),
       { numRuns: 300, seed: 20261123 },
@@ -101,5 +137,9 @@ describe('findPreviousBest golden vs legacy', () => {
     // Garde-fou : le générateur produit bien des références non triviales.
     expect(compared).toBeGreaterThan(1000);
     expect(nonNull).toBeGreaterThan(compared / 4);
+    // Les deux écarts sont bien exercés et restent minoritaires.
+    expect(divergences.q2).toBeGreaterThan(0);
+    expect(divergences.c4).toBeGreaterThan(0);
+    expect(divergences.q2 + divergences.c4).toBeLessThan(compared / 4);
   });
 });

@@ -331,9 +331,9 @@ describe('mock backend specifics', () => {
 });
 
 describe('mock reset and the offline queue', () => {
-  it('clears the offline queue and its archives', async () => {
+  it('clears the mock offline queue and its archives', async () => {
     const storage = new MemoryStorage();
-    const keys = ['pending_performances_queue_v1', 'pending_performances_queue_v1_failed', 'pending_performances_queue_v1_corrupt'];
+    const keys = ['mock:pending_performances_queue_v1', 'mock:pending_performances_queue_v1_failed', 'mock:pending_performances_queue_v1_corrupt'];
     for (const key of keys) storage.setItem(key, '[]');
     storage.setItem('other_key', 'kept');
     await createMockBackend(storage).reset?.();

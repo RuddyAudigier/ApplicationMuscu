@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BackendProvider } from '@/data/queries';
 import { UiProvider } from '@/ui';
 import { createMockBackend } from '@/data/mock';
-import { OFFLINE_QUEUE_CORRUPT_KEY, OFFLINE_QUEUE_FAILED_KEY, OFFLINE_QUEUE_KEY } from '@/data/offlineQueue';
+import { MOCK_QUEUE_KEYS } from '@/data/offlineQueue';
 import { NetworkError, type DataBackend } from '@/data/ports';
 import { todayIso } from '@/domain/dates';
 import { applyPreferences, DISPLAY_PREFS_KEY, SettingsScreen } from '@/features/settings';
@@ -131,7 +131,7 @@ describe('SettingsScreen', () => {
   });
 
   it('hors-ligne : synchronise les lots en attente', async () => {
-    localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify([batch]));
+    localStorage.setItem(MOCK_QUEUE_KEYS.queue, JSON.stringify([batch]));
     const { backend, user } = setup();
     expect(screen.getByText('1 lot en attente d’envoi.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Synchroniser' }));
@@ -141,26 +141,26 @@ describe('SettingsScreen', () => {
   });
 
   it('hors-ligne : toujours sans réseau, les lots restent en attente', async () => {
-    localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify([batch, batch]));
+    localStorage.setItem(MOCK_QUEUE_KEYS.queue, JSON.stringify([batch, batch]));
     const backend = createMockBackend(localStorage);
     vi.spyOn(backend.performances, 'add').mockRejectedValue(new NetworkError('offline'));
     const { user } = setup(backend);
     expect(screen.getByText('2 lots en attente d’envoi.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Synchroniser' }));
     expect(await screen.findByText(/Rien n’a pu être envoyé/)).toBeInTheDocument();
-    expect(localStorage.getItem(OFFLINE_QUEUE_KEY)).not.toBeNull();
+    expect(localStorage.getItem(MOCK_QUEUE_KEYS.queue)).not.toBeNull();
   });
 
   it('hors-ligne : lot refusé archivé pendant la synchro', async () => {
-    localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify([{ ...batch, payload: [{ bad: true }] }]));
+    localStorage.setItem(MOCK_QUEUE_KEYS.queue, JSON.stringify([{ ...batch, payload: [{ bad: true }] }]));
     const { user } = setup();
     await user.click(screen.getByRole('button', { name: 'Synchroniser' }));
     expect(await screen.findByText(/1 lot refusé/)).toBeInTheDocument();
-    expect(screen.getByText(/1 élément archivé à vérifier \(refusés, incertains ou bloqués\)/)).toBeInTheDocument();
+    expect(screen.getByText(/1 élément archivé à vérifier \(refusés ou incertains\)/)).toBeInTheDocument();
   });
 
   it('hors-ligne : synchro interrompue (stockage) sans prétendre que tout est conservé', async () => {
-    localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify([batch]));
+    localStorage.setItem(MOCK_QUEUE_KEYS.queue, JSON.stringify([batch]));
     const { user } = setup();
     const spy = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => { throw new Error('quota'); });
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -171,16 +171,32 @@ describe('SettingsScreen', () => {
   });
 
   it('hors-ligne : explique honnêtement les archives et la file illisible, sans rien supprimer', () => {
-    localStorage.setItem(OFFLINE_QUEUE_KEY, '{illisible');
-    localStorage.setItem(OFFLINE_QUEUE_FAILED_KEY, JSON.stringify([{ ...batch, reason: 'rejected' }, { ...batch, reason: 'stuck' }]));
-    localStorage.setItem(OFFLINE_QUEUE_CORRUPT_KEY, JSON.stringify(['{old']));
+    localStorage.setItem(MOCK_QUEUE_KEYS.queue, '{illisible');
+    localStorage.setItem(MOCK_QUEUE_KEYS.failed, JSON.stringify([{ ...batch, reason: 'rejected' }, { ...batch, reason: 'uncertain' }]));
+    localStorage.setItem(MOCK_QUEUE_KEYS.corrupt, JSON.stringify(['{old']));
     setup();
-    expect(screen.getByText(/2 éléments archivés à vérifier \(refusés, incertains ou bloqués\)/)).toBeInTheDocument();
+    expect(screen.getByText(/2 éléments archivés à vérifier \(refusés ou incertains\)/)).toBeInTheDocument();
     expect(screen.getByText(/1 sauvegarde illisible/)).toBeInTheDocument();
     expect(screen.getByText(/La file d’attente est illisible/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Supprimer|Vider/ })).toBeNull();
-    expect(localStorage.getItem(OFFLINE_QUEUE_FAILED_KEY)).not.toBeNull();
-    expect(localStorage.getItem(OFFLINE_QUEUE_CORRUPT_KEY)).not.toBeNull();
+    expect(localStorage.getItem(MOCK_QUEUE_KEYS.failed)).not.toBeNull();
+    expect(localStorage.getItem(MOCK_QUEUE_KEYS.corrupt)).not.toBeNull();
+  });
+
+  it('hors-ligne : file bloquée par une erreur transitoire, affichée avec son message', () => {
+    localStorage.setItem(MOCK_QUEUE_KEYS.queue, JSON.stringify([{ ...batch, attempts: 3, lastError: 'JWT expired' }]));
+    setup();
+    expect(screen.getByText(/Envoi bloqué : le serveur refuse pour l’instant \(JWT expired\)/)).toBeInTheDocument();
+  });
+
+  it('hors-ligne : renvoie les éléments archivés en fin de file', async () => {
+    localStorage.setItem(MOCK_QUEUE_KEYS.failed, JSON.stringify([{ ...batch, reason: 'rejected', error: 'x' }]));
+    const { user } = setup();
+    await user.click(screen.getByRole('button', { name: 'Renvoyer les éléments archivés' }));
+    expect(await screen.findByText('1 lot remis en file d’envoi.')).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem(MOCK_QUEUE_KEYS.queue) ?? '[]')).toEqual([batch]);
+    expect(localStorage.getItem(MOCK_QUEUE_KEYS.failed)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Renvoyer les éléments archivés' })).toBeNull();
   });
 
   it('affichage : réduit les animations et change la taille du texte (persisté)', async () => {
@@ -198,8 +214,8 @@ describe('SettingsScreen', () => {
   });
 
   it('données (mock) : réinitialise après confirmation, file hors-ligne comprise', async () => {
-    localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify([batch]));
-    localStorage.setItem(OFFLINE_QUEUE_FAILED_KEY, JSON.stringify([{ ...batch, reason: 'rejected' }]));
+    localStorage.setItem(MOCK_QUEUE_KEYS.queue, JSON.stringify([batch]));
+    localStorage.setItem(MOCK_QUEUE_KEYS.failed, JSON.stringify([{ ...batch, reason: 'rejected' }]));
     const backend = createMockBackend(localStorage);
     const reset = vi.spyOn(backend, 'reset');
     const { user } = setup(backend);

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient, type UseMutationResult, type Use
 import type { GeneralAdvice } from '../../domain/model';
 import { useBackend } from '../context';
 import { queryKeys } from './keys';
+import { onlineOnly, requireOnline } from './online';
 
 export function useAdvice(): UseQueryResult<GeneralAdvice | null> {
   const { advice } = useBackend();
@@ -12,7 +13,8 @@ export function useSaveAdvice(): UseMutationResult<void, Error, GeneralAdvice> {
   const { advice } = useBackend();
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (a: GeneralAdvice) => advice.save(a),
+    ...onlineOnly,
+    mutationFn: requireOnline((a: GeneralAdvice) => advice.save(a)),
     onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.advice }),
   });
 }

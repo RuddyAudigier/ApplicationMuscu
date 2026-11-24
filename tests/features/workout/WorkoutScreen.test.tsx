@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createMockBackend } from '@/data/mock';
-import { OFFLINE_QUEUE_KEY } from '@/data/offlineQueue';
+import { MOCK_QUEUE_KEYS } from '@/data/offlineQueue';
 import { NetworkError, ValidationError, type DataBackend } from '@/data/ports';
 import { BackendProvider } from '@/data/queries';
 import { todayIso } from '@/domain/dates';
@@ -319,7 +319,7 @@ describe('WorkoutScreen', { timeout: 20_000 }, () => {
     expect(await screen.findByRole('heading', { name: 'Compte rendu' })).toBeInTheDocument();
     expect(await screen.findByText(/Connexion instable…/)).toBeInTheDocument();
     expect(loadActiveWorkout()).toBeNull();
-    expect(localStorage.getItem(OFFLINE_QUEUE_KEY)).toContain('Développé couché');
+    expect(localStorage.getItem(MOCK_QUEUE_KEYS.queue)).toContain('Développé couché');
   });
 
   it('Terminer en erreur : la séance est conservée et un toast d’erreur s’affiche', async () => {
@@ -486,7 +486,7 @@ describe('WorkoutScreen', { timeout: 20_000 }, () => {
     saveLastReport(previous);
     const setItem = realSetItem();
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key: string, value: string) {
-      if (key.startsWith(OFFLINE_QUEUE_KEY)) throw new Error('QuotaExceededError');
+      if (key.startsWith(MOCK_QUEUE_KEYS.queue)) throw new Error('QuotaExceededError');
       setItem.call(this, key, value);
     });
     renderWorkout(backend);
@@ -500,7 +500,7 @@ describe('WorkoutScreen', { timeout: 20_000 }, () => {
     expect(screen.queryByRole('heading', { name: 'Compte rendu' })).toBeNull();
     expect(loadActiveWorkout()?.exercises[1]?.series[0]?.validated).toBe(true);
     expect(loadLastReport()).toEqual(previous);
-    expect(localStorage.getItem(OFFLINE_QUEUE_KEY)).toBeNull();
+    expect(localStorage.getItem(MOCK_QUEUE_KEYS.queue)).toBeNull();
   });
 
   it('badges PR : buildReport n’est pas rappelé quand seule la saisie non validée change', async () => {

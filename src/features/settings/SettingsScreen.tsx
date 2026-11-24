@@ -4,9 +4,9 @@ import { useLocation, useNavigate } from 'react-router';
 import {
   archiveCount,
   flush,
-  OFFLINE_QUEUE_CORRUPT_KEY,
-  OFFLINE_QUEUE_FAILED_KEY,
   queryKeys,
+  queueKeysFor,
+  resendArchived,
   useBackend,
   useCycleState,
   useOfflineQueueStatus,
@@ -109,20 +109,21 @@ function CycleSection() {
 /* ---------- Hors-ligne ---------- */
 
 function OfflineSection() {
-  const { performances } = useBackend();
+  const { performances, kind } = useBackend();
+  const keys = queueKeysFor(kind);
   const client = useQueryClient();
   const toast = useToast();
   const status = useOfflineQueueStatus();
   const [syncing, setSyncing] = useState(false);
   // Détail des archives (le statut les additionne) ; relu à chaque rendu, donc à chaque changement de statut.
   const storage = safeStorage();
-  const archived = storage ? archiveCount(storage, OFFLINE_QUEUE_FAILED_KEY) : 0;
-  const corruptArchived = storage ? archiveCount(storage, OFFLINE_QUEUE_CORRUPT_KEY) : 0;
+  const archived = storage ? archiveCount(storage, keys.failed) : 0;
+  const corruptArchived = storage ? archiveCount(storage, keys.corrupt) : 0;
 
   const sync = async () => {
     setSyncing(true);
     try {
-      const { text, kind } = syncMessage(await flush(performances));
+      const { text, kind } = syncMessage(await flush(performances, undefined, keys));
       toast.show(text, kind);
     } catch (e) {
       console.error('[offline] Synchronisation manuelle impossible :', e);
@@ -135,6 +136,16 @@ function OfflineSection() {
       // Toujours recharger : même un flush interrompu peut avoir écrit côté serveur.
       void client.invalidateQueries({ queryKey: queryKeys.performances });
       setSyncing(false);
+    }
+  };
+
+  const resend = () => {
+    try {
+      const n = resendArchived(undefined, keys);
+      toast.show(n > 0 ? `${plural(n, 'lot remis', 'lots remis')} en file d’envoi.` : 'Aucun lot à renvoyer.', n > 0 ? 'success' : 'info');
+    } catch (e) {
+      console.error('[offline] Remise en file impossible :', e);
+      toast.show('Les éléments archivés n’ont pas pu être remis en file (stockage de l’appareil).', 'error');
     }
   };
 
@@ -157,9 +168,15 @@ function OfflineSection() {
             contient ne peuvent pas être récupérées automatiquement.
           </p>
         )}
+        {status.blocked && (
+          <p className={styles.warning}>
+            Envoi bloqué : le serveur refuse pour l’instant ({status.lastError}). Rien n’est perdu, les données restent en
+            attente sur cet appareil ; réessaie plus tard.
+          </p>
+        )}
         {archived > 0 && (
           <p className={styles.warning}>
-            {plural(archived, 'élément archivé', 'éléments archivés')} à vérifier (refusés, incertains ou bloqués). Ils
+            {plural(archived, 'élément archivé', 'éléments archivés')} à vérifier (refusés ou incertains). Ils
             sont conservés sur cet appareil et ne sont pas renvoyés automatiquement : un envoi incertain a pu être
             enregistré malgré tout. Vérifie tes records et ressaisis ce qui manque.
           </p>
@@ -169,6 +186,11 @@ function OfflineSection() {
             {plural(corruptArchived, 'sauvegarde illisible', 'sauvegardes illisibles')} de l’ancienne file, conservée
             telle quelle : son contenu ne peut pas être relu automatiquement.
           </p>
+        )}
+        {archived > 0 && (
+          <Button variant="secondary" fullWidth onClick={resend}>
+            Renvoyer les éléments archivés
+          </Button>
         )}
         <Button
           variant="secondary"

@@ -3,12 +3,14 @@ import { useNavigate, useSearchParams } from 'react-router';
 import { performanceTimestamp, todayIso } from '@/domain/dates';
 import type { Exercise, IsoDate, PerformanceInput, Variant } from '@/domain/model';
 import { parseReps, parseRpe, parseWeight } from '@/domain/numbers';
+import { defaultCycleState } from '@/domain/cycles';
 import { classify, findPreviousBest } from '@/domain/records';
+import { MANUAL_SESSION, sessionNameForDay } from '@/domain/sessions';
 import { getDefaultVariant, variantLabel, variantMatches } from '@/domain/variants';
-import { useAddPerformances, useExercises, useHistoryIndex, usePerformances } from '@/data/queries';
+import { useAddPerformances, useCycleState, useExercises, useHistoryIndex, usePerformances, useSessions } from '@/data/queries';
 import { Button, Icon, IconButton, Pill, Skeleton, useToast } from '@/ui';
 import { ExercisePicker } from './ExercisePicker';
-import { cx, longDateFr, MANUAL_SESSION, nextDayIso, prMessage, sessionOfDay, yesterdayIso } from './format';
+import { cx, longDateFr, nextDayIso, prMessage, yesterdayIso } from './format';
 import styles from './Records.module.css';
 
 type DateChoice = 'today' | 'yesterday' | 'other';
@@ -25,6 +27,8 @@ export function AddRecordScreen() {
   const toast = useToast();
   const exercisesQuery = useExercises();
   const perfsQuery = usePerformances();
+  const sessionsQuery = useSessions();
+  const cycleQuery = useCycleState();
   const history = useHistoryIndex();
   /** Sans historique chargé, aucune comparaison n'est fiable : pas d'encadré, pas d'enregistrement. */
   const historyReady = perfsQuery.isSuccess;
@@ -58,10 +62,14 @@ export function AddRecordScreen() {
   const dateError = dateValid ? null : 'Date invalide ou dans le futur.';
   const valid = !repsError && !weightError && !rpeError && !dateError && exercise !== null && variant !== null;
 
-  const session = useMemo(
-    () => (perfsQuery.data && dateValid ? sessionOfDay(perfsQuery.data, date) : null),
-    [perfsQuery.data, date, dateValid],
-  );
+  /** Séance de rattachement : séance prévue du cycle ce jour-là si faite, sinon la plus fréquente. */
+  const session = useMemo(() => {
+    if (!perfsQuery.data || !dateValid) return MANUAL_SESSION;
+    const plan = sessionsQuery.data
+      ? { sessions: sessionsQuery.data, cycleState: cycleQuery.data ?? defaultCycleState(today) }
+      : undefined;
+    return sessionNameForDay(perfsQuery.data, date, plan);
+  }, [perfsQuery.data, sessionsQuery.data, cycleQuery.data, date, dateValid, today]);
 
   const preview = useMemo(() => {
     if (!historyReady || !exercise || !variant || repsN === null || repsN < 1 || weightN === null || !dateValid) return null;
@@ -93,7 +101,7 @@ export function AddRecordScreen() {
     const input: PerformanceInput = {
       exerciseId: exercise.id,
       exerciseName: exercise.name,
-      sessionName: session ?? MANUAL_SESSION,
+      sessionName: session,
       reps: repsN,
       weight: weightN,
       rpe: rpeN,
@@ -221,7 +229,7 @@ export function AddRecordScreen() {
           )}
           <span className={styles.dateLine}>
             {dateValid ? longDateFr(date) : dateError}
-            {dateValid && session && (
+            {dateValid && session !== MANUAL_SESSION && (
               <>
                 {' · rattaché à '}
                 <strong className={styles.dateSession}>{session}</strong>

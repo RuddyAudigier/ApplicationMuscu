@@ -2,6 +2,7 @@ import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/r
 import type { Id } from '../../domain/model';
 import { useBackend } from '../context';
 import { queryKeys } from './keys';
+import { onlineOnly, requireOnline } from './online';
 
 export interface SaveCoachNotesVars { exerciseId: Id; notes: string }
 
@@ -10,7 +11,8 @@ export function useSaveCoachNotes(): UseMutationResult<void, Error, SaveCoachNot
   const { coachNotes } = useBackend();
   const client = useQueryClient();
   return useMutation({
-    mutationFn: ({ exerciseId, notes }: SaveCoachNotesVars) => coachNotes.save(exerciseId, notes),
+    ...onlineOnly,
+    mutationFn: requireOnline(({ exerciseId, notes }: SaveCoachNotesVars) => coachNotes.save(exerciseId, notes)),
     onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.exercises }),
   });
 }

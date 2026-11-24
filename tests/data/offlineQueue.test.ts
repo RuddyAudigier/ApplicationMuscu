@@ -1,7 +1,9 @@
 import type { Mock } from 'vitest';
 import {
-  enqueue, failedCount, flush, OFFLINE_QUEUE_CORRUPT_KEY, OFFLINE_QUEUE_FAILED_KEY, OFFLINE_QUEUE_KEY, pendingCount,
+  enqueue, failedCount, flush, MOCK_QUEUE_KEYS, OFFLINE_QUEUE_CORRUPT_KEY, OFFLINE_QUEUE_FAILED_KEY, OFFLINE_QUEUE_KEY, pendingCount,
+  queueKeysFor, queueStatus, resendArchived,
 } from '../../src/data/offlineQueue';
+import { createMockBackend } from '../../src/data/mock';
 import { BackendError, NetworkError, ValidationError, type PerformancesRepo } from '../../src/data/ports';
 import type { PerformanceInput } from '../../src/domain/model';
 import { MemoryStorage } from './helpers';
@@ -125,27 +127,91 @@ describe('offline queue', () => {
     ]);
   });
 
-  it('poison pill: a batch failing transiently 5 times is archived as stuck; later batches unblock in order', async () => {
+  it('transient failures are never archived: the batch stays first, the queue is blocked with the last error', async () => {
     const storage = new MemoryStorage();
     enqueue([perf(1)], storage);
     enqueue([perf(2)], storage);
-    enqueue([perf(3)], storage);
     const r = repo((inputs) => (inputs[0]?.serieNumber === 1
       ? Promise.reject(new BackendError('boom', { status: 500 }))
       : Promise.resolve({ written: 1 })));
-    for (let i = 1; i <= 4; i += 1) {
-      expect(await flush(r, storage)).toEqual({ sent: 0, remaining: 3, failed: 0, corrupt: false });
-      expect(JSON.parse(storage.getItem(OFFLINE_QUEUE_KEY) ?? '[]')).toEqual([
-        expect.objectContaining({ payload: [perf(1)], attempts: i }),
-        expect.objectContaining({ payload: [perf(2)] }),
-        expect.objectContaining({ payload: [perf(3)] }),
-      ]);
+    for (let i = 1; i <= 8; i += 1) {
+      expect(await flush(r, storage)).toEqual({ sent: 0, remaining: 2, failed: 0, corrupt: false });
     }
-    expect(await flush(r, storage)).toEqual({ sent: 2, remaining: 0, failed: 1, corrupt: false });
-    expect(r.add.mock.calls.slice(-3).map((c) => c[0][0]?.serieNumber)).toEqual([1, 2, 3]);
+    expect(r.add).toHaveBeenCalledTimes(8);
+    expect(queued(storage).map((b) => b.payload[0]?.serieNumber)).toEqual([1, 2]);
+    expect(queued(storage)[0]).not.toHaveProperty('inFlight');
+    expect(failedCount(storage)).toBe(0);
+    expect(queueStatus(storage)).toEqual({ pending: 2, failed: 0, corrupt: false, blocked: true, lastError: 'boom' });
+  });
+
+  it('a batch left in flight (interrupted send) is archived as uncertain and never resent', async () => {
+    const storage = new MemoryStorage();
+    enqueue([perf(1)], storage);
+    enqueue([perf(2)], storage);
+    const marks: unknown[] = [];
+    const r = repo(() => {
+      marks.push((queued(storage)[0] as { inFlight?: boolean }).inFlight);
+      return Promise.resolve({ written: 1 });
+    });
+    await flush(r, storage);
+    expect(marks).toEqual([true, true]);
+
+    // Envoi interrompu (onglet fermé pendant repo.add) : le lot reste marqué.
+    storage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify([
+      { createdAt: 'x', payload: [perf(3)], inFlight: true },
+      { createdAt: 'y', payload: [perf(4)] },
+    ]));
+    r.add.mockClear();
+    expect(await flush(r, storage)).toEqual({ sent: 1, remaining: 0, failed: 1, corrupt: false });
+    expect(r.add.mock.calls.map((c) => c[0][0]?.serieNumber)).toEqual([4]);
     expect(JSON.parse(storage.getItem(OFFLINE_QUEUE_FAILED_KEY) ?? '[]')).toEqual([
-      expect.objectContaining({ payload: [perf(1)], reason: 'stuck', attempts: 5, error: 'boom' }),
+      expect.objectContaining({ payload: [perf(3)], reason: 'uncertain' }),
     ]);
+  });
+
+  it('resendArchived moves archived batches back to the queue tail', async () => {
+    const storage = new MemoryStorage();
+    enqueue([perf(1)], storage);
+    await flush(repo(() => Promise.reject(new ValidationError('bad'))), storage);
+    enqueue([perf(2)], storage);
+    storage.setItem(OFFLINE_QUEUE_FAILED_KEY, JSON.stringify([...queued(storage, OFFLINE_QUEUE_FAILED_KEY), 'garbage']));
+    expect(resendArchived(storage)).toBe(1);
+    expect(queued(storage)).toEqual([
+      expect.objectContaining({ payload: [perf(2)] }),
+      { createdAt: expect.any(String) as string, payload: [perf(1)] },
+    ]);
+    // Une entrée illisible reste archivée.
+    expect(JSON.parse(storage.getItem(OFFLINE_QUEUE_FAILED_KEY) ?? '[]')).toEqual(['garbage']);
+    expect(resendArchived(new MemoryStorage())).toBe(0);
+  });
+
+  it('namespaces the keys per backend; a mock reset keeps the real queue', async () => {
+    expect(queueKeysFor('supabase')).toEqual({
+      queue: OFFLINE_QUEUE_KEY, failed: OFFLINE_QUEUE_FAILED_KEY, corrupt: OFFLINE_QUEUE_CORRUPT_KEY,
+    });
+    expect(queueKeysFor('mock')).toEqual({
+      queue: 'mock:pending_performances_queue_v1',
+      failed: 'mock:pending_performances_queue_v1_failed',
+      corrupt: 'mock:pending_performances_queue_v1_corrupt',
+    });
+    const storage = new MemoryStorage();
+    enqueue([perf(1)], storage);
+    storage.setItem(OFFLINE_QUEUE_FAILED_KEY, '[]');
+    enqueue([perf(2)], storage, new Date(), MOCK_QUEUE_KEYS);
+    storage.setItem(MOCK_QUEUE_KEYS.failed, '[]');
+    storage.setItem('other', 'keep');
+    expect(pendingCount(storage, MOCK_QUEUE_KEYS)).toBe(1);
+    await createMockBackend(storage).reset?.();
+    expect(queued(storage).map((b) => b.payload[0]?.serieNumber)).toEqual([1]);
+    expect(storage.getItem(OFFLINE_QUEUE_FAILED_KEY)).toBe('[]');
+    expect(storage.getItem('other')).toBe('keep');
+    expect(storage.getItem(MOCK_QUEUE_KEYS.queue)).toBeNull();
+    expect(storage.getItem(MOCK_QUEUE_KEYS.failed)).toBeNull();
+  });
+
+  it('reads an empty status when localStorage itself is blocked', () => {
+    vi.spyOn(window, 'localStorage', 'get').mockImplementation(() => { throw new Error('SecurityError'); });
+    expect(queueStatus()).toEqual({ pending: 0, failed: 0, corrupt: false, blocked: false, lastError: null });
   });
 
   it('network errors do not count as attempts (offline for a long time is not a poison pill)', async () => {
