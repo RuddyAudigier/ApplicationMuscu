@@ -13,4 +13,5 @@ export { useAddPerformances, useHistoryIndex, usePerformances, type AddPerforman
 export { useSaveCoachNotes, type SaveCoachNotesVars } from './coachNotes';
 export { useAdvice, useSaveAdvice } from './advice';
 export { useCycleState, useSaveCycleState } from './cycles';
+export { useSaveWeekPlan, useWeekPlan } from './weekPlan';
 export { useResetBackend } from './reset';

@@ -21,6 +21,7 @@ import {
 } from './programModel';
 import styles from './ProgramScreen.module.css';
 import { SessionBuilder } from './SessionBuilder';
+import { WeekPlanSection } from './WeekPlanSection';
 
 const CYCLES: CycleId[] = ['A', 'B'];
 const VISIBLE_EXERCISES = 3;
@@ -290,6 +291,8 @@ export function ProgramScreen() {
           </section>
         )}
       </div>
+
+      {sessionsQuery.data && <WeekPlanSection sessions={sessionsQuery.data} />}
 
       {builder && (
         <SessionBuilder

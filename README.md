@@ -40,6 +40,12 @@ Le design est sombre, « noir & citron » : fond noir, accents jaune citron, typ
 - Cycle en cours (A ou B), semaine en cours et nombre de jours avant la bascule.
 - Frise des blocs passés, en cours et à venir.
 - « Séance du jour » avec son code (A1, A2, B1…) et le nombre de séries prévues, bouton **Démarrer**.
+- Avec une semaine réglée dans Programme :
+  - **séance manquée** (jour passé, séance non faite) : **La faire maintenant**, **Décaler…** (vers un jour d’ici dimanche) ou **Sauter cette semaine** (la séance reste au programme) ;
+  - **prochaine séance** : celle du jour, sinon la suivante de la semaine, qu’on peut démarrer **en avance** ;
+  - une séance compte comme faite dès qu’une série porte son nom cette semaine, même faite en avance ;
+  - un décalage ou un saut ne vaut que pour la semaine en cours, et peut être annulé.
+- Sans semaine réglée : la première séance du cycle pas encore faite depuis lundi.
 - « Derniers PR » : les records les plus récents, avec leur type (charge, reps, hybride).
 
 ### Programme
@@ -47,6 +53,7 @@ Le design est sombre, « noir & citron » : fond noir, accents jaune citron, typ
 - Onglets **A** / **B** : les séances de chaque cycle et leurs exercices.
 - Durée du cycle en cours : **2 semaines** ou **3 semaines** (après une semaine manquée).
 - Démarrage d’une séance depuis la liste.
+- **Ma semaine** : pour chaque jour (lundi → dimanche), repos ou « Séance N ». Un créneau vaut pour les deux cycles : Séance 1 = A1 en cycle A, B1 en cycle B. La bascule A/B est donc automatique.
 
 ### Séance en cours
 
@@ -239,6 +246,10 @@ Exécuter `scripts/sql/2026-11-23_cycles.sql` dans l’éditeur SQL de Supabase.
 Tant que ce script n’est pas joué, l’application enregistre le cycle **dans le stockage local de l’appareil** (clé `mymuscle_cycles_v1`) : rien n’est synchronisé entre appareils.
 
 Si la RLS est activée sur `cycle_state`, ajouter des politiques de lecture, d’insertion et de mise à jour, sinon l’application recevra une erreur `42501`.
+
+### Migration du planning
+
+Exécuter `scripts/sql/2026-11-24_week_plan.sql` (additif, idempotent) : table `week_plan` (semaine type et décalages). Sans elle, le planning est gardé sur l’appareil (clé `mymuscle_week_plan_v1`). Le script `reset_complet.sql` l’inclut déjà.
 
 ### Attention
 

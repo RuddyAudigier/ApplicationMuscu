@@ -5,4 +5,5 @@ export const queryKeys = {
   performances: ['performances'],
   advice: ['advice'],
   cycleState: ['cycleState'],
+  weekPlan: ['weekPlan'],
 } as const;

@@ -34,6 +34,7 @@ drop table if exists muscle_groups      cascade;
 drop table if exists exercises          cascade;
 drop table if exists general_advice     cascade;
 drop table if exists cycle_state        cascade;
+drop table if exists week_plan          cascade;
 drop table if exists shared_sessions    cascade;
 
 -- ---------------------------------------------------------------------
@@ -121,6 +122,15 @@ create table cycle_state (
   updated_at timestamptz default now()
 );
 
+create table week_plan (
+  id         int primary key default 1 check (id = 1),
+  -- 7 valeurs, lundi → dimanche : rang de séance dans le cycle (0 = A1/B1) ou null (repos).
+  days       jsonb not null default '[null,null,null,null,null,null,null]'::jsonb,
+  -- Exceptions ponctuelles : {week, day, kind: 'moved', date} ou {week, day, kind: 'skipped'}.
+  overrides  jsonb not null default '[]'::jsonb,
+  updated_at timestamptz default now()
+);
+
 create index idx_muscle_groups_exercise_id     on muscle_groups(exercise_id);
 create index idx_exercise_variants_exercise_id on exercise_variants(exercise_id);
 create index idx_session_exercises_session_id  on session_exercises(session_id);
@@ -149,7 +159,7 @@ declare t text;
 begin
   foreach t in array array['exercises','muscle_groups','exercise_variants','sessions',
                            'session_exercises','performances','coach_notes',
-                           'general_advice','cycle_state']
+                           'general_advice','cycle_state','week_plan']
   loop
     execute format('alter table %I enable row level security', t);
     execute format('create policy app_all on %I for all to anon, authenticated using (true) with check (true)', t);

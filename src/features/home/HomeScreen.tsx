@@ -2,17 +2,19 @@ import { useMemo, useState, type CSSProperties } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { cycleStatus, defaultCycleState } from '@/domain/cycles';
 import { todayIso } from '@/domain/dates';
-import type { CycleId, Exercise, Performance, Session } from '@/domain/model';
+import type { CycleId, CycleState, Exercise, Performance, Session, WeekPlan } from '@/domain/model';
 import { normalizeVariantName } from '@/domain/names';
 import { formatWeight } from '@/domain/numbers';
 import { latestPrs } from '@/domain/records';
 import { DEFAULT_VARIANT, variantLabel } from '@/domain/variants';
 import { startWorkout, type WorkoutState } from '@/domain/workout';
-import { useCycleState, useExercises, usePerformances, useSessions } from '@/data/queries';
+import { hasSchedule } from '@/domain/planning';
+import { useCycleState, useExercises, usePerformances, useSessions, useWeekPlan } from '@/data/queries';
 import { loadActiveWorkout, loadLastReport, saveActiveWorkout, saveLastReport } from '@/features/workout';
 import { Button, Icon, Skeleton } from '@/ui';
 import { nextPlannedSession, PR_LABEL, relativeDay, weekSegments, type WeekSegment } from './homeLogic';
 import styles from './HomeScreen.module.css';
+import { ScheduledSessions } from './ScheduledSessions';
 
 const plural = (n: number, one: string, many: string): string => `${String(n)} ${n > 1 ? many : one}`;
 
@@ -93,6 +95,8 @@ function ActiveCard({ active }: { active: WorkoutState }) {
 
 function SessionCard({
   cycle,
+  cycleState,
+  plan,
   sessionsQuery,
   perfsQuery,
   exercisesQuery,
@@ -100,6 +104,9 @@ function SessionCard({
   onStart,
 }: {
   cycle: Query<CycleId>;
+  cycleState: CycleState | null;
+  /** Semaine type : `undefined` tant qu'elle charge (ou en erreur → mode sans planning). */
+  plan: WeekPlan | null | undefined;
   sessionsQuery: Query<Session[]>;
   perfsQuery: Query<Performance[]>;
   exercisesQuery: Query<Exercise[]>;
@@ -128,12 +135,26 @@ function SessionCard({
       />
     );
   }
-  if (sessionsQuery.data === undefined || perfsQuery.data === undefined || cycle.data === undefined) {
+  if (sessionsQuery.data === undefined || perfsQuery.data === undefined || cycle.data === undefined || plan === undefined) {
     return (
       <div className={styles.skeletonCard} aria-busy="true">
         <span className="visually-hidden">Chargement de la séance du jour…</span>
         <Skeleton height={132} />
       </div>
+    );
+  }
+
+  if (hasSchedule(plan) && cycleState) {
+    return (
+      <ScheduledSessions
+        plan={plan}
+        sessions={sessionsQuery.data}
+        cycleState={cycleState}
+        perfs={perfsQuery.data}
+        exercises={exercisesQuery.isSuccess ? (exercisesQuery.data ?? null) : null}
+        today={today}
+        onStart={onStart}
+      />
     );
   }
 
@@ -203,6 +224,7 @@ export function HomeScreen() {
   const sessionsQuery = useSessions();
   const exercisesQuery = useExercises();
   const perfsQuery = usePerformances();
+  const planQuery = useWeekPlan();
   // Lus une seule fois par affichage de l'écran.
   const [active] = useState(loadActiveWorkout);
   const [lastReport] = useState(loadLastReport);
@@ -268,6 +290,8 @@ export function HomeScreen() {
       ) : (
         <SessionCard
           cycle={cycle}
+          cycleState={state}
+          plan={planQuery.isPending ? undefined : (planQuery.data ?? null)}
           sessionsQuery={sessionsQuery}
           perfsQuery={perfsQuery}
           exercisesQuery={exercisesQuery}

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { weekPlanSchema } from '../shared/weekPlan';
 import type { Id } from '../../domain/model';
 import { buildSeed } from './seed';
 
@@ -23,6 +24,8 @@ const mockDbSchema = z.object({
   generalAdvice: z.object({ training: z.string(), nutrition: z.string(), sleep: z.string(), updatedAt: z.string() }).nullable(),
   /** Absent des bases créées avant les cycles (Task 21) : lu comme `null`, sans réinitialiser. */
   cycleState: z.object({ current: z.enum(['A', 'B']), startedOn: z.string(), weeks: z.union([z.literal(2), z.literal(3)]) }).nullish(),
+  /** Absent des bases créées avant le planning : lu comme `null`, sans réinitialiser. */
+  weekPlan: weekPlanSchema.nullish(),
 });
 
 export type MockDb = z.infer<typeof mockDbSchema>;

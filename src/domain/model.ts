@@ -12,6 +12,16 @@ export interface ExerciseDraft { name: string; description: string; muscleGroups
 export type CycleId = 'A' | 'B';
 export interface CycleState { current: CycleId; startedOn: IsoDate; weeks: 2 | 3 }
 
+/**
+ * Semaine type : `days[0]` = lundi … `days[6]` = dimanche ; valeur = rang de séance (0 → A1/B1)
+ * dans le cycle actif ce jour-là, `null` = repos.
+ */
+export interface WeekPlan { days: (number | null)[]; overrides: PlanOverride[] }
+/** Exception ponctuelle d'une semaine : `week` = lundi, `day` = jour prévu (0 = lundi). */
+export type PlanOverride =
+  | { week: IsoDate; day: number; kind: 'moved'; date: IsoDate }
+  | { week: IsoDate; day: number; kind: 'skipped' };
+
 export interface SessionExercise { exerciseId: Id; name: string; series: number }
 export interface Session { id: Id; name: string; createdAt: IsoDateTime; cycle: CycleId | null; exercises: SessionExercise[] }
 export interface SessionDraft { name: string; cycle: CycleId | null; exercises: { exerciseId: Id; series: number }[] }
