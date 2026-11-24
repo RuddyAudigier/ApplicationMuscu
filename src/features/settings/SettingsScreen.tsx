@@ -72,7 +72,8 @@ function CycleForm({ initial }: { initial: CycleState }) {
       return;
     }
     setError(undefined);
-    save.mutate({ ...initial, current, startedOn }, {
+    const changed = current !== initial.current || startedOn !== initial.startedOn;
+    save.mutate({ ...initial, current, startedOn, extraDays: changed ? 0 : initial.extraDays }, {
       onSuccess: () => { toast.show('Cycle enregistré.', 'success'); },
       onError: () => { toast.show('Le cycle n’a pas pu être enregistré. Réessaie.', 'error'); },
     });

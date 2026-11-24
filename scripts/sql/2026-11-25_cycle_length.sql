@@ -17,4 +17,4 @@ alter table cycle_state add column if not exists extra_days int not null default
   check (extra_days >= 0);
 
 -- Anciennes lignes prolongées à 3 semaines : 7 jours de report.
-update cycle_state set extra_days = 7 where weeks = 3 and extra_days = 0;
+update cycle_state set extra_days = 7 where weeks = 3 and extra_days = 0 and length_days = 14;

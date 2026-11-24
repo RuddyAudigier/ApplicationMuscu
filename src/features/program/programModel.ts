@@ -56,7 +56,7 @@ export function tabCaption(state: CycleState, today: IsoDate, cycle: CycleId): s
 /** Durées proposées : 1 à 4 semaines par pas de 0,5 (en jours : 7, 11, 14, 18, 21, 25, 28). */
 export const LENGTH_OPTIONS = [1, 1.5, 2, 2.5, 3, 3.5, 4].map((w) => ({
   value: String(daysForWeeks(w)),
-  label: `${String(w).replace('.', ',')} semaine${w > 1 ? 's' : ''}`,
+  label: `${String(w).replace('.', ',')} semaine${w >= 2 ? 's' : ''}`,
 }));
 
 const plural = (n: number, word: string): string => `${String(n)} ${word}${n > 1 ? 's' : ''}`;
@@ -64,7 +64,7 @@ const plural = (n: number, word: string): string => `${String(n)} ${word}${n > 1
 /** « 2 semaines », « 1,5 semaine » : durée d'un bloc en jours, au demi-semaine près. */
 function lengthLabel(days: number): string {
   const w = Math.round(days / 3.5) / 2;
-  return `${String(w).replace('.', ',')} semaine${w > 1 ? 's' : ''}`;
+  return `${String(w).replace('.', ',')} semaine${w >= 2 ? 's' : ''}`;
 }
 
 /** « Prochain cycle B le jeudi 12 déc. » (+ « · reporté de N semaine(s) »). */

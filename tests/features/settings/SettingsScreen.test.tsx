@@ -74,7 +74,7 @@ describe('SettingsScreen', () => {
     expect(await screen.findByText('Cycle enregistré.')).toBeInTheDocument();
   });
 
-  it('conserve la durée prolongée et refuse une date vide ou future', async () => {
+  it('remet le report à zéro et refuse une date vide ou future', async () => {
     const backend = createMockBackend(localStorage);
     await backend.cycles.save({ current: 'A', startedOn: daysAgo(5), lengthDays: 14, extraDays: 7 });
     const { user } = setup(backend);
@@ -90,7 +90,7 @@ describe('SettingsScreen', () => {
     fireEvent.change(date, { target: { value: daysAgo(1) } });
     await submit();
     await waitFor(async () => {
-      expect(await backend.cycles.get()).toEqual({ current: 'A', startedOn: daysAgo(1), lengthDays: 14, extraDays: 7 });
+      expect(await backend.cycles.get()).toEqual({ current: 'A', startedOn: daysAgo(1), lengthDays: 14, extraDays: 0 });
     });
     expect(screen.queryByText('La date de début ne peut pas être dans le futur.')).toBeNull();
   });

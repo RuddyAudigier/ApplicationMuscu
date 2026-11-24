@@ -5,7 +5,6 @@ import type { PrKind } from '@/domain/records';
 import { sessionCode, sessionsOfCycle } from '@/domain/sessions';
 
 const DAY_MS = 86_400_000;
-/** Durée supposée des blocs passés / futurs (la prolongation ne concerne que le bloc en cours). */
 
 const localDate = (iso: IsoDate): Date => {
   const [y = 0, m = 1, d = 1] = iso.split('-').map(Number);
