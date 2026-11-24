@@ -79,9 +79,26 @@ function fireDate(date: string, time: string): Date {
   return new Date(y, m - 1, d, hh, mm);
 }
 
-/** Annule les notifications en attente de l'appli puis programme `reminders`. */
-export async function syncReminders(reminders: Reminder[], time: string): Promise<void> {
-  if (!isNative()) return;
+let syncChain: Promise<void> = Promise.resolve();
+let syncGeneration = 0;
+
+/**
+ * Annule les notifications en attente de l'appli puis programme `reminders`.
+ * Appels sérialisés dans l'ordre ; seul le dernier appel en file s'exécute (les périmés sont ignorés).
+ */
+export function syncReminders(reminders: Reminder[], time: string): Promise<void> {
+  if (!isNative()) return Promise.resolve();
+  const generation = ++syncGeneration;
+  const run = syncChain.then(() => {
+    if (generation !== syncGeneration) return;
+    return doSync(reminders, time);
+  });
+  // Une erreur ne casse pas la chaîne ; elle reste visible pour l'appelant via `run`.
+  syncChain = run.catch(() => undefined);
+  return run;
+}
+
+async function doSync(reminders: Reminder[], time: string): Promise<void> {
   const { notifications } = await LocalNotifications.getPending();
   if (notifications.length > 0) await LocalNotifications.cancel({ notifications });
 

@@ -28,6 +28,18 @@ export function useReminderSync(): void {
     return () => { window.removeEventListener(REMINDER_PREFS_EVENT, reload); };
   }, [available]);
 
+  // Incrémenté au retour au premier plan : recalcule (aujourd'hui et l'heure ont pu changer).
+  const [resumeTick, setResumeTick] = useState(0);
+
+  useEffect(() => {
+    if (!available) return;
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') setResumeTick((n) => n + 1);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { document.removeEventListener('visibilitychange', onVisible); };
+  }, [available]);
+
   const planData = plan.data;
   const sessionsData = sessions.data;
   const cycleData = cycle.data;
@@ -56,5 +68,5 @@ export function useReminderSync(): void {
       await syncReminders(reminders, prefs.time);
     };
     run().catch((e: unknown) => { console.warn('[rappels] Synchronisation impossible :', e); });
-  }, [available, ready, planData, sessionsData, cycleData, perfsData, prefs]);
+  }, [available, ready, planData, sessionsData, cycleData, perfsData, prefs, resumeTick]);
 }
