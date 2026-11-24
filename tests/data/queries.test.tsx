@@ -2,7 +2,7 @@ import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { createMockBackend } from '../../src/data/mock';
-import { enqueue, flush, OFFLINE_QUEUE_KEY } from '../../src/data/offlineQueue';
+import { enqueue, flush, MOCK_QUEUE_KEYS } from '../../src/data/offlineQueue';
 import { NetworkError, ValidationError, type DataBackend } from '../../src/data/ports';
 import {
   BackendProvider, queryKeys, useAddPerformances, useAdvice, useBackend, useCreateExercise, useCycleState,
@@ -165,7 +165,7 @@ describe('useAddPerformances (D7/D8)', () => {
     const res = await act(() => result.current.mutateAsync([perf(), perf({ serieNumber: 2, reps: 0, weight: null })]));
     expect(res).toEqual({ written: 1, queued: false });
     expect(invalidated()).toContain('performances');
-    expect(localStorage.getItem(OFFLINE_QUEUE_KEY)).toBeNull();
+    expect(localStorage.getItem(MOCK_QUEUE_KEYS.queue)).toBeNull();
   });
 
   it('queues on NetworkError and not on ValidationError', async () => {
@@ -175,20 +175,20 @@ describe('useAddPerformances (D7/D8)', () => {
     const { result } = renderHook(() => useAddPerformances(), { wrapper });
     const res = await act(() => result.current.mutateAsync([perf()]));
     expect(res).toEqual({ written: 0, queued: true });
-    expect(JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) ?? '[]')).toEqual([{ createdAt: expect.any(String) as string, payload: [perf()] }]);
+    expect(JSON.parse(localStorage.getItem(MOCK_QUEUE_KEYS.queue) ?? '[]')).toEqual([{ createdAt: expect.any(String) as string, payload: [perf()] }]);
 
     localStorage.clear();
     add.mockRejectedValueOnce(new ValidationError('Entrée performance invalide'));
     await act(async () => {
       await expect(result.current.mutateAsync([perf()])).rejects.toBeInstanceOf(ValidationError);
     });
-    expect(localStorage.getItem(OFFLINE_QUEUE_KEY)).toBeNull();
+    expect(localStorage.getItem(MOCK_QUEUE_KEYS.queue)).toBeNull();
 
     add.mockRejectedValueOnce(new Error('permission denied'));
     await act(async () => {
       await expect(result.current.mutateAsync([perf()])).rejects.toThrow('permission denied');
     });
-    expect(localStorage.getItem(OFFLINE_QUEUE_KEY)).toBeNull();
+    expect(localStorage.getItem(MOCK_QUEUE_KEYS.queue)).toBeNull();
   });
 });
 
@@ -205,9 +205,40 @@ describe('useAddPerformances while the browser is offline', () => {
     onlineManager.setOnline(false);
     const res = await act(() => result.current.mutateAsync([perf()]));
     expect(res).toEqual({ written: 0, queued: true });
-    expect(JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) ?? '[]')).toHaveLength(1);
+    expect(JSON.parse(localStorage.getItem(MOCK_QUEUE_KEYS.queue) ?? '[]')).toHaveLength(1);
   });
 });
+
+describe('non-performance mutations while the browser is offline (no silent pause)', () => {
+  it.each<[string, (h: ReturnType<typeof useAll>) => Promise<unknown>]>([
+    ['create exercise', (h) => h.createEx.mutateAsync({ name: 'X', description: '', muscleGroups: [], variants: [] })],
+    ['update exercise', (h) => h.updateEx.mutateAsync({ id: 'e1', draft: { name: 'X', description: '', muscleGroups: [], variants: [] } })],
+    ['delete exercise', (h) => h.deleteEx.mutateAsync('e1')],
+    ['save session', (h) => h.saveSession.mutateAsync({ draft: { name: 'S', cycle: null, exercises: [] } })],
+    ['delete session', (h) => h.deleteSession.mutateAsync('s1')],
+    ['save cycle', (h) => h.saveCycle.mutateAsync({ current: 'A', startedOn: '2026-11-01', weeks: 2 } as never)],
+    ['save advice', (h) => h.saveAdvice.mutateAsync({ training: '', nutrition: '', sleep: '' })],
+    ['save coach notes', (h) => h.saveNotes.mutateAsync({ exerciseId: 'e1', notes: 'n' })],
+  ])('%s rejects at once with a NetworkError', async (_label, run) => {
+    const backend = createMockBackend(new MemoryStorage());
+    const { wrapper } = setup(backend);
+    const { result } = renderHook(() => useAll(), { wrapper });
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    await act(async () => {
+      const p = run(result.current);
+      await expect(p).rejects.toBeInstanceOf(NetworkError);
+      await expect(p).rejects.toThrow('Hors ligne : enregistrement impossible, réessaie avec du réseau.');
+    });
+  });
+});
+
+function useAll() {
+  return {
+    createEx: useCreateExercise(), updateEx: useUpdateExercise(), deleteEx: useDeleteExercise(),
+    saveSession: useSaveSession(), deleteSession: useDeleteSession(), saveCycle: useSaveCycleState(),
+    saveAdvice: useSaveAdvice(), saveNotes: useSaveCoachNotes(),
+  };
+}
 
 describe('useAddPerformances storage failure', () => {
   it('rejects (no queued:true) when the offline queue cannot be written', async () => {
@@ -224,20 +255,21 @@ describe('useAddPerformances storage failure', () => {
 
 describe('useOfflineQueueStatus', () => {
   it('reports pending/failed/corrupt, refreshed after flush and on the storage event', async () => {
-    localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify([{ createdAt: 'x', payload: [perf({ exerciseId: 'q9' })] }]));
-    const { result } = renderHook(() => useOfflineQueueStatus());
-    expect(result.current).toEqual({ pending: 1, failed: 0, corrupt: false });
+    localStorage.setItem(MOCK_QUEUE_KEYS.queue, JSON.stringify([{ createdAt: 'x', payload: [perf({ exerciseId: 'q9' })] }]));
+    const { wrapper } = setup();
+    const { result } = renderHook(() => useOfflineQueueStatus(), { wrapper });
+    expect(result.current).toEqual({ pending: 1, failed: 0, corrupt: false, blocked: false, lastError: null });
 
-    await act(() => flush(createMockBackend(new MemoryStorage()).performances));
-    expect(result.current).toEqual({ pending: 0, failed: 0, corrupt: false });
+    await act(() => flush(createMockBackend(new MemoryStorage()).performances, localStorage, MOCK_QUEUE_KEYS));
+    expect(result.current).toEqual({ pending: 0, failed: 0, corrupt: false, blocked: false, lastError: null });
 
-    localStorage.setItem(OFFLINE_QUEUE_KEY, '{oops');
-    act(() => { window.dispatchEvent(new StorageEvent('storage', { key: OFFLINE_QUEUE_KEY })); });
-    expect(result.current).toEqual({ pending: 1, failed: 0, corrupt: true });
+    localStorage.setItem(MOCK_QUEUE_KEYS.queue, '{oops');
+    act(() => { window.dispatchEvent(new StorageEvent('storage', { key: MOCK_QUEUE_KEYS.queue })); });
+    expect(result.current).toEqual({ pending: 1, failed: 0, corrupt: true, blocked: false, lastError: null });
 
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    act(() => { enqueue([perf()]); });
-    expect(result.current).toEqual({ pending: 1, failed: 1, corrupt: false });
+    act(() => { enqueue([perf()], localStorage, new Date(), MOCK_QUEUE_KEYS); });
+    expect(result.current).toEqual({ pending: 1, failed: 1, corrupt: false, blocked: false, lastError: null });
   });
 });
 
@@ -265,10 +297,10 @@ describe('useResetBackend', () => {
 
 describe('useOfflineQueueSync', () => {
   it('flushes on mount and invalidates performances', async () => {
-    localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify([{ createdAt: 'x', payload: [perf({ exerciseId: 'q1' })] }]));
+    localStorage.setItem(MOCK_QUEUE_KEYS.queue, JSON.stringify([{ createdAt: 'x', payload: [perf({ exerciseId: 'q1' })] }]));
     const { wrapper, invalidated, backend } = setup();
     renderHook(() => { useOfflineQueueSync(); }, { wrapper });
-    await waitFor(() => { expect(localStorage.getItem(OFFLINE_QUEUE_KEY)).toBeNull(); });
+    await waitFor(() => { expect(localStorage.getItem(MOCK_QUEUE_KEYS.queue)).toBeNull(); });
     expect((await backend.performances.list()).some((p) => p.exerciseId === 'q1')).toBe(true);
     await waitFor(() => { expect(invalidated()).toContain('performances'); });
   });
@@ -281,13 +313,13 @@ describe('useOfflineQueueSync', () => {
     await waitFor(() => { expect(add).not.toHaveBeenCalled(); });
     expect(invalidated()).not.toContain('performances');
 
-    localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify([{ createdAt: 'x', payload: [perf({ exerciseId: 'q2' })] }]));
+    localStorage.setItem(MOCK_QUEUE_KEYS.queue, JSON.stringify([{ createdAt: 'x', payload: [perf({ exerciseId: 'q2' })] }]));
     act(() => { window.dispatchEvent(new Event('online')); });
     await waitFor(() => { expect(add).toHaveBeenCalledTimes(1); });
-    await waitFor(() => { expect(localStorage.getItem(OFFLINE_QUEUE_KEY)).toBeNull(); });
+    await waitFor(() => { expect(localStorage.getItem(MOCK_QUEUE_KEYS.queue)).toBeNull(); });
 
     unmount();
-    localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify([{ createdAt: 'y', payload: [perf({ exerciseId: 'q3' })] }]));
+    localStorage.setItem(MOCK_QUEUE_KEYS.queue, JSON.stringify([{ createdAt: 'y', payload: [perf({ exerciseId: 'q3' })] }]));
     window.dispatchEvent(new Event('online'));
     await new Promise((r) => setTimeout(r, 20));
     expect(add).toHaveBeenCalledTimes(1);

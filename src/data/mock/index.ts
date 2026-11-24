@@ -1,4 +1,4 @@
-import { OFFLINE_QUEUE_CORRUPT_KEY, OFFLINE_QUEUE_FAILED_KEY, OFFLINE_QUEUE_KEY } from '../offlineQueue';
+import { MOCK_QUEUE_KEYS } from '../offlineQueue';
 import type { DataBackend } from '../ports';
 import { createMockAdviceRepo } from './advice.repo';
 import { createMockCoachNotesRepo } from './coachNotes.repo';
@@ -22,10 +22,10 @@ export function createMockBackend(storage: Storage = localStorage, opts: MockOpt
     coachNotes: createMockCoachNotesRepo(ctx),
     advice: createMockAdviceRepo(ctx),
     cycles: createMockCyclesRepo(ctx),
-    /** Remet le seed ET vide la file hors-ligne et ses archives : en démo, rien de réel n'y est perdu. */
+    /** Remet le seed ET vide la file hors-ligne de démo (clés `mock:`) ; la vraie file n'est jamais touchée. */
     reset: () => task(() => {
       ctx.reset();
-      for (const key of [OFFLINE_QUEUE_KEY, OFFLINE_QUEUE_FAILED_KEY, OFFLINE_QUEUE_CORRUPT_KEY]) storage.removeItem(key);
+      for (const key of [MOCK_QUEUE_KEYS.queue, MOCK_QUEUE_KEYS.failed, MOCK_QUEUE_KEYS.corrupt]) storage.removeItem(key);
     }),
   };
 }

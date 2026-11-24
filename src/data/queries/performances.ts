@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import type { Performance, PerformanceInput } from '../../domain/model';
 import { buildHistoryIndex, type HistoryIndex } from '../../domain/records';
 import { useBackend } from '../context';
-import { enqueue } from '../offlineQueue';
+import { enqueue, queueKeysFor } from '../offlineQueue';
 import { NetworkError } from '../ports';
 import { queryKeys } from './keys';
 
@@ -21,7 +21,7 @@ export interface AddPerformancesResult {
 
 /** Seule une `NetworkError` met en file ; toute autre erreur est rejetée telle quelle. */
 export function useAddPerformances(): UseMutationResult<AddPerformancesResult, Error, PerformanceInput[]> {
-  const { performances } = useBackend();
+  const { performances, kind } = useBackend();
   const client = useQueryClient();
   return useMutation({
     // Jamais mise en pause hors ligne par TanStack : l'envoi doit échouer en `NetworkError`
@@ -33,7 +33,7 @@ export function useAddPerformances(): UseMutationResult<AddPerformancesResult, E
         return { written, queued: false };
       } catch (e) {
         if (!(e instanceof NetworkError)) throw e;
-        enqueue(inputs);
+        enqueue(inputs, undefined, new Date(), queueKeysFor(kind));
         return { written: 0, queued: true };
       }
     },

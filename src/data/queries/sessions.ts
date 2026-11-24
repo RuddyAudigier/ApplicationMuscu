@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient, type UseMutationResult, type Use
 import type { Id, Session, SessionDraft } from '../../domain/model';
 import { useBackend } from '../context';
 import { queryKeys } from './keys';
+import { onlineOnly, requireOnline } from './online';
 
 export function useSessions(): UseQueryResult<Session[]> {
   const { sessions } = useBackend();
@@ -15,7 +16,8 @@ export function useSaveSession(): UseMutationResult<Session, Error, SaveSessionV
   const { sessions } = useBackend();
   const client = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, draft }: SaveSessionVars) => (id ? sessions.update(id, draft) : sessions.create(draft)),
+    ...onlineOnly,
+    mutationFn: requireOnline(({ id, draft }: SaveSessionVars) => (id ? sessions.update(id, draft) : sessions.create(draft))),
     onSuccess: async (_session, { id }) => {
       await client.invalidateQueries({ queryKey: queryKeys.sessions });
       if (id) await client.invalidateQueries({ queryKey: queryKeys.performances });
@@ -27,7 +29,8 @@ export function useDeleteSession(): UseMutationResult<void, Error, Id> {
   const { sessions } = useBackend();
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (id: Id) => sessions.remove(id),
+    ...onlineOnly,
+    mutationFn: requireOnline((id: Id) => sessions.remove(id)),
     onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.sessions }),
   });
 }

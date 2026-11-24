@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Layout } from '../../src/app/Layout';
 import { Providers } from '../../src/app/providers';
 import { createMockBackend } from '../../src/data/mock';
-import { OFFLINE_QUEUE_KEY } from '../../src/data/offlineQueue';
+import { MOCK_QUEUE_KEYS } from '../../src/data/offlineQueue';
 import { useAndroidBackButton } from '../../src/platform/backButton';
 
 vi.mock('../../src/platform/backButton', () => ({ useAndroidBackButton: vi.fn() }));
@@ -48,10 +48,10 @@ describe('Layout', () => {
   });
 
   it('rejoue la file hors-ligne au montage', async () => {
-    localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify([batch]));
+    localStorage.setItem(MOCK_QUEUE_KEYS.queue, JSON.stringify([batch]));
     const { backend } = renderLayout();
     expect(screen.getByRole('heading', { name: 'Réglages' })).toBeInTheDocument();
-    await waitFor(() => { expect(localStorage.getItem(OFFLINE_QUEUE_KEY)).toBeNull(); });
+    await waitFor(() => { expect(localStorage.getItem(MOCK_QUEUE_KEYS.queue)).toBeNull(); });
     expect((await backend.performances.list()).some((p) => p.exerciseName === 'Squat')).toBe(true);
   });
 

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient, type UseMutationResult, type Use
 import type { Exercise, ExerciseDraft, Id } from '../../domain/model';
 import { useBackend } from '../context';
 import { queryKeys } from './keys';
+import { onlineOnly, requireOnline } from './online';
 
 export function useExercises(): UseQueryResult<Exercise[]> {
   const { exercises } = useBackend();
@@ -12,7 +13,8 @@ export function useCreateExercise(): UseMutationResult<Exercise, Error, Exercise
   const { exercises } = useBackend();
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (draft: ExerciseDraft) => exercises.create(draft),
+    ...onlineOnly,
+    mutationFn: requireOnline((draft: ExerciseDraft) => exercises.create(draft)),
     onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.exercises }),
   });
 }
@@ -28,7 +30,8 @@ export function useUpdateExercise(exerciseId?: Id): UseMutationResult<Exercise, 
   const client = useQueryClient();
   return useMutation({
     scope: exerciseId ? { id: `exercise:${exerciseId}` } : undefined,
-    mutationFn: ({ id, draft }: UpdateExerciseVars) => exercises.update(id, draft),
+    ...onlineOnly,
+    mutationFn: requireOnline(({ id, draft }: UpdateExerciseVars) => exercises.update(id, draft)),
     onSuccess: () => Promise.all([
       client.invalidateQueries({ queryKey: queryKeys.exercises }),
       client.invalidateQueries({ queryKey: queryKeys.sessions }),
@@ -41,7 +44,8 @@ export function useDeleteExercise(): UseMutationResult<void, Error, Id> {
   const { exercises } = useBackend();
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (id: Id) => exercises.remove(id),
+    ...onlineOnly,
+    mutationFn: requireOnline((id: Id) => exercises.remove(id)),
     onSuccess: () => Promise.all([
       client.invalidateQueries({ queryKey: queryKeys.exercises }),
       client.invalidateQueries({ queryKey: queryKeys.sessions }),
