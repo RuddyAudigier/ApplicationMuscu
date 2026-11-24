@@ -1,21 +1,43 @@
-import { useMemo, type CSSProperties } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { cycleStatus, defaultCycleState } from '@/domain/cycles';
 import { todayIso } from '@/domain/dates';
-import type { Performance, Session } from '@/domain/model';
+import type { CycleId, Exercise, Performance, Session } from '@/domain/model';
+import { normalizeVariantName } from '@/domain/names';
 import { formatWeight } from '@/domain/numbers';
 import { DEFAULT_VARIANT, variantLabel } from '@/domain/variants';
-import { startWorkout } from '@/domain/workout';
-import { normalizeVariantName } from '@/domain/names';
-import { useCycleState, useExercises, useHistoryIndex, usePerformances, useSessions } from '@/data/queries';
+import { startWorkout, type WorkoutState } from '@/domain/workout';
+import { useCycleState, useExercises, usePerformances, useSessions } from '@/data/queries';
 import { loadActiveWorkout, loadLastReport, saveActiveWorkout, saveLastReport } from '@/features/workout';
-import { Icon, Skeleton } from '@/ui';
+import { Button, Icon, Skeleton } from '@/ui';
 import { latestPrs, PR_LABEL, relativeDay, sessionOfDay, weekSegments, type WeekSegment } from './homeLogic';
 import styles from './HomeScreen.module.css';
 
-const EMPTY_PERFS: Performance[] = [];
-
 const plural = (n: number, one: string, many: string): string => `${String(n)} ${n > 1 ? many : one}`;
+
+/** Vue minimale d'une requête (données dérivées possibles, ex. cycle courant). */
+interface Query<T> {
+  data: T | undefined;
+  isPending: boolean;
+  isError: boolean;
+  isSuccess: boolean;
+  refetch: () => Promise<unknown>;
+}
+
+/** Relance seulement les requêtes en erreur. */
+const retry = (...queries: Query<unknown>[]) => (): void => {
+  for (const q of queries) if (q.isError) void q.refetch();
+};
+
+/** Erreur de chargement honnête (D8) avec relance. */
+function LoadError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className={styles.notice} role="alert">
+      <p className={styles.noticeText}>{message}</p>
+      <Button variant="secondary" onClick={onRetry}>Réessayer</Button>
+    </div>
+  );
+}
 
 function Timeline({ segments }: { segments: WeekSegment[] }) {
   const current = segments.find((s) => s.status === 'current');
@@ -43,61 +65,50 @@ function Timeline({ segments }: { segments: WeekSegment[] }) {
   );
 }
 
+function ActiveCard({ active }: { active: WorkoutState }) {
+  const done = active.exercises.reduce((n, e) => n + e.series.filter((s) => s.validated).length, 0);
+  return (
+    <Link to="/workout" className={styles.dayCard} aria-label={`Reprendre ${active.sessionName}`}>
+      <div className={styles.dayHead}>
+        <div className={styles.dayTitles}>
+          <span className={styles.dayKicker}>Séance en cours{active.cycle ? ` · Cycle ${active.cycle}` : ''}</span>
+          <span className={styles.dayName}>{active.sessionName}</span>
+        </div>
+        <span className={styles.play}><Icon name="play" size={20} /></span>
+      </div>
+      <div className={styles.dayStats}>
+        <span className={styles.dayNumber}>{done}</span>
+        <span className={styles.dayText}>
+          {done > 1 ? 'séries validées' : 'série validée'}
+          <br />
+          Reprendre
+        </span>
+      </div>
+    </Link>
+  );
+}
+
 function SessionCard({
-  sessions,
-  loading,
-  failed,
   cycle,
-  perfs,
+  sessionsQuery,
+  perfsQuery,
+  exercisesQuery,
   today,
   onStart,
-  starting,
 }: {
-  sessions: Session[] | undefined;
-  loading: boolean;
-  failed: boolean;
-  cycle: 'A' | 'B';
-  perfs: Performance[];
+  cycle: Query<CycleId>;
+  sessionsQuery: Query<Session[]>;
+  perfsQuery: Query<Performance[]>;
+  exercisesQuery: Query<Exercise[]>;
   today: string;
-  onStart: (s: Session) => void;
-  starting: boolean;
+  onStart: (s: Session, exercises: Exercise[]) => void;
 }) {
-  const active = loadActiveWorkout();
-  if (active) {
-    const done = active.exercises.reduce((n, e) => n + e.series.filter((s) => s.validated).length, 0);
+  if (sessionsQuery.isError) {
     return (
-      <Link to="/workout" className={styles.dayCard} aria-label={`Reprendre ${active.sessionName}`}>
-        <div className={styles.dayHead}>
-          <div className={styles.dayTitles}>
-            <span className={styles.dayKicker}>Séance en cours{active.cycle ? ` · Cycle ${active.cycle}` : ''}</span>
-            <span className={styles.dayName}>{active.sessionName}</span>
-          </div>
-          <span className={styles.play}><Icon name="play" size={20} /></span>
-        </div>
-        <div className={styles.dayStats}>
-          <span className={styles.dayNumber}>{done}</span>
-          <span className={styles.dayText}>
-            {done > 1 ? 'séries validées' : 'série validée'}
-            <br />
-            Reprendre
-          </span>
-        </div>
-      </Link>
+      <LoadError message="Impossible de charger les séances. Vérifie ta connexion puis réessaie." onRetry={retry(sessionsQuery)} />
     );
   }
-
-  if (loading) {
-    return (
-      <div className={styles.skeletonCard} aria-busy="true">
-        <span className="visually-hidden">Chargement des séances…</span>
-        <Skeleton height={132} />
-      </div>
-    );
-  }
-  if (failed || sessions === undefined) {
-    return <p className={styles.notice} role="alert">Impossible de charger les séances. Vérifie ta connexion puis réessaie.</p>;
-  }
-  if (sessions.length === 0) {
+  if (sessionsQuery.data?.length === 0) {
     return (
       <div className={styles.empty}>
         <h2 className={styles.emptyTitle}>Aucune séance</h2>
@@ -106,8 +117,24 @@ function SessionCard({
       </div>
     );
   }
+  if (perfsQuery.isError || cycle.isError) {
+    return (
+      <LoadError
+        message="Impossible de déterminer la séance du jour : historique ou cycle indisponible."
+        onRetry={retry(perfsQuery, cycle)}
+      />
+    );
+  }
+  if (sessionsQuery.data === undefined || perfsQuery.data === undefined || cycle.data === undefined) {
+    return (
+      <div className={styles.skeletonCard} aria-busy="true">
+        <span className="visually-hidden">Chargement de la séance du jour…</span>
+        <Skeleton height={132} />
+      </div>
+    );
+  }
 
-  const day = sessionOfDay(sessions, cycle, perfs, today);
+  const day = sessionOfDay(sessionsQuery.data, cycle.data, perfsQuery.data, today);
   if (day.kind !== 'next') {
     return (
       <div className={styles.empty}>
@@ -124,32 +151,44 @@ function SessionCard({
     );
   }
 
-  const { session } = day;
+  const { session, code } = day;
   const series = session.exercises.reduce((n, e) => n + e.series, 0);
+  // Jamais de démarrage sur une liste d'exercices de repli : il faut les vraies variantes.
+  const exercises = exercisesQuery.isSuccess ? (exercisesQuery.data ?? null) : null;
   return (
-    <button
-      type="button"
-      className={styles.dayCard}
-      onClick={() => { onStart(session); }}
-      disabled={starting}
-      aria-label={`Démarrer ${session.name}`}
-    >
-      <div className={styles.dayHead}>
-        <div className={styles.dayTitles}>
-          <span className={styles.dayKicker}>Séance du jour · Cycle {cycle}</span>
-          <span className={styles.dayName}>{session.name}</span>
+    <>
+      <button
+        type="button"
+        className={styles.dayCard}
+        onClick={() => {
+          if (exercises) onStart(session, exercises);
+        }}
+        disabled={exercises === null}
+        aria-label={`Démarrer ${session.name}`}
+      >
+        <div className={styles.dayHead}>
+          <div className={styles.dayTitles}>
+            <span className={styles.dayKicker}>Séance du jour · {code}</span>
+            <span className={styles.dayName}>{session.name}</span>
+          </div>
+          <span className={styles.play}><Icon name="play" size={20} /></span>
         </div>
-        <span className={styles.play}><Icon name="play" size={20} /></span>
-      </div>
-      <div className={styles.dayStats}>
-        <span className={styles.dayNumber}>{series}</span>
-        <span className={styles.dayText}>
-          {series > 1 ? 'séries prévues' : 'série prévue'}
-          <br />
-          sur {plural(session.exercises.length, 'exercice', 'exercices')}
-        </span>
-      </div>
-    </button>
+        <div className={styles.dayStats}>
+          <span className={styles.dayNumber}>{series}</span>
+          <span className={styles.dayText}>
+            {series > 1 ? 'séries prévues' : 'série prévue'}
+            <br />
+            sur {plural(session.exercises.length, 'exercice', 'exercices')}
+          </span>
+        </div>
+      </button>
+      {exercisesQuery.isError && (
+        <LoadError
+          message="Impossible de charger les exercices : la séance ne peut pas démarrer."
+          onRetry={retry(exercisesQuery)}
+        />
+      )}
+    </>
   );
 }
 
@@ -160,17 +199,19 @@ export function HomeScreen() {
   const sessionsQuery = useSessions();
   const exercisesQuery = useExercises();
   const perfsQuery = usePerformances();
-  const index = useHistoryIndex();
-  const perfs = perfsQuery.data ?? EMPTY_PERFS;
+  // Lus une seule fois par affichage de l'écran.
+  const [active] = useState(loadActiveWorkout);
+  const [lastReport] = useState(loadLastReport);
 
-  const state = cycleQuery.data ?? defaultCycleState(today);
-  const status = cycleStatus(state, today);
-  const segments = weekSegments(state, today, status.weeks);
-  const prs = useMemo(() => latestPrs(perfs, index), [perfs, index]);
-  const lastReport = loadLastReport();
+  // Défaut seulement si la requête a réussi sans état enregistré ; jamais en cas d'erreur (D8).
+  const state = cycleQuery.isSuccess ? (cycleQuery.data ?? defaultCycleState(today)) : null;
+  const status = state ? cycleStatus(state, today) : null;
+  const segments = state && status ? weekSegments(state, today, status.weeks) : [];
+  const cycle: Query<CycleId> = { ...cycleQuery, data: status?.current };
+  const prs = useMemo(() => (perfsQuery.data ? latestPrs(perfsQuery.data) : []), [perfsQuery.data]);
 
-  const start = (session: Session): void => {
-    saveActiveWorkout(startWorkout(session, exercisesQuery.data ?? [], new Date()));
+  const start = (session: Session, exercises: Exercise[]): void => {
+    saveActiveWorkout(startWorkout(session, exercises, new Date()));
     // Le dernier compte rendu reste visible jusqu'à la séance suivante.
     saveLastReport(null);
     void navigate('/workout');
@@ -187,13 +228,17 @@ export function HomeScreen() {
       </header>
 
       <section className={styles.cycle} aria-label="Cycle en cours" aria-busy={cycleQuery.isPending || undefined}>
-        {cycleQuery.isPending ? (
+        {cycleQuery.isError && (
+          <LoadError message="Impossible de charger ton cycle A/B. Vérifie ta connexion puis réessaie." onRetry={retry(cycleQuery)} />
+        )}
+        {cycleQuery.isPending && (
           <>
             <span className="visually-hidden">Chargement du cycle…</span>
             <Skeleton height={65} />
             <Skeleton height={23} />
           </>
-        ) : (
+        )}
+        {status && (
           <>
             <div className={styles.cycleRow}>
               <div className={styles.cycleMain}>
@@ -214,16 +259,18 @@ export function HomeScreen() {
         )}
       </section>
 
-      <SessionCard
-        sessions={sessionsQuery.data}
-        loading={sessionsQuery.isPending}
-        failed={sessionsQuery.isError}
-        cycle={status.current}
-        perfs={perfs}
-        today={today}
-        onStart={start}
-        starting={exercisesQuery.isPending}
-      />
+      {active ? (
+        <ActiveCard active={active} />
+      ) : (
+        <SessionCard
+          cycle={cycle}
+          sessionsQuery={sessionsQuery}
+          perfsQuery={perfsQuery}
+          exercisesQuery={exercisesQuery}
+          today={today}
+          onStart={start}
+        />
+      )}
 
       {lastReport && (
         <Link to="/report" className={styles.report}>
@@ -243,7 +290,9 @@ export function HomeScreen() {
           <h2 id="home-prs" className={styles.prsTitle}>Derniers PR</h2>
           <Link to="/records" className={styles.seeAll}>Tout voir</Link>
         </div>
-        {prs.length === 0 ? (
+        {perfsQuery.isError ? (
+          <LoadError message="Impossible de charger tes performances : PR indisponibles." onRetry={retry(perfsQuery)} />
+        ) : prs.length === 0 ? (
           <p className={styles.prsEmpty}>
             {perfsQuery.isPending ? 'Chargement…' : 'Aucun PR pour l’instant. Ta prochaine séance en fera tomber.'}
           </p>

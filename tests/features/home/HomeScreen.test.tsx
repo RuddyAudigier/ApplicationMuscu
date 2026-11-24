@@ -16,19 +16,33 @@ const A1: Session = {
   exercises: [{ exerciseId: 'e1', name: 'Développé couché', series: 3 }, { exerciseId: 'e2', name: 'Squat', series: 2 }],
 };
 
-function backendWith(over: { sessions?: Session[]; cycle?: CycleState | null; sessionsError?: boolean } = {}): DataBackend {
+interface Over {
+  sessions?: Session[]; cycle?: CycleState | null;
+  sessionsError?: boolean; cycleError?: boolean; perfsError?: boolean; exercisesError?: boolean; exercisesPending?: boolean;
+}
+
+const fail = () => Promise.reject(new Error('réseau'));
+
+function backendWith(over: Over = {}): DataBackend {
   const base = createMockBackend(localStorage);
   return {
     ...base,
     sessions: {
       ...base.sessions,
       list: over.sessionsError
-        ? () => Promise.reject(new Error('réseau'))
+        ? fail
         : over.sessions ? () => Promise.resolve(over.sessions ?? []) : () => base.sessions.list(),
     },
     cycles: {
       ...base.cycles,
-      get: () => Promise.resolve(over.cycle === undefined ? null : over.cycle),
+      get: over.cycleError ? fail : () => Promise.resolve(over.cycle === undefined ? null : over.cycle),
+    },
+    performances: { ...base.performances, list: over.perfsError ? fail : () => base.performances.list() },
+    exercises: {
+      ...base.exercises,
+      list: over.exercisesError
+        ? fail
+        : over.exercisesPending ? () => new Promise<never>(() => undefined) : () => base.exercises.list(),
     },
   };
 }
@@ -84,7 +98,7 @@ describe('HomeScreen', () => {
     saveLastReport({ exercises: [], title: 'Ancien', prCount: 0 } as never);
     const router = renderHome(backendWith({ sessions: [A1] }));
     const card = await screen.findByRole('button', { name: 'Démarrer A1 · Haut du corps' });
-    expect(card).toHaveTextContent('Séance du jour · Cycle A');
+    expect(card).toHaveTextContent('Séance du jour · A1');
     expect(card).toHaveTextContent('5séries prévuessur 2 exercices');
     await waitFor(() => { expect(card).toBeEnabled(); });
     await user.click(card);
@@ -121,6 +135,59 @@ describe('HomeScreen', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     renderHome(backendWith({ sessionsError: true }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Impossible de charger les séances');
+  });
+
+  it('ordonne les séances comme le Programme (createdAt) et affiche le code', async () => {
+    const legs: Session = { ...A1, id: 's0', name: 'Jambes', createdAt: '2026-02-01T00:00:00Z' };
+    renderHome(backendWith({ sessions: [legs, A1] }));
+    const card = await screen.findByRole('button', { name: 'Démarrer A1 · Haut du corps' });
+    expect(card).toHaveTextContent('Séance du jour · A1');
+  });
+
+  it('ne démarre pas tant que les exercices ne sont pas chargés', async () => {
+    const router = renderHome(backendWith({ sessions: [A1], exercisesPending: true }));
+    const card = await screen.findByRole('button', { name: 'Démarrer A1 · Haut du corps' });
+    expect(card).toBeDisabled();
+    card.click();
+    expect(router.state.location.pathname).toBe('/');
+    expect(loadActiveWorkout()).toBeNull();
+  });
+
+  it('exercices en erreur : séance bloquée et erreur avec relance', async () => {
+    renderHome(backendWith({ sessions: [A1], exercisesError: true }));
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Impossible de charger les exercices');
+    expect(screen.getByRole('button', { name: 'Démarrer A1 · Haut du corps' })).toBeDisabled();
+    expect(within(alert).getByRole('button', { name: 'Réessayer' })).toBeInTheDocument();
+  });
+
+  it('cycle en erreur : pas de cycle par défaut présenté comme un fait, relance', async () => {
+    const backend = backendWith({ sessions: [A1] });
+    const get = vi.fn<DataBackend['cycles']['get']>()
+      .mockRejectedValueOnce(new Error('réseau'))
+      .mockResolvedValue({ current: 'B', startedOn: '2026-11-23', weeks: 2 });
+    backend.cycles.get = get;
+    const user = userEvent.setup({ advanceTimers: () => undefined });
+    renderHome(backend);
+    await waitFor(() => { expect(screen.getAllByRole('alert')).toHaveLength(2); });
+    const [cycleAlert, cardAlert] = screen.getAllByRole('alert');
+    expect(cycleAlert).toHaveTextContent('Impossible de charger ton cycle A/B');
+    expect(cardAlert).toHaveTextContent('Impossible de déterminer la séance du jour');
+    expect(screen.queryByRole('heading', { name: /^Cycle / })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Démarrer/ })).toBeNull();
+    if (!cycleAlert) throw new Error('alerte manquante');
+    await user.click(within(cycleAlert).getByRole('button', { name: 'Réessayer' }));
+    expect(await screen.findByRole('heading', { name: 'Cycle B' })).toBeInTheDocument();
+    expect(get).toHaveBeenCalledTimes(2);
+  });
+
+  it('performances en erreur : erreur dans la carte et dans Derniers PR', async () => {
+    renderHome(backendWith({ sessions: [A1], perfsError: true }));
+    const section = await screen.findByRole('region', { name: 'Derniers PR' });
+    expect(await within(section).findByRole('alert')).toHaveTextContent('Impossible de charger tes performances');
+    expect(screen.getAllByRole('alert')[0]).toHaveTextContent('Impossible de déterminer la séance du jour');
+    expect(screen.queryByText(/Aucun PR pour l’instant/)).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Démarrer/ })).toBeNull();
   });
 
   it('affiche les 3 derniers PR calculés et le dernier compte rendu', async () => {
