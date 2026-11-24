@@ -2,14 +2,13 @@ import { isoToFr } from './dates';
 import { e1rm, roundE1rm } from './e1rm';
 import type { Performance, Variant } from './model';
 import { round2 } from './numbers';
-import { DEFAULT_VARIANT } from './variants';
+import { sameVariant } from './variants';
 
 const MAX_REPS = 30;
 const w0 = (p: Performance): number => p.weight ?? 0;
 
-/** Règle legacy d'appartenance d'une perf à une colonne de variante (INV §3.7). */
-const inColumn = (p: Performance, v: Variant): boolean =>
-  (p.variantId || p.variantName || DEFAULT_VARIANT) === (v.id || v.name) || p.variantName === v.name;
+/** Appartenance d'une perf à une colonne de variante : même identité que la détection de PR. */
+const inColumn = (p: Performance, v: Variant): boolean => sameVariant(p, v);
 
 /** Meilleure perf par reps (index 0 = 1 rep … 29 = 30 reps) ; égalité → la plus récente. */
 export function bestByReps(perfs: Performance[], variant: Variant): (Performance | null)[] {

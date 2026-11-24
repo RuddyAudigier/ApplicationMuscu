@@ -43,9 +43,21 @@ export function getDefaultVariant(list: Variant[]): Variant {
   return list.find((v) => v.isDefault) ?? list[0] ?? defaultVariant(null);
 }
 
+/**
+ * Identité unique perf ↔ variante (tableau des records ET détection de PR) :
+ * ids égaux quand les deux en ont un ; sinon nom normalisé (vide = « Touch and Go »).
+ * Ainsi une variante recréée sous un ancien nom ne récupère pas les records de l'ancienne.
+ */
+export function sameVariant(
+  p: Pick<Performance, 'variantId' | 'variantName'>,
+  v: Pick<Variant, 'id' | 'name'>,
+): boolean {
+  if (p.variantId && v.id) return p.variantId === v.id;
+  return normalizeVariantName(p.variantName) === normalizeVariantName(v.name);
+}
+
 export function variantMatches(v: Variant, p: Pick<Performance, 'variantId' | 'variantName'>): boolean {
-  if (v.id !== null && p.variantId !== null && v.id === p.variantId) return true;
-  return normalizeVariantName(v.name) === normalizeVariantName(p.variantName);
+  return sameVariant(p, v);
 }
 
 /** Libellé affiché : la variante par défaut (`'Touch and Go'` en base) s'affiche « Classique ». */

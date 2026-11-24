@@ -91,6 +91,35 @@ describe('mutations and invalidations', () => {
     expect(invalidated()).toEqual(expect.arrayContaining(['exercises', 'sessions', 'performances']));
   });
 
+  it('useUpdateExercise(id) runs updates of one exercise one after the other (mutation scope)', async () => {
+    const { wrapper, backend } = setup();
+    const [ex] = await backend.exercises.list();
+    if (!ex) throw new Error('seed expected');
+    const order: string[] = [];
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((r) => { release = r; });
+    const real = backend.exercises.update.bind(backend.exercises);
+    vi.spyOn(backend.exercises, 'update').mockImplementation(async (id, draft) => {
+      order.push(`start:${draft.name}`);
+      if (draft.name === 'first') await gate;
+      const out = await real(id, draft);
+      order.push(`end:${draft.name}`);
+      return out;
+    });
+    const { result } = renderHook(() => ({ a: useUpdateExercise(ex.id), b: useUpdateExercise(ex.id) }), { wrapper });
+    const draft = (name: string) => ({ name, description: '', muscleGroups: [], variants: ex.variants });
+    let p1: Promise<unknown> = Promise.resolve();
+    let p2: Promise<unknown> = Promise.resolve();
+    act(() => {
+      p1 = result.current.a.mutateAsync({ id: ex.id, draft: draft('first') });
+      p2 = result.current.b.mutateAsync({ id: ex.id, draft: draft('second') });
+    });
+    await waitFor(() => { expect(order).toEqual(['start:first']); });
+    release();
+    await act(() => Promise.all([p1, p2]));
+    expect(order).toEqual(['start:first', 'end:first', 'start:second', 'end:second']);
+  });
+
   it('create/delete exercise and coach notes invalidate exercises', async () => {
     const { wrapper, invalidated, backend } = setup();
     const { result } = renderHook(() => ({ create: useCreateExercise(), del: useDeleteExercise(), notes: useSaveCoachNotes() }), { wrapper });

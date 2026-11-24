@@ -2,11 +2,16 @@ import { parseDateToIso, performanceTimestamp } from './dates';
 import type { ComparisonType, Id, IsoDate, Performance, Reference, ShareSerie } from './model';
 import { normalizeExerciseName, normalizeVariantName } from './names';
 import { round2, toNumber } from './numbers';
+import { sameVariant } from './variants';
 
 /** Tolérance anti faux PR / faux « en-dessous » dus aux arrondis. */
 export const PR_EPSILON = 0.01;
 
-interface Candidate { reps: number; weight: number; date: IsoDate; timestamp: number }
+/** `variantId` / `variantName` : identité de la perf source, filtrée par `sameVariant` à la lecture. */
+interface Candidate {
+  reps: number; weight: number; date: IsoDate; timestamp: number;
+  variantId: Id | null; variantName: string;
+}
 
 declare const historyIndexBrand: unique symbol;
 /** Index opaque : `"exKey::varKey" → reps → candidats` (INV §3.11). */
@@ -44,7 +49,7 @@ export function buildHistoryIndex(perfs: Performance[]): HistoryIndex {
     const exKeys = exerciseKeys(p.exerciseId, p);
     if (exKeys.length === 0 || date === null || timestamp === null) continue;
     if (reps === null || reps <= 0 || weight === null || weight < 0) continue;
-    const candidate: Candidate = { reps, weight, date, timestamp };
+    const candidate: Candidate = { reps, weight, date, timestamp, variantId: p.variantId, variantName: p.variantName };
     for (const varKey of variantKeys(p)) {
       for (const exKey of exKeys) {
         const baseKey = `${exKey}::${varKey}`;
@@ -89,11 +94,13 @@ function dedupe(candidates: Candidate[]): Candidate[] {
 function findAllCandidates(index: HistoryIndex, exKeys: string[], p: Identity): Candidate[] {
   const merged: Candidate[] = [];
   const varKeys = variantKeys(p);
+  // Les clés id/nom ne font que présélectionner : `sameVariant` tranche (même règle que le tableau).
+  const target = { id: p.variantId, name: p.variantName };
   for (const exKey of exKeys) {
     for (const varKey of varKeys) {
       const repsMap = index.get(`${exKey}::${varKey}`);
       if (!repsMap) continue;
-      for (const list of repsMap.values()) merged.push(...list);
+      for (const list of repsMap.values()) merged.push(...list.filter((c) => sameVariant(c, target)));
     }
   }
   return dedupe(merged);

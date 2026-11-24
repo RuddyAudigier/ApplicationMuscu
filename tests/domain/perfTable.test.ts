@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Performance, Variant } from '@/domain/model';
 import { bestByReps, excelExport, exerciseFooter, globalStats, paretoMask } from '@/domain/perfTable';
+import { buildHistoryIndex, findPreviousBest } from '@/domain/records';
 
 let seq = 0;
 const perf = (over: Partial<Performance>): Performance => ({
@@ -42,7 +43,8 @@ describe('bestByReps', () => {
     const withIdSameName = perf({ variantId: 'v9', variantName: 'Touch and Go', reps: 4, weight: 1 });
     const cells = bestByReps([byEmptyName, byOtherCase, pause, withIdSameName], tng);
     expect(cells[4]).toBe(byEmptyName);
-    expect(cells[1]).toBeNull();
+    // Nom normalisé (même règle que la détection de PR) : « touch and go » = « Touch and Go ».
+    expect(cells[1]).toBe(byOtherCase);
     expect(cells[2]).toBeNull();
     expect(cells[3]).toBe(withIdSameName);
 
@@ -52,8 +54,39 @@ describe('bestByReps', () => {
     const other = perf({ variantId: 'v2', variantName: 'pause', reps: 8 });
     const cells2 = bestByReps([byId, byName, other], withId);
     expect(cells2[5]).toBe(byId);
-    expect(cells2[6]).toBe(byName);
+    // Une perf portant un variantId n'est rattachée que par id, jamais par nom.
+    expect(cells2[6]).toBeNull();
     expect(cells2[7]).toBeNull();
+  });
+
+  it('matches by name only when the performance has no variantId', () => {
+    const pause: Variant = { id: 'v1', exerciseId: 'bench', name: 'Pause', isDefault: false };
+    const legacy = perf({ variantId: null, variantName: 'Pause', reps: 3 });
+    expect(bestByReps([legacy], pause)[2]).toBe(legacy);
+  });
+
+  it('agrees with findPreviousBest on legacy « pause » vs « Pause » and on rename/recreate', () => {
+    const pause: Variant = { id: 'v1', exerciseId: 'bench', name: 'Pause', isDefault: false };
+    const legacy = perf({ variantId: null, variantName: 'pause', reps: 5, weight: 100, performanceDate: '2026-03-01' });
+    const cur = perf({ variantId: 'v1', variantName: 'Pause', reps: 5, weight: 90, performanceDate: '2026-03-04' });
+    expect(bestByReps([legacy], pause)[4]).toBe(legacy);
+    expect(findPreviousBest(buildHistoryIndex([legacy, cur]), 'bench', cur)).toMatchObject({ weight: 100 });
+
+    const recreated: Variant = { id: 'v3', exerciseId: 'bench', name: 'Pause', isDefault: false };
+    const old = perf({ variantId: 'v1', variantName: 'Pause', reps: 5, weight: 100, performanceDate: '2026-03-01' });
+    const fresh = perf({ variantId: 'v3', variantName: 'Pause', reps: 5, weight: 90, performanceDate: '2026-03-04' });
+    expect(bestByReps([old], recreated).filter(Boolean)).toEqual([]);
+    expect(findPreviousBest(buildHistoryIndex([old, fresh]), 'bench', fresh)).toBeNull();
+  });
+
+  it('rename then recreate with the same name: old records stay with the old variant id', () => {
+    // v1 « Pause » renommée « Pause 2 s » (relabel : ses perfs gardent v1), puis nouvelle « Pause » v3.
+    const renamed: Variant = { id: 'v1', exerciseId: 'bench', name: 'Pause 2 s', isDefault: false };
+    const recreated: Variant = { id: 'v3', exerciseId: 'bench', name: 'Pause', isDefault: false };
+    const old = perf({ variantId: 'v1', variantName: 'Pause', reps: 5, weight: 80 });
+    const fresh = perf({ variantId: 'v3', variantName: 'Pause', reps: 6, weight: 70 });
+    expect(bestByReps([old, fresh], renamed).filter(Boolean)).toEqual([old]);
+    expect(bestByReps([old, fresh], recreated).filter(Boolean)).toEqual([fresh]);
   });
 
   it('treats null weight as 0 and ignores non-finite reps', () => {
