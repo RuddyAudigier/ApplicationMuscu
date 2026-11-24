@@ -59,20 +59,23 @@ describe('nextPlannedSession', () => {
 });
 
 describe('weekSegments', () => {
-  it('découpe bloc passé, bloc en cours et bloc suivant en semaines', () => {
-    const segs = weekSegments({ current: 'A', startedOn: '2026-11-16', weeks: 2 }, '2026-11-26', 2);
+  it('part de la semaine en cours : 1re semaine de A → A A B B A A', () => {
+    const segs = weekSegments({ current: 'A', startedOn: '2026-11-23', weeks: 2 }, '2026-11-26');
     expect(segs.map((s) => `${s.cycle}:${s.status}`)).toEqual([
-      'B:past', 'B:past', 'A:current', 'A:current', 'B:future', 'B:future',
+      'A:current', 'A:future', 'B:future', 'B:future', 'A:future', 'A:future',
     ]);
-    expect(segs[2]?.fill).toBe(1);
-    expect(segs[3]?.fill).toBeCloseTo(3 / 7);
-    expect(segs[4]?.fill).toBe(0);
   });
 
-  it('affiche 3 semaines pour un cycle prolongé', () => {
-    const segs = weekSegments({ current: 'B', startedOn: '2026-11-23', weeks: 3 }, '2026-11-23', 3);
-    expect(segs.filter((s) => s.status === 'current')).toHaveLength(3);
-    expect(segs.every((s) => s.status !== 'current' || s.fill === 0)).toBe(true);
+  it('2e semaine de A → un seul A, surligné', () => {
+    const segs = weekSegments({ current: 'A', startedOn: '2026-11-16', weeks: 2 }, '2026-11-26');
+    expect(segs.map((s) => `${s.cycle}:${s.status}`)).toEqual([
+      'A:current', 'B:future', 'B:future', 'A:future', 'A:future', 'B:future',
+    ]);
+  });
+
+  it('cycle prolongé à 3 semaines : 3 A en 1re semaine', () => {
+    const segs = weekSegments({ current: 'B', startedOn: '2026-11-23', weeks: 3 }, '2026-11-23');
+    expect(segs.filter((s) => s.cycle === 'B').slice(0, 3).map((s) => s.status)).toEqual(['current', 'future', 'future']);
   });
 });
 

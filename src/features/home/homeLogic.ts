@@ -1,4 +1,4 @@
-import { timeline } from '@/domain/cycles';
+import { cycleStatus } from '@/domain/cycles';
 import { parseDateToIso, todayIso } from '@/domain/dates';
 import type { CycleId, CycleState, IsoDate, Performance, Session } from '@/domain/model';
 import type { PrKind } from '@/domain/records';
@@ -54,18 +54,21 @@ export interface WeekSegment {
   fill: number;
 }
 
-/** Frise semaine par semaine : bloc précédent, bloc en cours, bloc suivant (cf. maquette). */
-export function weekSegments(state: CycleState, today: IsoDate, weeks: number): WeekSegment[] {
-  const [, past, current, future] = timeline(state, today, 4);
-  const out: WeekSegment[] = [];
-  if (past) for (let i = 0; i < STANDARD_WEEKS; i += 1) out.push({ cycle: past.cycle, status: 'past', fill: 1 });
-  if (current) {
-    for (let i = 0; i < weeks; i += 1) {
-      const fill = Math.min(1, Math.max(0, current.progress * weeks - i));
-      out.push({ cycle: current.cycle, status: 'current', fill });
-    }
+/**
+ * Frise semaine par semaine, à partir de la semaine en cours (surlignée) : semaines restantes du
+ * bloc en cours, puis les blocs suivants (2 semaines, en alternant), `total` segments en tout.
+ */
+export function weekSegments(state: CycleState, today: IsoDate, total = 6): WeekSegment[] {
+  const status = cycleStatus(state, today);
+  const out: WeekSegment[] = [{ cycle: status.current, status: 'current', fill: 1 }];
+  for (let i = status.week; i < status.weeks && out.length < total; i += 1) {
+    out.push({ cycle: status.current, status: 'future', fill: 0 });
   }
-  if (future) for (let i = 0; i < STANDARD_WEEKS; i += 1) out.push({ cycle: future.cycle, status: 'future', fill: 0 });
+  let cycle = status.next;
+  while (out.length < total) {
+    for (let i = 0; i < STANDARD_WEEKS && out.length < total; i += 1) out.push({ cycle, status: 'future', fill: 0 });
+    cycle = cycle === 'A' ? 'B' : 'A';
+  }
   return out;
 }
 

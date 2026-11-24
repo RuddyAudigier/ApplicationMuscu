@@ -44,11 +44,12 @@ function LoadError({ message, onRetry }: { message: string; onRetry: () => void 
 
 function Timeline({ segments }: { segments: WeekSegment[] }) {
   const current = segments.find((s) => s.status === 'current');
-  const past = segments.find((s) => s.status === 'past');
-  const future = segments.find((s) => s.status === 'future');
+  // Semaines restantes du bloc en cours = segments consécutifs du même cycle en tête de frise.
+  const changeAt = segments.findIndex((s) => s.cycle !== current?.cycle);
+  const left = changeAt === -1 ? segments.length : changeAt;
+  const future = segments.find((s) => s.cycle !== current?.cycle);
   const label = [
-    past && `cycle ${past.cycle} terminé`,
-    current && `cycle ${current.cycle} en cours`,
+    current && `cycle ${current.cycle} en cours, ${left > 1 ? `${String(left)} semaines restantes` : 'dernière semaine'}`,
     future && `puis cycle ${future.cycle}`,
   ].filter(Boolean).join(', ');
   return (
@@ -232,7 +233,7 @@ export function HomeScreen() {
   // Défaut seulement si la requête a réussi sans état enregistré ; jamais en cas d'erreur (D8).
   const state = cycleQuery.isSuccess ? (cycleQuery.data ?? defaultCycleState(today)) : null;
   const status = state ? cycleStatus(state, today) : null;
-  const segments = state && status ? weekSegments(state, today, status.weeks) : [];
+  const segments = state && status ? weekSegments(state, today) : [];
   const cycle: Query<CycleId> = { ...cycleQuery, data: status?.current };
   const prs = useMemo(() => (perfsQuery.data ? latestPrs(perfsQuery.data) : []), [perfsQuery.data]);
 

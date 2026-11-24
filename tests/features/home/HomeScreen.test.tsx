@@ -76,7 +76,7 @@ describe('HomeScreen', () => {
     expect(await screen.findByRole('heading', { name: 'Cycle A' })).toBeInTheDocument();
     expect(screen.getByText('Semaine 2 sur 2')).toBeInTheDocument();
     expect(screen.getByText('dans 4 jours')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: /Frise des cycles : cycle B terminé, cycle A en cours, puis cycle B/ }))
+    expect(screen.getByRole('img', { name: /Frise des cycles : cycle A en cours, .*puis cycle B/ }))
       .toBeInTheDocument();
   });
 

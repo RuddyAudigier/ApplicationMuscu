@@ -124,7 +124,7 @@
 }
 
 .segment[data-status='current'] .bar {
-  background: linear-gradient(90deg, var(--color-accent) var(--fill), var(--color-surface-3) var(--fill));
+  background: var(--color-accent);
 }
 
 .segmentLabel {
@@ -133,7 +133,7 @@
 }
 
 .segment[data-status='current'] .segmentLabel {
-  color: var(--color-text);
+  color: var(--color-accent);
   font-weight: var(--weight-semibold);
 }
 
