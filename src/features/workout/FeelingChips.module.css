@@ -34,7 +34,8 @@
   background: var(--color-border-control);
 }
 
-.chips .state[aria-pressed='true'] {
+.chips .state.state[aria-pressed='true'],
+.chips .state.state[aria-pressed='true']:hover:not(:disabled) {
   background: var(--color-accent-soft);
   border-color: var(--color-accent);
   color: var(--color-accent);
