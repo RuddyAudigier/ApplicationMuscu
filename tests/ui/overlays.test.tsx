@@ -2,6 +2,7 @@ import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { Button, Sheet, UiProvider, useConfirm, useToast } from '../../src/ui';
+import { closeTopSheet } from '../../src/ui/Sheet';
 
 function SheetHarness({ onClose }: { onClose?: () => void }) {
   const [open, setOpen] = useState(false);
@@ -30,6 +31,20 @@ function SheetHarness({ onClose }: { onClose?: () => void }) {
 }
 
 describe('Sheet', () => {
+  it('closeTopSheet ferme la modale ouverte (bouton retour Android) et renvoie false sinon', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(<SheetHarness onClose={onClose} />);
+    expect(closeTopSheet()).toBe(false);
+    await user.click(screen.getByRole('button', { name: 'Ouvrir' }));
+    let handled = false;
+    act(() => { handled = closeTopSheet(); });
+    expect(handled).toBe(true);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(closeTopSheet()).toBe(false);
+  });
+
   it('Sheet traps focus and closes on Escape', async () => {
     const user = userEvent.setup();
     render(<SheetHarness />);

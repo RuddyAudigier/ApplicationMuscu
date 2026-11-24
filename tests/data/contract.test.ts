@@ -288,3 +288,15 @@ describe('mock backend specifics', () => {
     expect((await b.performances.list()).find((p) => p.exerciseId === 'd')?.performanceDate).toBe('2026-05-02');
   });
 });
+
+describe('mock reset and the offline queue', () => {
+  it('clears the offline queue and its archives', async () => {
+    const storage = new MemoryStorage();
+    const keys = ['pending_performances_queue_v1', 'pending_performances_queue_v1_failed', 'pending_performances_queue_v1_corrupt'];
+    for (const key of keys) storage.setItem(key, '[]');
+    storage.setItem('other_key', 'kept');
+    await createMockBackend(storage).reset?.();
+    for (const key of keys) expect(storage.getItem(key)).toBeNull();
+    expect(storage.getItem('other_key')).toBe('kept');
+  });
+});
