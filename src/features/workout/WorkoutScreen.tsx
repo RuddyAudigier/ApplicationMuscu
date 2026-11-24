@@ -193,7 +193,7 @@ function WorkoutView() {
         }}
       />
       <span className={styles.progress}>
-        <span className={styles.session}>{code ?? state.sessionName}</span>
+        <span className={styles.session}>{code ? `${code} : ${state.sessionName}` : state.sessionName}</span>
         {total > 0 && (
           <>
             <span aria-hidden="true">{' · '}</span>

@@ -44,7 +44,7 @@ export function nextPlannedSession(
   }
   const index = inCycle.findIndex((s) => s.exercises.length > 0 && !done.has(s.name));
   const session = inCycle[index];
-  return session ? { kind: 'next', session, code: sessionCode(cycle, index) } : { kind: 'all-done', cycle };
+  return session ? { kind: 'next', session, code: sessionCode(cycle) } : { kind: 'all-done', cycle };
 }
 
 export interface WeekSegment {

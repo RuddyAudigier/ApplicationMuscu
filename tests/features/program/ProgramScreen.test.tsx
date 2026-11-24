@@ -42,7 +42,7 @@ function setup(backend: DataBackend = createMockBackend(localStorage)) {
   return { backend, router, user: userEvent.setup() };
 }
 
-const seedRow = () => screen.findByRole('button', { name: startName('Démarrer', `A1 ${SEED}`) });
+const seedRow = () => screen.findByRole('button', { name: startName('Démarrer', `Cycle A : ${SEED}`) });
 
 describe('ProgramScreen', () => {
   it('affiche les onglets A/B, la durée et les séances du cycle en cours', async () => {
@@ -147,7 +147,7 @@ describe('ProgramScreen', () => {
       startedAt: new Date().toISOString(), exercises: [],
     });
     const { user } = setup(backend);
-    const row = await screen.findByRole('button', { name: startName('Reprendre', `A1 ${SEED}`) });
+    const row = await screen.findByRole('button', { name: startName('Reprendre', `Cycle A : ${SEED}`) });
     expect(within(row).getByText('En cours')).toBeInTheDocument();
     await user.click(row);
     expect(await screen.findByRole('heading', { name: 'Séance en cours' })).toBeInTheDocument();
@@ -180,7 +180,7 @@ describe('ProgramScreen', () => {
     expect(created?.exercises.map((e) => [e.name, e.series])).toEqual([['Développé couché', 3], ['Squat', 5]]);
     expect(screen.queryByText(/porte déjà ce nom/)).toBeNull();
     await user.click(screen.getByRole('tab', { name: /^B/ }));
-    expect(await screen.findByRole('button', { name: startName('Démarrer', 'B1 Bas du corps') })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: startName('Démarrer', 'Cycle B : Bas du corps') })).toBeInTheDocument();
   });
 
   it('refuse un nom déjà pris dans le même cycle', async () => {
@@ -202,7 +202,7 @@ describe('ProgramScreen', () => {
     const [session] = await backend.sessions.list();
     saveActiveWorkout(activeOf(session?.id ?? '', SEED));
     const { user } = setup(backend);
-    await user.click(await screen.findByRole('button', { name: `Modifier A1 ${SEED}` }));
+    await user.click(await screen.findByRole('button', { name: `Modifier Cycle A : ${SEED}` }));
     await user.click(screen.getByRole('button', { name: 'Supprimer' }));
     const confirm = screen.getByRole('alertdialog', { name: 'Supprimer la séance ?' });
     expect(within(confirm).getByText(/Cette séance est en cours/)).toBeInTheDocument();
@@ -213,7 +213,7 @@ describe('ProgramScreen', () => {
   it('modifie puis supprime une séance après confirmation', async () => {
     const { backend, user } = setup();
     await seedRow();
-    await user.click(screen.getByRole('button', { name: `Modifier A1 ${SEED}` }));
+    await user.click(screen.getByRole('button', { name: `Modifier Cycle A : ${SEED}` }));
     const dialog = screen.getByRole('dialog', { name: 'Modifier la séance' });
     const nameInput = within(dialog).getByLabelText('Nom de la séance');
     expect(nameInput).toHaveValue(SEED);
@@ -227,7 +227,7 @@ describe('ProgramScreen', () => {
     await waitFor(() => { expect(screen.queryByRole('dialog')).toBeNull(); });
     expect((await backend.sessions.list())[0]?.exercises).toHaveLength(1);
 
-    await user.click(screen.getByRole('button', { name: `Modifier A1 ${SEED}` }));
+    await user.click(screen.getByRole('button', { name: `Modifier Cycle A : ${SEED}` }));
     await user.click(screen.getByRole('button', { name: 'Supprimer' }));
     const confirm = screen.getByRole('alertdialog', { name: 'Supprimer la séance ?' });
     await user.click(within(confirm).getByRole('button', { name: 'Supprimer' }));
@@ -267,7 +267,7 @@ describe('ProgramScreen', () => {
       expect(radio).toHaveAttribute('aria-checked', 'false');
     }
     expect(screen.queryByRole('tab', { name: /En cours/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: startName('Démarrer', `A1 ${SEED}`) })).toBeNull();
+    expect(screen.queryByRole('button', { name: startName('Démarrer', `Cycle A : ${SEED}`) })).toBeNull();
     release();
     expect(await screen.findByRole('tab', { name: /B En cours/ })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('radio', { name: '3 sem.' })).toHaveAttribute('aria-checked', 'true');
@@ -283,7 +283,7 @@ describe('ProgramScreen', () => {
     expect(await screen.findByText(/Impossible de charger ton cycle A\/B/)).toBeInTheDocument();
     expect(screen.queryByRole('radiogroup', { name: /Durée/ })).toBeNull();
     expect(screen.queryByRole('tab', { name: /En cours/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: startName('Démarrer', `A1 ${SEED}`) })).toBeNull();
+    expect(screen.queryByRole('button', { name: startName('Démarrer', `Cycle A : ${SEED}`) })).toBeNull();
     fail = false;
     await user.click(screen.getByRole('button', { name: 'Réessayer' }));
     expect(await screen.findByRole('tab', { name: /A En cours/ })).toBeInTheDocument();

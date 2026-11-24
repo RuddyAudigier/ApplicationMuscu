@@ -20,9 +20,9 @@ describe('sessionsOfCycle / sessionCode', () => {
     expect(sessionsOfCycle(list, null).map((s) => s.id)).toEqual(['n']);
   });
 
-  it('formate le code cycle + rang', () => {
-    expect(sessionCode('A', 0)).toBe('A1');
-    expect(sessionCode('B', 2)).toBe('B3');
+  it('formate le libellé de cycle', () => {
+    expect(sessionCode('A')).toBe('Cycle A');
+    expect(sessionCode('B')).toBe('Cycle B');
   });
 });
 

@@ -33,7 +33,7 @@ function MoveSheet({
   onClose: () => void;
 }) {
   return (
-    <Sheet open onClose={onClose} title={`Décaler ${occurrence.code} ${occurrence.session.name}`}>
+    <Sheet open onClose={onClose} title={`Décaler ${occurrence.code} : ${occurrence.session.name}`}>
       <ul className={own.targets}>
         {moveTargets(today).map((date) => {
           const busy = occurrences.filter((o) => o !== occurrence && o.date === date && o.status !== 'skipped');
@@ -48,7 +48,7 @@ function MoveSheet({
               >
                 <span className={own.targetDay}>{date === today ? `Aujourd’hui (${dayLabel(date)})` : dayLabel(date)}</span>
                 {busy.length > 0 && (
-                  <span className={own.targetBusy}>Déjà prévu : {busy.map((o) => o.code).join(', ')}</span>
+                  <span className={own.targetBusy}>Déjà prévu : {busy.map((o) => o.session.name).join(', ')}</span>
                 )}
                 {current && <span className={own.targetBusy}>Jour actuel</span>}
               </button>
@@ -109,7 +109,7 @@ export function ScheduledSessions({
       <Button
         variant="ghost"
         disabled={save.isPending}
-        onClick={() => { persist(skipOccurrence(plan, today, o.day), `${o.code} sautée cette semaine.`); }}
+        onClick={() => { persist(skipOccurrence(plan, today, o.day), `${o.session.name} sautée cette semaine.`); }}
       >
         Sauter cette semaine
       </Button>
@@ -119,11 +119,11 @@ export function ScheduledSessions({
   return (
     <>
       {missed.map((o) => (
-        <div key={o.day} className={own.missed} role="group" aria-label={`Séance manquée : ${o.code} ${o.session.name}`}>
+        <div key={o.day} className={own.missed} role="group" aria-label={`Séance manquée, ${o.code} : ${o.session.name}`}>
           <span className={own.missedKicker}>
             <Icon name="info" size={16} /> Séance manquée · {dayLabel(o.date)}
           </span>
-          <span className={own.missedName}>{o.code} · {o.session.name}</span>
+          <span className={own.missedName}>{o.code} : {o.session.name}</span>
           <div className={own.actions}>
             <Button variant="accent" disabled={exercises === null} onClick={() => { start(o); }}>
               La faire maintenant
@@ -183,12 +183,12 @@ export function ScheduledSessions({
 
       {skipped.map((o) => (
         <p key={o.day} className={own.skipped}>
-          {o.code} {o.session.name} sautée cette semaine ({dayLabel(o.plannedDate)}).{' '}
+          {o.code} : {o.session.name} sautée cette semaine ({dayLabel(o.plannedDate)}).{' '}
           <button
             type="button"
             className={own.undo}
             disabled={save.isPending}
-            onClick={() => { persist(resetOccurrence(plan, today, o.day), `${o.code} remise au planning.`); }}
+            onClick={() => { persist(resetOccurrence(plan, today, o.day), `${o.session.name} remise au planning.`); }}
           >
             Annuler
           </button>
@@ -203,7 +203,7 @@ export function ScheduledSessions({
           onClose={() => { setMoving(null); }}
           onPick={(date) => {
             setMoving(null);
-            persist(moveOccurrence(plan, today, moving.day, date), `${moving.code} décalée à ${dayLabel(date)}.`);
+            persist(moveOccurrence(plan, today, moving.day, date), `${moving.session.name} décalée à ${dayLabel(date)}.`);
           }}
         />
       )}

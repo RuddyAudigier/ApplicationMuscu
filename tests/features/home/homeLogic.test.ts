@@ -32,22 +32,22 @@ describe('nextPlannedSession', () => {
   ];
 
   it('prend la première séance du cycle (ordre Programme) non faite cette semaine, avec son code', () => {
-    expect(nextPlannedSession(sessions, 'A', [], '2026-11-26')).toMatchObject({ kind: 'next', code: 'A1', session: { name: 'Dos' } });
+    expect(nextPlannedSession(sessions, 'A', [], '2026-11-26')).toMatchObject({ kind: 'next', code: 'Cycle A', session: { name: 'Dos' } });
     const done = [perf({ sessionName: 'Dos', performanceDate: '2026-11-24' })];
-    expect(nextPlannedSession(sessions, 'A', done, '2026-11-26')).toMatchObject({ kind: 'next', code: 'A2', session: { name: 'Haut' } });
+    expect(nextPlannedSession(sessions, 'A', done, '2026-11-26')).toMatchObject({ kind: 'next', code: 'Cycle A', session: { name: 'Haut' } });
     const two = [...done, perf({ sessionName: 'Haut', performanceDate: '2026-11-25' })];
-    expect(nextPlannedSession(sessions, 'A', two, '2026-11-26')).toMatchObject({ code: 'A3', session: { name: 'Jambes' } });
+    expect(nextPlannedSession(sessions, 'A', two, '2026-11-26')).toMatchObject({ code: 'Cycle A', session: { name: 'Jambes' } });
   });
 
   it('ignore les séances faites avant lundi', () => {
     const old = [perf({ sessionName: 'Dos', performanceDate: '2026-11-22' })];
-    expect(nextPlannedSession(sessions, 'A', old, '2026-11-26')).toMatchObject({ code: 'A1', session: { name: 'Dos' } });
+    expect(nextPlannedSession(sessions, 'A', old, '2026-11-26')).toMatchObject({ code: 'Cycle A', session: { name: 'Dos' } });
   });
 
   it('saute les séances sans exercice (le code reste le rang Programme)', () => {
     const empty: Session = { ...session('e', 'Vide', 'A', '2026-01-01T00:00:00Z'), exercises: [] };
     const withEmpty = [empty, session('f', 'Pleine', 'A', '2026-01-02T00:00:00Z')];
-    expect(nextPlannedSession(withEmpty, 'A', [], '2026-11-26')).toMatchObject({ kind: 'next', code: 'A2', session: { name: 'Pleine' } });
+    expect(nextPlannedSession(withEmpty, 'A', [], '2026-11-26')).toMatchObject({ kind: 'next', code: 'Cycle A', session: { name: 'Pleine' } });
     expect(nextPlannedSession([empty], 'A', [], '2026-11-26')).toEqual({ kind: 'no-cycle-session', cycle: 'A' });
   });
 

@@ -36,7 +36,7 @@ export const SEED_SESSION = 'Séance test (mock)';
 
 /** Carte « Séance du jour » de l'accueil (nom accessible = texte visible : action, code A1, nom). */
 export function todayCard(page: Page) {
-  return page.getByRole('button', { name: /^Démarrer Séance du jour · A1 Séance test \(mock\)/ });
+  return page.getByRole('button', { name: /^Démarrer Séance du jour · Cycle A Séance test \(mock\)/ });
 }
 
 /** Ouvre la fiche Records d'un exercice via le sélecteur d'exercice. */

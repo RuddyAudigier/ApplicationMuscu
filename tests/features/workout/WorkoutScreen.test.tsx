@@ -120,7 +120,7 @@ describe('WorkoutScreen', { timeout: 20_000 }, () => {
     await seedWorkout(backend);
     renderWorkout(backend);
     await ready();
-    expect(await screen.findByText('A1')).toBeInTheDocument();
+    expect(await screen.findByText(/^Cycle A : /)).toBeInTheDocument();
     expect(screen.getByText('Exercice 1 sur 2')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'Développé couché' })).toBeInTheDocument();
     expect(await screen.findByText(/Coudes ouverts/)).toBeInTheDocument();
@@ -545,15 +545,14 @@ describe('WorkoutScreen', { timeout: 20_000 }, () => {
     expect(screen.getByLabelText('Reps')).toHaveFocus();
   });
 
-  it('en-tête : code de séance (A1) ou nom de la séance sans cycle', async () => {
+  it('en-tête : « Cycle A : nom » ou nom de la séance sans cycle', async () => {
     const backend = makeBackend();
     const state = await seedWorkout(backend);
     renderWorkout(backend);
     await ready();
     const header = screen.getByRole('banner');
-    expect(await within(header).findByText('A1')).toBeInTheDocument();
-    expect(header).toHaveTextContent('A1 · Exercice 1 sur 2');
-    expect(within(header).queryByText(SESSION)).toBeNull();
+    expect(await within(header).findByText(/^Cycle A : /)).toBeInTheDocument();
+    expect(header).toHaveTextContent(`Cycle A : ${SESSION} · Exercice 1 sur 2`);
     cleanup();
     saveActiveWorkout({ ...state, cycle: null });
     renderWorkout(backend);

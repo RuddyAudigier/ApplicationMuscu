@@ -54,8 +54,8 @@ export function WeekPlanSection({ sessions, cycle }: { sessions: Session[]; cycl
                 onChange={(e) => { change(day, e.target.value); }}
               >
                 <option value="">Repos</option>
-                {ofCycle.map((s, rank) => (
-                  <option key={s.id} value={s.id}>{sessionCode(cycle, rank)} · {s.name}</option>
+                {ofCycle.map((s) => (
+                  <option key={s.id} value={s.id}>{sessionCode(cycle)} : {s.name}</option>
                 ))}
               </Field>
             </li>

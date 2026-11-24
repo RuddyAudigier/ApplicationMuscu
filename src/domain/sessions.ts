@@ -11,9 +11,12 @@ export function sessionsOfCycle(sessions: Session[], cycle: CycleId | null): Ses
   return sessions.filter((s) => s.cycle === cycle).sort(byCreation);
 }
 
-/** Code d'une séance : cycle + rang (0-based) dans `sessionsOfCycle` → « A1 ». */
-export function sessionCode(cycle: CycleId, index: number): string {
-  return `${cycle}${String(index + 1)}`;
+/**
+ * Libellé de cycle d'une séance → « Cycle A ».
+ * (Le rang A1, A2… n'est plus affiché.)
+ */
+export function sessionCode(cycle: CycleId): string {
+  return `Cycle ${cycle}`;
 }
 
 /** Nom de séance des perfs saisies à la main sans séance ce jour-là. */

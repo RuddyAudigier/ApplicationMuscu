@@ -85,7 +85,7 @@ export function weekOccurrences(
     if (!session || session.exercises.length === 0) continue;
     const ov = plan.overrides.find((o) => o.week === monday && o.day === day);
     const date = ov?.kind === 'moved' ? ov.date : plannedDate;
-    raw.push({ day, plannedDate, date, moved: ov?.kind === 'moved', session, code: sessionCode(cycle, rank) });
+    raw.push({ day, plannedDate, date, moved: ov?.kind === 'moved', session, code: sessionCode(cycle) });
   }
   raw.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.day - b.day));
 

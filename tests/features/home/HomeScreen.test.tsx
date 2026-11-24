@@ -97,8 +97,8 @@ describe('HomeScreen', () => {
     const user = userEvent.setup({ advanceTimers: () => undefined });
     saveLastReport({ exercises: [], title: 'Ancien', prCount: 0 } as never);
     const router = renderHome(backendWith({ sessions: [A1] }));
-    const card = await screen.findByRole('button', { name: /^Démarrer Séance du jour · A1 A1 · Haut du corps/ });
-    expect(card).toHaveTextContent('Séance du jour · A1');
+    const card = await screen.findByRole('button', { name: /^Démarrer Séance du jour · Cycle A A1 · Haut du corps/ });
+    expect(card).toHaveTextContent('Séance du jour · Cycle A');
     expect(card).toHaveTextContent('5 séries prévuessur 2 exercices');
     await waitFor(() => { expect(card).toBeEnabled(); });
     await user.click(card);
@@ -140,13 +140,13 @@ describe('HomeScreen', () => {
   it('ordonne les séances comme le Programme (createdAt) et affiche le code', async () => {
     const legs: Session = { ...A1, id: 's0', name: 'Jambes', createdAt: '2026-02-01T00:00:00Z' };
     renderHome(backendWith({ sessions: [legs, A1] }));
-    const card = await screen.findByRole('button', { name: /^Démarrer Séance du jour · A1 A1 · Haut du corps/ });
-    expect(card).toHaveTextContent('Séance du jour · A1');
+    const card = await screen.findByRole('button', { name: /^Démarrer Séance du jour · Cycle A A1 · Haut du corps/ });
+    expect(card).toHaveTextContent('Séance du jour · Cycle A');
   });
 
   it('ne démarre pas tant que les exercices ne sont pas chargés', async () => {
     const router = renderHome(backendWith({ sessions: [A1], exercisesPending: true }));
-    const card = await screen.findByRole('button', { name: /^Démarrer Séance du jour · A1 A1 · Haut du corps/ });
+    const card = await screen.findByRole('button', { name: /^Démarrer Séance du jour · Cycle A A1 · Haut du corps/ });
     expect(card).toBeDisabled();
     card.click();
     expect(router.state.location.pathname).toBe('/');
@@ -157,7 +157,7 @@ describe('HomeScreen', () => {
     renderHome(backendWith({ sessions: [A1], exercisesError: true }));
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Impossible de charger les exercices');
-    expect(screen.getByRole('button', { name: /^Démarrer Séance du jour · A1 A1 · Haut du corps/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Démarrer Séance du jour · Cycle A A1 · Haut du corps/ })).toBeDisabled();
     expect(within(alert).getByRole('button', { name: 'Réessayer' })).toBeInTheDocument();
   });
 

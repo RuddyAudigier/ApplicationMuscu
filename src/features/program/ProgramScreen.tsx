@@ -113,7 +113,7 @@ export function ProgramScreen() {
     const last = lastDoneLabel(lastDoneOn(perfsQuery.data ?? [], session.name), today);
     const isActive = active?.sessionId === session.id;
     const hidden = session.exercises.length - VISIBLE_EXERCISES;
-    const title = code ? `${code} ${session.name}` : session.name;
+    const title = code ? `${code} : ${session.name}` : session.name;
     return (
       <li key={session.id} className={styles.session}>
         <button
@@ -127,7 +127,7 @@ export function ProgramScreen() {
           <span className="visually-hidden">{isActive ? 'Reprendre' : 'Démarrer'}</span>{' '}
           <span className={styles.sessionHead}>
             <span className={styles.sessionTitle}>
-              {code && <span className={styles.code}>{code}</span>} {session.name}
+              {code && <span className={styles.code}>{code} :</span>} {session.name}
             </span>{' '}
             {isActive ? (
               <span className={styles.badge}>En cours</span>
@@ -277,7 +277,7 @@ export function ProgramScreen() {
           />
         ) : (
           <ul className={styles.sessions} aria-label={`Séances du cycle ${shownCycle}`}>
-            {list.map((s, i) => renderSession(s, sessionCode(shownCycle, i)))}
+            {list.map((s) => renderSession(s, sessionCode(shownCycle)))}
           </ul>
         )}
 

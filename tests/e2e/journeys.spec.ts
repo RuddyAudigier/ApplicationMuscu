@@ -10,7 +10,7 @@ async function fillSerie(page: import('@playwright/test').Page, reps: string, kg
 
 test('1. séance A1 : cible choisie dans « Mes records », arrêt à 2 séries, compte rendu avec PR', async ({ freshPage: page }) => {
   const start = todayCard(page);
-  await expect(start).toContainText('A1');
+  await expect(start).toContainText('Cycle A');
   await start.click();
 
   await expect(page).toHaveURL(/\/workout$/);
