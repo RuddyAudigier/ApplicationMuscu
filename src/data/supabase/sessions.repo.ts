@@ -5,13 +5,16 @@ import type { CycleFallback } from './cycleFallback';
 import { parseRows, prepareSession } from '../shared/rules';
 import { mapSessionRow } from './mappers';
 
-const EXERCISES_SELECT = 'session_exercises(series_count, exercise_id, exercises(name))';
-const SESSION_SELECT = `id, name, created_at, cycle, ${EXERCISES_SELECT}`;
-/** Sans la colonne `cycle` (migration 2026-11-23 non jouée). */
-const LEGACY_SESSION_SELECT = `id, name, created_at, ${EXERCISES_SELECT}`;
+/** Colonnes `sessions.cycle` et `session_exercises.position` incluses seulement si présentes. */
+const sessionSelect = (cycle: boolean, position: boolean): string =>
+  `id, name, created_at, ${cycle ? 'cycle, ' : ''}`
+  + `session_exercises(series_count, exercise_id, ${position ? 'position, ' : ''}exercises(name))`;
 
-const links = (sessionId: Id, d: SessionDraft) =>
-  d.exercises.map((e) => ({ session_id: sessionId, exercise_id: e.exerciseId, series_count: e.series }));
+/** `position` = rang dans le brouillon (ordre des exercices, migration 2026-11-23). */
+const links = (sessionId: Id, d: SessionDraft, withPosition: boolean) =>
+  d.exercises.map((e, i) => ({
+    session_id: sessionId, exercise_id: e.exerciseId, series_count: e.series, ...(withPosition ? { position: i } : {}),
+  }));
 
 /**
  * Colonne `sessions.cycle` : lue et écrite si elle existe. Absente (`42703`/`PGRST204`…) → la requête
@@ -21,8 +24,43 @@ const links = (sessionId: Id, d: SessionDraft) =>
  */
 export function createSessionsRepo(db: Db, fallback: CycleFallback): SessionsRepo {
   let hasCycleColumn = true;
+  /** `session_exercises.position` absente → ordre renvoyé par la base (aucun repli local). */
+  let hasPositionColumn = true;
 
-  /** Tente avec la colonne ; sur schéma incomplet, bascule en repli puis tente sans. */
+  /**
+   * Lecture avec les colonnes optionnelles connues. Sur schéma incomplet, retire la colonne
+   * en cause (message citant `position`, sinon `cycle`, puis `position`) et rejoue.
+   */
+  async function readSessions(build: (cols: string) => PromiseLike<PgResult>, ctx: string): Promise<unknown> {
+    for (;;) {
+      const { data, error, status } = await run(build(sessionSelect(hasCycleColumn, hasPositionColumn)), ctx);
+      if (!error) return data;
+      if (!isSchemaGap(error)) fail(error, ctx, status);
+      if (hasPositionColumn && error.message.toLowerCase().includes('position')) {
+        hasPositionColumn = false;
+      } else if (hasCycleColumn) {
+        hasCycleColumn = false;
+        fallback.warn();
+      } else if (hasPositionColumn) {
+        hasPositionColumn = false;
+      } else {
+        fail(error, ctx, status);
+      }
+    }
+  }
+
+  /** Insère les liens avec `position` ; colonne absente → rejoue sans et le mémorise. */
+  async function insertLinks(id: Id, d: SessionDraft, ctx: string): Promise<void> {
+    if (hasPositionColumn) {
+      const { error, status } = await run(db.from('session_exercises').insert(links(id, d, true)), ctx);
+      if (!error) return;
+      if (!isSchemaGap(error)) fail(error, ctx, status);
+      hasPositionColumn = false;
+    }
+    await must(db.from('session_exercises').insert(links(id, d, false)), ctx);
+  }
+
+  /** Écriture de `sessions` : tente avec la colonne cycle ; sur schéma incomplet, bascule en repli. */
   async function withCycle(withCol: () => PromiseLike<PgResult>, without: () => PromiseLike<PgResult>, ctx: string): Promise<unknown> {
     if (hasCycleColumn) {
       const { data, error, status } = await run(withCol(), ctx);
@@ -45,7 +83,7 @@ export function createSessionsRepo(db: Db, fallback: CycleFallback): SessionsRep
   async function readOne(id: Id): Promise<Session> {
     const ctx = 'Lecture de la séance';
     const one = (cols: string) => db.from('sessions').select(cols).eq('id', id).single();
-    const s = mapSessionRow(await withCycle(() => one(SESSION_SELECT), () => one(LEGACY_SESSION_SELECT), ctx));
+    const s = mapSessionRow(await readSessions(one, ctx));
     if (!s) throw new Error(`${ctx} : réponse invalide.`);
     return withLocalCycle(s);
   }
@@ -54,7 +92,7 @@ export function createSessionsRepo(db: Db, fallback: CycleFallback): SessionsRep
     /** Une seule requête avec jointure (D12). */
     async list() {
       const all = (cols: string) => db.from('sessions').select(cols).order('created_at', { ascending: false });
-      const data = await withCycle(() => all(SESSION_SELECT), () => all(LEGACY_SESSION_SELECT), 'Lecture des séances');
+      const data = await readSessions(all, 'Lecture des séances');
       return parseRows(data, mapSessionRow, 'sessions').map(withLocalCycle);
     },
 
@@ -65,7 +103,7 @@ export function createSessionsRepo(db: Db, fallback: CycleFallback): SessionsRep
       const row = await withCycle(() => insert({ name: d.name, cycle: d.cycle }), () => insert({ name: d.name }), ctx);
       const id = (row as { id?: unknown } | null)?.id;
       if (typeof id !== 'string') throw new Error(`${ctx} : id manquant.`);
-      await must(db.from('session_exercises').insert(links(id, d)), ctx);
+      await insertLinks(id, d, ctx);
       // Cycle local écrit en DERNIER : un échec de stockage ne laisse pas de séance sans exercices.
       // La séance est déjà validée en base : rejeter inviterait à recréer (doublon). Choix : on
       // résout avec la séance relue (`cycle: null`, signal visible) et on avertit en console.
@@ -96,7 +134,7 @@ export function createSessionsRepo(db: Db, fallback: CycleFallback): SessionsRep
       const update = (values: object) => db.from('sessions').update(values).eq('id', id);
       await withCycle(() => update({ name: d.name, cycle: d.cycle }), () => update({ name: d.name }), ctx);
       await must(db.from('session_exercises').delete().eq('session_id', id), ctx);
-      await must(db.from('session_exercises').insert(links(id, d)), ctx);
+      await insertLinks(id, d, ctx);
       rememberCycle(id, d.cycle);
       return readOne(id);
     },

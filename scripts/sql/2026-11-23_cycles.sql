@@ -18,3 +18,7 @@ create table if not exists cycle_state (
   weeks int not null check (weeks in (2,3)),
   updated_at timestamptz default now()
 );
+
+-- Ordre des exercices d'une séance (bug legacy : ordre aléatoire). NULL = lignes existantes,
+-- affichées après les lignes ordonnées, dans l'ordre renvoyé par la base.
+alter table session_exercises add column if not exists position int;

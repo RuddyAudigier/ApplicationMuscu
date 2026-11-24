@@ -132,6 +132,16 @@ function contract(name: string, make: () => DataBackend): void {
       expect((await b.performances.list()).filter((p) => p.sessionName === 'Push A')).toHaveLength(1);
     });
 
+    it('sessions: exercise order is kept on create, list and update', async () => {
+      const [e1, e2] = await b.exercises.list();
+      if (!e1 || !e2) throw new Error('seed expected');
+      const s = await b.sessions.create({ cycle: null, name: 'Ordre', exercises: [{ exerciseId: e2.id, series: 2 }, { exerciseId: e1.id, series: 3 }] });
+      expect(s.exercises.map((e) => e.exerciseId)).toEqual([e2.id, e1.id]);
+      expect((await b.sessions.list()).find((x) => x.id === s.id)?.exercises.map((e) => e.exerciseId)).toEqual([e2.id, e1.id]);
+      const u = await b.sessions.update(s.id, { cycle: null, name: 'Ordre', exercises: [{ exerciseId: e1.id, series: 3 }, { exerciseId: e2.id, series: 2 }] });
+      expect(u.exercises.map((e) => e.exerciseId)).toEqual([e1.id, e2.id]);
+    });
+
     it('sessions: validation', async () => {
       const [e1] = await b.exercises.list();
       if (!e1) throw new Error('seed expected');

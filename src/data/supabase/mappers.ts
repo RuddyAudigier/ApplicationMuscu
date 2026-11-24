@@ -52,18 +52,27 @@ const sessionRow = z.object({
   cycle: z.enum(['A', 'B']).nullish().catch(null),
   session_exercises: z.array(z.object({
     series_count: numeric.nullish(),
+    /** Colonne ajoutée par la migration (ordre) : absente ou invalide → `null`. */
+    position: z.number().int().nullish().catch(null),
     exercise_id: z.string().nullish(),
     exercises: z.union([nestedExercise, z.array(nestedExercise)]).nullish(),
   })).nullish(),
 });
 
-/** `createdAt` reste ISO ; les exercices supprimés (jointure nulle) sont ignorés (D12). */
+/**
+ * `createdAt` reste ISO ; les exercices supprimés (jointure nulle) sont ignorés (D12).
+ * Exercices triés par `position` croissante, `null` en dernier, ordre de la base sinon (tri stable).
+ */
 export function mapSessionRow(raw: unknown): Session | null {
   const parsed = sessionRow.safeParse(raw);
   if (!parsed.success) return null;
   const r = parsed.data;
   const exercises: SessionExercise[] = [];
-  for (const se of r.session_exercises ?? []) {
+  const ordered = [...(r.session_exercises ?? [])].sort((a, b) => {
+    if (a.position == null) return b.position == null ? 0 : 1;
+    return b.position == null ? -1 : a.position - b.position;
+  });
+  for (const se of ordered) {
     const ex = Array.isArray(se.exercises) ? se.exercises[0] : se.exercises;
     if (!ex || !se.exercise_id) continue;
     exercises.push({ exerciseId: se.exercise_id, name: ex.name, series: toNumber(se.series_count) ?? 1 });

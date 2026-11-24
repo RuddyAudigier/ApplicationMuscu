@@ -169,7 +169,7 @@ describe('sessions (Supabase)', () => {
     const list = await createSupabaseBackend(client).sessions.list();
     expect(list).toEqual([{ id: 's1', name: 'Push', createdAt: '2026-01-01T00:00:00Z', cycle: null, exercises: [{ exerciseId: 'e1', name: 'Bench', series: 3 }] }]);
     expect(calls).toHaveLength(1);
-    expect(op(calls[0] as FakeCall, 'select')?.[0]).toContain('session_exercises(series_count, exercise_id, exercises(name))');
+    expect(op(calls[0] as FakeCall, 'select')?.[0]).toContain('session_exercises(series_count, exercise_id, position, exercises(name))');
     expect(op(calls[0] as FakeCall, 'order')).toEqual(['created_at', { ascending: false }]);
   });
 
@@ -210,7 +210,7 @@ describe('sessions (Supabase)', () => {
     const del = calls.find((c) => isOp(c, 'delete', 'session_exercises'));
     expect(op(del as FakeCall, 'eq')).toEqual(['session_id', 's1']);
     const ins = calls.find((c) => isOp(c, 'insert', 'session_exercises'));
-    expect(op(ins as FakeCall, 'insert')?.[0]).toEqual([{ session_id: 's1', exercise_id: 'e1', series_count: 3 }]);
+    expect(op(ins as FakeCall, 'insert')?.[0]).toEqual([{ session_id: 's1', exercise_id: 'e1', series_count: 3, position: 0 }]);
   });
 
   it('update() with the same name does not touch performances; create() re-reads', async () => {
