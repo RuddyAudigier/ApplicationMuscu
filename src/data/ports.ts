@@ -1,3 +1,4 @@
+import type { Journal } from '../domain/journal';
 import type { WeekPlan, CycleState, Exercise, ExerciseDraft, Session, SessionDraft, Performance, PerformanceInput, GeneralAdvice, Id } from '../domain/model';
 
 export interface ExercisesRepo { list(): Promise<Exercise[]>; create(d: ExerciseDraft): Promise<Exercise>; update(id: Id, d: ExerciseDraft): Promise<Exercise>; remove(id: Id): Promise<void> }
@@ -9,10 +10,13 @@ export interface AdviceRepo { get(): Promise<GeneralAdvice | null>; save(a: Gene
 export interface CyclesRepo { get(): Promise<CycleState | null>; save(s: CycleState): Promise<void> }
 /** Semaine type + décalages ponctuels (singleton) ; `null` tant qu'elle n'a jamais été réglée. */
 export interface WeekPlanRepo { get(): Promise<WeekPlan | null>; save(p: WeekPlan): Promise<void> }
+/** Journal (singleton) : comptes rendus, notes de bloc, échauffements ; `null` tant qu'il n'a jamais été enregistré. */
+export interface JournalRepo { get(): Promise<Journal | null>; save(j: Journal): Promise<void> }
 export interface DataBackend {
   kind: 'mock' | 'supabase';
   exercises: ExercisesRepo; sessions: SessionsRepo; performances: PerformancesRepo;
   coachNotes: CoachNotesRepo; advice: AdviceRepo; cycles: CyclesRepo; weekPlan: WeekPlanRepo;
+  journal: JournalRepo;
   reset?: () => Promise<void>;
 }
 /** Erreur réseau (rejouable) vs validation (non rejouable). D8. */

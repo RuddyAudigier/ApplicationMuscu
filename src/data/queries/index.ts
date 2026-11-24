@@ -14,4 +14,5 @@ export { useSaveCoachNotes, type SaveCoachNotesVars } from './coachNotes';
 export { useAdvice, useSaveAdvice } from './advice';
 export { useCycleState, useSaveCycleState } from './cycles';
 export { useSaveWeekPlan, useWeekPlan } from './weekPlan';
+export { useJournal, useSaveJournal } from './journal';
 export { useResetBackend } from './reset';

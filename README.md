@@ -252,6 +252,10 @@ Si la RLS est activée sur `cycle_state`, ajouter des politiques de lecture, d�
 
 Exécuter `scripts/sql/2026-11-24_week_plan.sql` (additif, idempotent) : table `week_plan` (une semaine type par cycle, décalages). Le rejouer convertit l’ancien format (semaine commune aux deux cycles) en planning vide. Sans elle, le planning est gardé sur l’appareil (clé `mymuscle_week_plan_v1`). Le script `reset_complet.sql` l’inclut déjà.
 
+### Migration du journal
+
+Exécuter `scripts/sql/2026-11-25_journal.sql` (additif, idempotent) : table `journal` (comptes rendus de séance avec état et échauffements, notes de bloc, catalogue d’échauffements). Sans elle, le journal est gardé sur l’appareil (clé `mymuscle_journal_v1`). Le script `reset_complet.sql` l’inclut déjà.
+
 ### Attention
 
 **Ne pas exécuter** `scripts/sql/fix_triceps_*.sql` ni `scripts/sql/repair_triceps_*.sql`. Ce sont d’anciennes corrections ponctuelles qui **modifient l’historique** des performances.

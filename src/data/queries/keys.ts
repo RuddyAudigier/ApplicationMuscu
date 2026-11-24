@@ -6,4 +6,5 @@ export const queryKeys = {
   advice: ['advice'],
   cycleState: ['cycleState'],
   weekPlan: ['weekPlan'],
+  journal: ['journal'],
 } as const;

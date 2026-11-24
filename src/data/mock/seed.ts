@@ -57,5 +57,6 @@ export function buildSeed(genId: (prefix: string) => Id, createdAt: IsoDateTime)
     generalAdvice: null,
     cycleState: null,
     weekPlan: null,
+    journal: null,
   };
 }

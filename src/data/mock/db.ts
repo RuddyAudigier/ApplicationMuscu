@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { journalSchema } from '../shared/journal';
 import { weekPlanSchema } from '../shared/weekPlan';
 import type { Id } from '../../domain/model';
 import { buildSeed } from './seed';
@@ -26,6 +27,8 @@ const mockDbSchema = z.object({
   cycleState: z.object({ current: z.enum(['A', 'B']), startedOn: z.string(), weeks: z.union([z.literal(2), z.literal(3)]) }).nullish(),
   /** Absent des bases créées avant le planning : lu comme `null`, sans réinitialiser. */
   weekPlan: weekPlanSchema.nullish(),
+  /** Absent des bases créées avant le journal : lu comme `null`, sans réinitialiser. */
+  journal: journalSchema.nullish(),
 });
 
 export type MockDb = z.infer<typeof mockDbSchema>;

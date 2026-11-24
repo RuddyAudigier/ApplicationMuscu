@@ -35,6 +35,7 @@ drop table if exists exercises          cascade;
 drop table if exists general_advice     cascade;
 drop table if exists cycle_state        cascade;
 drop table if exists week_plan          cascade;
+drop table if exists journal            cascade;
 drop table if exists shared_sessions    cascade;
 
 -- ---------------------------------------------------------------------
@@ -132,6 +133,14 @@ create table week_plan (
   updated_at timestamptz default now()
 );
 
+create table journal (
+  id          int primary key default 1 check (id = 1),
+  logs        jsonb not null default '[]'::jsonb,
+  block_notes jsonb not null default '{}'::jsonb,
+  warmups     jsonb not null default '{"catalog":[],"bySession":{}}'::jsonb,
+  updated_at  timestamptz default now()
+);
+
 create index idx_muscle_groups_exercise_id     on muscle_groups(exercise_id);
 create index idx_exercise_variants_exercise_id on exercise_variants(exercise_id);
 create index idx_session_exercises_session_id  on session_exercises(session_id);
@@ -160,7 +169,7 @@ declare t text;
 begin
   foreach t in array array['exercises','muscle_groups','exercise_variants','sessions',
                            'session_exercises','performances','coach_notes',
-                           'general_advice','cycle_state','week_plan']
+                           'general_advice','cycle_state','week_plan','journal']
   loop
     execute format('alter table %I enable row level security', t);
     execute format('create policy app_all on %I for all to anon, authenticated using (true) with check (true)', t);
@@ -174,6 +183,7 @@ grant select on exercises_with_muscles to anon, authenticated;
 -- ---------------------------------------------------------------------
 insert into general_advice (id) values (1);
 insert into week_plan (id) values (1);
+insert into journal (id) values (1);
 
 -- Cycle en cours : A, démarré aujourd'hui, 2 semaines (modifiable dans Réglages).
 insert into cycle_state (id, current, started_on, weeks) values (1, 'A', current_date, 2);
