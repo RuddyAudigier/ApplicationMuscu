@@ -1,7 +1,8 @@
-import { cycleStatus, weeksForDays } from '@/domain/cycles';
+import { cycleOn, cycleStatus, weeksForDays } from '@/domain/cycles';
 import { parseDateToIso, todayIso } from '@/domain/dates';
 import type { CycleId, CycleState, IsoDate, Performance, Session } from '@/domain/model';
 import type { PrKind } from '@/domain/records';
+import { addDays, weekdayOf } from '@/domain/planning';
 import { sessionCode, sessionsOfCycle } from '@/domain/sessions';
 
 const DAY_MS = 86_400_000;
@@ -88,3 +89,46 @@ export const PR_LABEL: Record<PrKind, string> = {
   reps: 'Record reps',
   hybride: 'PR hybride',
 };
+
+export interface MonthCell {
+  date: IsoDate;
+  trained: boolean;
+  cycle: CycleId;
+  isToday: boolean;
+}
+
+export interface MonthGrid {
+  /** Semaines du lundi au dimanche ; `null` = jour hors du mois. */
+  weeks: (MonthCell | null)[][];
+  /** Jours distincts avec au moins une performance dans le mois. */
+  sessions: number;
+}
+
+const pad = (n: number): string => String(n).padStart(2, '0');
+
+/** Grille d'un mois (`month` de 1 à 12), en dates locales ; pastilles = jours entraînés, teinte = cycle A/B. */
+export function monthGrid(
+  year: number,
+  month: number,
+  perfs: Performance[],
+  cycleState: CycleState,
+  today: IsoDate,
+): MonthGrid {
+  const first: IsoDate = `${String(year)}-${pad(month)}-01`;
+  const length = new Date(year, month, 0).getDate();
+  const prefix = first.slice(0, 8);
+  const trainedDays = new Set<IsoDate>();
+  for (const p of perfs) {
+    const day = parseDateToIso(p.performanceDate);
+    if (day?.startsWith(prefix)) trainedDays.add(day);
+  }
+  const cells: (MonthCell | null)[] = Array.from({ length: weekdayOf(first) }, () => null);
+  for (let i = 0; i < length; i += 1) {
+    const date = addDays(first, i);
+    cells.push({ date, trained: trainedDays.has(date), cycle: cycleOn(cycleState, date), isToday: date === today });
+  }
+  while (cells.length % 7 !== 0) cells.push(null);
+  const weeks: (MonthCell | null)[][] = [];
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+  return { weeks, sessions: trainedDays.size };
+}

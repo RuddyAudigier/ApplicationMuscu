@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { matchPath, Outlet, useLocation, useNavigate } from 'react-router';
 import { useOfflineQueueSync } from '../data/queries';
 import { useReminderSync } from '../features/settings';
@@ -6,6 +6,7 @@ import { useAndroidBackButton } from '../platform/backButton';
 import { useReminderTap } from '../platform/notifications';
 import { BottomNav, type NavItem, useSwipe } from '../ui';
 import { closeTopSheet } from '../ui/Sheet';
+import styles from './Layout.module.css';
 
 const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Accueil', icon: 'home' },
@@ -55,10 +56,18 @@ export function Layout() {
     onSwipeLeft: () => { goTab(1); },
     onSwipeRight: () => { goTab(-1); },
   });
+  // Transition entre onglets : glissement dans le sens de la navigation (rien hors onglets).
+  const [nav, setNav] = useState<{ tab: number; slide: 'next' | 'prev' | undefined }>({ tab, slide: undefined });
+  if (nav.tab !== tab) {
+    setNav({ tab, slide: tab >= 0 && nav.tab >= 0 ? (tab > nav.tab ? 'next' : 'prev') : undefined });
+  }
+  const slide = nav.tab === tab ? nav.slide : undefined;
   return (
     <>
       <main style={showNav ? { paddingBottom: NAV_CLEARANCE } : undefined}>
-        <Outlet />
+        <div key={pathname} className={styles.page} data-slide={slide}>
+          <Outlet />
+        </div>
       </main>
       {showNav && <BottomNav items={NAV_ITEMS} />}
     </>

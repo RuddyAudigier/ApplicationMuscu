@@ -444,3 +444,97 @@
   font-weight: var(--weight-medium);
   color: var(--color-text-muted);
 }
+
+/* Calendrier du mois */
+.calendar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg, 16px);
+  padding: var(--space-4);
+}
+
+.calHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.calTitles {
+  display: flex;
+  flex-direction: column;
+}
+
+.calMonth {
+  font-size: var(--text-md, 16px);
+  color: var(--color-text);
+  text-transform: capitalize;
+}
+
+.calNav {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.calGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  row-gap: var(--space-1);
+  text-align: center;
+}
+
+.calDow {
+  font-size: 11px;
+  color: var(--color-text-subtle);
+  padding-bottom: var(--space-1);
+}
+
+.calDay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.calDay[data-today] {
+  color: var(--color-text);
+  font-weight: var(--weight-bold, 700);
+}
+
+.calDay::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  box-sizing: border-box;
+}
+
+.calDay[data-trained][data-cycle='A']::after {
+  background: var(--color-accent);
+}
+
+.calDay[data-trained][data-cycle='B']::after {
+  border: 2px solid var(--color-accent);
+}
+
+.calNum {
+  min-width: 22px;
+  line-height: 20px;
+  border-radius: var(--radius-full);
+  border: 1px solid transparent;
+}
+
+.calDay[data-today] .calNum {
+  border-color: var(--color-text);
+}
+
+.calTotal {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}

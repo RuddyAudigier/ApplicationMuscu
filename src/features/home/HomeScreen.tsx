@@ -20,10 +20,65 @@ import {
   saveLastReport,
   usePendingReportSync,
 } from '@/features/workout';
-import { Button, Icon, PageHeader, Skeleton } from '@/ui';
-import { nextPlannedSession, PR_LABEL, relativeDay, weekSegments, type WeekSegment } from './homeLogic';
+import { Button, Icon, IconButton, PageHeader, Skeleton } from '@/ui';
+import { monthGrid, nextPlannedSession, PR_LABEL, relativeDay, weekSegments, type WeekSegment } from './homeLogic';
 import styles from './HomeScreen.module.css';
 import { ScheduledSessions } from './ScheduledSessions';
+
+const MONTHS = [
+  'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+  'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
+];
+const INITIALS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+
+function MonthCalendar({ perfs, cycleState, today }: { perfs: Performance[]; cycleState: CycleState; today: string }) {
+  const [shown, setShown] = useState(() => ({ year: Number(today.slice(0, 4)), month: Number(today.slice(5, 7)) }));
+  const { year, month } = shown;
+  const grid = useMemo(() => monthGrid(year, month, perfs, cycleState, today), [year, month, perfs, cycleState, today]);
+  const step = (delta: number): void => {
+    const d = new Date(year, month - 1 + delta, 1);
+    setShown({ year: d.getFullYear(), month: d.getMonth() + 1 });
+  };
+  const name = MONTHS[month - 1] ?? '';
+  return (
+    <section className={styles.calendar} aria-labelledby="home-month">
+      <div className={styles.calHead}>
+        <div className={styles.calTitles}>
+          <h2 id="home-month" className={styles.prsTitle}>Ce mois-ci</h2>
+          <span className={styles.calMonth}>{name} {year}</span>
+        </div>
+        <div className={styles.calNav}>
+          <IconButton icon="back" label="Mois précédent" onClick={() => { step(-1); }} />
+          <IconButton icon="chevron" label="Mois suivant" onClick={() => { step(1); }} />
+        </div>
+      </div>
+      <div className={styles.calGrid}>
+        {INITIALS.map((l, i) => (
+          <span key={i} className={styles.calDow} aria-hidden="true">{l}</span>
+        ))}
+        {grid.weeks.flat().map((cell, i) => {
+          if (!cell) return <span key={i} />;
+          const day = Number(cell.date.slice(8, 10));
+          const label = `${String(day)} ${name}${cell.trained ? ` : séance (cycle ${cell.cycle})` : ''}`;
+          return (
+            <span
+              key={i}
+              className={styles.calDay}
+              data-trained={cell.trained || undefined}
+              data-cycle={cell.cycle}
+              data-today={cell.isToday || undefined}
+              role="img"
+              aria-label={label}
+            >
+              <span className={styles.calNum} aria-hidden="true">{day}</span>
+            </span>
+          );
+        })}
+      </div>
+      <p className={styles.calTotal}>{plural(grid.sessions, 'séance', 'séances')}</p>
+    </section>
+  );
+}
 
 const plural = (n: number, one: string, many: string): string => `${String(n)} ${n > 1 ? many : one}`;
 
@@ -355,6 +410,8 @@ export function HomeScreen() {
           <span className={styles.reportMeta}><Icon name="chevron" size={18} /></span>
         </Link>
       )}
+
+      {state && perfsQuery.data && <MonthCalendar perfs={perfsQuery.data} cycleState={state} today={today} />}
 
       <section className={styles.prs} aria-labelledby="home-prs">
         <div className={styles.prsHead}>
