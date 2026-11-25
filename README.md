@@ -297,7 +297,7 @@ Si la RLS est activée sur `cycle_state`, ajouter des politiques de lecture, d�
 - **Refus définitif** du serveur, ou envoi au résultat incertain (502/504, envoi interrompu) : la série est **archivée** pour éviter les doublons.
 - Dans Réglages : **Synchroniser** relance l’envoi, **Renvoyer les éléments archivés** remet les archives dans la file.
 - Les autres modifications (séances, exercices, cycles, remarques) demandent du réseau : hors-ligne, elles sont refusées avec un message explicite.
-- Le **journal** (compte rendu, état, chauffe) est aussi mis en file : en cas d’échec, un message l’indique, les données restent sur l’appareil et un nouvel essai a lieu à la modification suivante.
+- Le **journal** (forme, état, chauffe d’une séance) terminé hors-ligne reste sur l’appareil : un message l’indique, puis il est renvoyé tout seul dès que l’app retrouve le réseau (ouverture de l’accueil ou du compte rendu, démarrage de la séance suivante).
 
 ---
 
