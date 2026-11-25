@@ -119,6 +119,14 @@ export function syncReminders(reminders: Reminder[], time: string, stillValid: n
   return run;
 }
 
+async function exactAlarmsAllowed(): Promise<boolean> {
+  try {
+    return (await LocalNotifications.checkExactNotificationSetting()).exact_alarm === 'granted';
+  } catch {
+    return false;
+  }
+}
+
 async function doSync(reminders: Reminder[], time: string, stillValid: number[]): Promise<void> {
   const { notifications } = await LocalNotifications.getPending();
   if (notifications.length > 0) await LocalNotifications.cancel({ notifications });
@@ -138,13 +146,17 @@ async function doSync(reminders: Reminder[], time: string, stillValid: number[])
 
   if (reminders.length === 0) return;
   await setup();
+  // Alarme exacte seulement si Android l'autorise déjà (USE_EXACT_ALARM / SCHEDULE_EXACT_ALARM) :
+  // sinon le plugin ouvrirait l'écran « Alarmes et rappels » à chaque synchro. Une alarme non exacte
+  // peut être retardée de plusieurs minutes, voire plus, une fois l'appli fermée.
+  const exact = await exactAlarmsAllowed();
   await LocalNotifications.schedule({
     notifications: reminders.map((r) => ({
       id: r.id,
       title: r.title,
       body: r.body,
       largeBody: r.largeBody,
-      schedule: { at: fireDate(r.date, time), allowWhileIdle: true, isExactNotification: false },
+      schedule: { at: fireDate(r.date, time), allowWhileIdle: true, isExactNotification: exact },
       smallIcon: SMALL_ICON,
       iconColor: ICON_COLOR,
       group: GROUP,
