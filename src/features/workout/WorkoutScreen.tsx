@@ -15,7 +15,20 @@ import {
 } from '@/domain/workout';
 import { todayIso } from '@/domain/dates';
 import { useAddPerformances, useExercises, usePerformances, useSessions } from '@/data/queries';
-import { Button, cx, Field, Icon, IconButton, Pill, ProgressRing, Sheet, Skeleton, useConfirm, useSwipe, useToast } from '@/ui';
+import {
+  Button,
+  cx,
+  Field,
+  Icon,
+  IconButton,
+  Pill,
+  ProgressRing,
+  Sheet,
+  Skeleton,
+  useConfirm,
+  useSwipe,
+  useToast,
+} from '@/ui';
 import { AddExerciseSheet } from './AddExerciseSheet';
 import { FeelingChips } from './FeelingChips';
 import { isSameVariant, livePrFlags, prSignature, variantKeyOf, variantsOf } from './livePr';
@@ -100,7 +113,10 @@ function WorkoutView() {
   const current = Math.min(exIdx, Math.max(0, total - 1));
   const we = state.exercises[current];
   const plannedSeries = state.exercises.reduce((n, e) => n + e.series.length, 0);
-  const doneSeries = state.exercises.reduce((n, e) => n + e.series.filter((x) => x.validated).length, 0);
+  const doneSeries = state.exercises.reduce(
+    (n, e) => n + e.series.filter((x) => x.validated).length,
+    0,
+  );
 
   // Glisser entre exercices (borné, sans boucle) ; ignoré dans les champs et les feuilles (useSwipe).
   useSwipe({
@@ -207,55 +223,64 @@ function WorkoutView() {
   };
 
   const today = todayIso();
-  const code = sessionsQuery.data ? sessionCode(sessionsQuery.data, state.sessionId, state.cycle) : null;
+  const code = sessionsQuery.data
+    ? sessionCode(sessionsQuery.data, state.sessionId, state.cycle)
+    : null;
   const header = (
     <header className={styles.header}>
-      <IconButton
-        icon="back"
-        label="Retour au programme"
-        variant="surface"
-        onClick={() => {
-          void navigate('/program');
-        }}
-      />
-      <span className={styles.progress}>
-        <span className={styles.session}>{code ? `${code} : ${state.sessionName}` : state.sessionName}</span>
-        {total > 0 && (
-          <>
-            <span aria-hidden="true">{' · '}</span>
-            <span className={styles.step}>{`Exercice ${String(current + 1)} sur ${String(total)}`}</span>
-          </>
-        )}
-      </span>
-      {plannedSeries > 0 && (
-        <ProgressRing
-          label={`Séries faites : ${String(doneSeries)} sur ${String(plannedSeries)}`}
-          value={doneSeries}
-          max={plannedSeries}
+      <div className={styles.headerRow}>
+        <IconButton
+          icon="back"
+          label="Retour au programme"
+          variant="surface"
+          onClick={() => {
+            void navigate('/program');
+          }}
         />
+        <span className={styles.session}>
+          {code ? `${code} : ${state.sessionName}` : state.sessionName}
+        </span>
+        <IconButton
+          icon="more"
+          label="Options de la séance"
+          onClick={() => {
+            setOptionsOpen(true);
+          }}
+        />
+        <Button
+          className={styles.finish}
+          variant="secondary"
+          loading={finishing}
+          disabled={!dataReady}
+          onClick={() => {
+            void finish();
+          }}
+        >
+          Terminer
+        </Button>
+      </div>
+      {total > 0 && (
+        <div className={styles.headerSub}>
+          {plannedSeries > 0 && (
+            <ProgressRing
+              label={`Séries faites : ${String(doneSeries)} sur ${String(plannedSeries)}`}
+              value={doneSeries}
+              max={plannedSeries}
+            />
+          )}
+          <span
+            className={styles.step}
+          >{`Exercice ${String(current + 1)} sur ${String(total)}`}</span>
+        </div>
       )}
-      <IconButton
-        icon="more"
-        label="Options de la séance"
-        onClick={() => {
-          setOptionsOpen(true);
-        }}
-      />
-      <Button
-        className={styles.finish}
-        variant="secondary"
-        loading={finishing}
-        disabled={!dataReady}
-        onClick={() => {
-          void finish();
-        }}
-      >
-        Terminer
-      </Button>
     </header>
   );
 
-  const moodFirstLine = state.mood.split('\n').find((l) => l.trim() !== '')?.trim() ?? '';
+  const moodFirstLine =
+    state.mood
+      .split('\n')
+      .find((l) => l.trim() !== '')
+      ?.trim() ?? '';
   const moodSection = (
     <section className={styles.mood}>
       <button
@@ -266,7 +291,9 @@ function WorkoutView() {
           setMoodOpen((o) => !o);
         }}
       >
-        <span className={styles.moodLabel}>{moodFirstLine === '' ? 'Ajouter ton état général' : moodFirstLine}</span>
+        <span className={styles.moodLabel}>
+          {moodFirstLine === '' ? 'Ajouter ton état général' : moodFirstLine}
+        </span>
         <Icon name="chevron" size={16} />
       </button>
       {moodOpen && (
@@ -289,7 +316,9 @@ function WorkoutView() {
   const warmupSection = state.warmup.length > 0 && (
     <section className={styles.warmup} aria-labelledby="warmup-title">
       {warmupOpen ? (
-        <h2 id="warmup-title" className={styles.warmupTitle}>Échauffement</h2>
+        <h2 id="warmup-title" className={styles.warmupTitle}>
+          Échauffement
+        </h2>
       ) : (
         <button
           type="button"
@@ -364,7 +393,8 @@ function WorkoutView() {
           onChange={(e) => {
             const date = e.target.value;
             // Jamais dans le futur ; un champ vidé garde la date actuelle.
-            if (/^\d{4}-\d{2}-\d{2}$/.test(date) && date <= today) dispatch({ type: 'setDate', date });
+            if (/^\d{4}-\d{2}-\d{2}$/.test(date) && date <= today)
+              dispatch({ type: 'setDate', date });
           }}
         />
         {we && (
@@ -436,7 +466,9 @@ function WorkoutView() {
     );
   }
 
-  const exercise = exercisesQuery.isSuccess ? exercises.find((e) => e.id === we.exerciseId) : undefined;
+  const exercise = exercisesQuery.isSuccess
+    ? exercises.find((e) => e.id === we.exerciseId)
+    : undefined;
   // Jamais de variantes devinées (chargement, erreur, exercice inconnu) : seulement celles de l'exercice.
   const variants = exercise ? variantsOf(exercise, we.exerciseId) : [];
   const prs = prFlags?.[current] ?? [];
@@ -444,13 +476,20 @@ function WorkoutView() {
   const serie = serieIdx >= 0 ? we.series[serieIdx] : undefined;
   const doneCount = we.series.filter((s) => s.validated).length;
   const lastSerie = we.series[we.series.length - 1];
-  const activeKey = serie?.variantKey ?? lastSerie?.variantKey ?? (variants[0] ? variantKeyOf(variants[0]) : '');
+  const activeKey =
+    serie?.variantKey ?? lastSerie?.variantKey ?? (variants[0] ? variantKeyOf(variants[0]) : '');
   const coachNotes = exercise?.coachNotes.trim() ?? '';
 
   /** Change la variante de la série en cours ; la cible est recalculée pour les reps saisies. */
   const switchVariant = (v: Variant): void => {
     if (!serie || isSameVariant(v, serie.variantKey)) return;
-    dispatch({ type: 'setField', ex: current, serie: serieIdx, field: 'variantKey', value: variantKeyOf(v) });
+    dispatch({
+      type: 'setField',
+      ex: current,
+      serie: serieIdx,
+      field: 'variantKey',
+      value: variantKeyOf(v),
+    });
     dispatch({
       type: 'retarget',
       ex: current,
@@ -589,7 +628,12 @@ function WorkoutView() {
           }}
           onValidate={() => {
             focusAfterLast.current = we.series.every((s, i) => i === serieIdx || s.validated);
-            dispatch({ type: 'validate', ex: current, serie: serieIdx, at: new Date().toISOString() });
+            dispatch({
+              type: 'validate',
+              ex: current,
+              serie: serieIdx,
+              at: new Date().toISOString(),
+            });
           }}
           stopLabel={doneCount > 0 ? `Fatigué ? Arrêter à ${seriesWord(doneCount)}` : null}
           onStop={() => {
@@ -700,61 +744,6 @@ function WarmupSets({ we, onAdd, onChange, onRemove }: WarmupSetsProps) {
           {we.warmupSets.map((w, i) => (
             <li key={i} className={styles.warmupSet}>
               <span className={styles.warmupSetN}>Chauffe</span>
-              <span className={styles.warmupGroup}>
-                <StepButton
-                  dir="minus"
-                  label="Retirer une rep (chauffe)"
-                  onClick={() => {
-                    step(i, 'reps', -1);
-                  }}
-                />
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="Reps"
-                  aria-label={`Reps de la série de chauffe ${String(i + 1)}`}
-                  value={w.reps}
-                  className={styles.warmupInput}
-                  onChange={(e) => {
-                    onChange(i, 'reps', e.target.value);
-                  }}
-                />
-                <StepButton
-                  dir="plus"
-                  label="Ajouter une rep (chauffe)"
-                  onClick={() => {
-                    step(i, 'reps', 1);
-                  }}
-                />
-              </span>
-              <span aria-hidden="true">×</span>
-              <span className={styles.warmupGroup}>
-                <StepButton
-                  dir="minus"
-                  label="Retirer 0,5 kg (chauffe)"
-                  onClick={() => {
-                    step(i, 'kg', -1);
-                  }}
-                />
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  placeholder="kg"
-                  aria-label={`Poids de la série de chauffe ${String(i + 1)}`}
-                  value={w.kg}
-                  className={styles.warmupInput}
-                  onChange={(e) => {
-                    onChange(i, 'kg', e.target.value);
-                  }}
-                />
-                <StepButton
-                  dir="plus"
-                  label="Ajouter 0,5 kg (chauffe)"
-                  onClick={() => {
-                    step(i, 'kg', 1);
-                  }}
-                />
-              </span>
               <IconButton
                 icon="trash"
                 label={`Supprimer la série de chauffe ${String(i + 1)}`}
@@ -762,6 +751,63 @@ function WarmupSets({ we, onAdd, onChange, onRemove }: WarmupSetsProps) {
                   onRemove(i);
                 }}
               />
+              <div className={styles.warmupFields}>
+                <span className={styles.warmupGroup}>
+                  <StepButton
+                    dir="minus"
+                    label="Retirer une rep (chauffe)"
+                    onClick={() => {
+                      step(i, 'reps', -1);
+                    }}
+                  />
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Reps"
+                    aria-label={`Reps de la série de chauffe ${String(i + 1)}`}
+                    value={w.reps}
+                    className={styles.warmupInput}
+                    onChange={(e) => {
+                      onChange(i, 'reps', e.target.value);
+                    }}
+                  />
+                  <StepButton
+                    dir="plus"
+                    label="Ajouter une rep (chauffe)"
+                    onClick={() => {
+                      step(i, 'reps', 1);
+                    }}
+                  />
+                </span>
+                <span aria-hidden="true">×</span>
+                <span className={styles.warmupGroup}>
+                  <StepButton
+                    dir="minus"
+                    label="Retirer 0,5 kg (chauffe)"
+                    onClick={() => {
+                      step(i, 'kg', -1);
+                    }}
+                  />
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="kg"
+                    aria-label={`Poids de la série de chauffe ${String(i + 1)}`}
+                    value={w.kg}
+                    className={styles.warmupInput}
+                    onChange={(e) => {
+                      onChange(i, 'kg', e.target.value);
+                    }}
+                  />
+                  <StepButton
+                    dir="plus"
+                    label="Ajouter 0,5 kg (chauffe)"
+                    onClick={() => {
+                      step(i, 'kg', 1);
+                    }}
+                  />
+                </span>
+              </div>
             </li>
           ))}
         </ul>
@@ -820,7 +866,15 @@ function DoneSeries({ we, prs, variants, onEdit }: DoneSeriesProps) {
 }
 
 /** Bouton − / + d'un champ numérique (cible tactile de 44 px). */
-function StepButton({ dir, label, onClick }: { dir: 'minus' | 'plus'; label: string; onClick: () => void }) {
+function StepButton({
+  dir,
+  label,
+  onClick,
+}: {
+  dir: 'minus' | 'plus';
+  label: string;
+  onClick: () => void;
+}) {
   return (
     <button type="button" className={styles.stepBtn} aria-label={label} onClick={onClick}>
       <span aria-hidden="true">{dir === 'minus' ? '−' : '+'}</span>
@@ -877,8 +931,15 @@ function SerieForm({
           Série {n}
         </h2>
         <span className={styles.serieActions}>
-          {onRemove && <IconButton icon="trash" label={`Supprimer la série ${String(n)}`} onClick={onRemove} />}
-          <button type="button" className={styles.recordsBtn} onClick={onOpenRecords} disabled={!recordsAvailable}>
+          {onRemove && (
+            <IconButton icon="trash" label={`Supprimer la série ${String(n)}`} onClick={onRemove} />
+          )}
+          <button
+            type="button"
+            className={styles.recordsBtn}
+            onClick={onOpenRecords}
+            disabled={!recordsAvailable}
+          >
             <Icon name="table" size={16} />
             Mes records
           </button>

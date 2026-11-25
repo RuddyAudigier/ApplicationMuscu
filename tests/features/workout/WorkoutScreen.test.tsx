@@ -552,12 +552,14 @@ describe('WorkoutScreen', { timeout: 20_000 }, () => {
     await ready();
     const header = screen.getByRole('banner');
     expect(await within(header).findByText(/^Cycle A : /)).toBeInTheDocument();
-    expect(header).toHaveTextContent(`Cycle A : ${SESSION} · Exercice 1 sur 2`);
+    expect(header).toHaveTextContent(`Cycle A : ${SESSION}`);
+    expect(header).toHaveTextContent('Exercice 1 sur 2');
     cleanup();
     saveActiveWorkout({ ...state, cycle: null });
     renderWorkout(backend);
     await ready();
-    expect(screen.getByRole('banner')).toHaveTextContent(`${SESSION} · Exercice 1 sur 2`);
+    expect(screen.getByRole('banner')).toHaveTextContent(SESSION);
+    expect(screen.getByRole('banner')).toHaveTextContent('Exercice 1 sur 2');
   });
 
   it('exercices en chargement : pas de variante devinée, « Mes records » désactivé', async () => {
