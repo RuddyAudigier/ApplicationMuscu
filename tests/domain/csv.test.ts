@@ -105,9 +105,9 @@ describe('importPerformances', () => {
   });
 
   it('rejects empty or header-only files', () => {
-    expect(importPerformances(' \r\n ', ex, d)).toEqual({ rows: [], errors: ['Le fichier CSV est vide.'] });
+    expect(importPerformances(' \r\n ', ex, d)).toEqual({ rows: [], errors: ['Le fichier est vide.'] });
     expect(importPerformances('exercice;reps;poids\n\n', ex, d)).toEqual({
-      rows: [], errors: ["Le CSV doit contenir une ligne d'en-tête et au moins une ligne de données."],
+      rows: [], errors: ["Le fichier doit contenir une ligne d'en-tête et au moins une ligne de données."],
     });
   });
 

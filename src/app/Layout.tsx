@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router';
+import { matchPath, Outlet, useLocation, useNavigate } from 'react-router';
 import { useOfflineQueueSync } from '../data/queries';
 import { useReminderSync } from '../features/settings';
 import { useAndroidBackButton } from '../platform/backButton';
@@ -41,7 +41,11 @@ export function Layout() {
   useAndroidBackButton(goBack, closeTopSheet);
   const showNav = !NAV_HIDDEN.includes(pathname);
   // Glisser entre les 4 onglets (gauche → suivant, droite → précédent) ; ailleurs, sans effet.
-  const tab = NAV_ITEMS.findIndex((item) => item.to === pathname);
+  const tab = NAV_ITEMS.findIndex((item) =>
+    item.to === '/records'
+      ? pathname !== '/records/add' && (matchPath('/records', pathname) !== null || matchPath('/records/:exerciseId', pathname) !== null)
+      : matchPath({ path: item.to, end: true }, pathname) !== null,
+  );
   const goTab = (delta: number) => {
     const target = NAV_ITEMS[tab + delta];
     if (target) void navigate(target.to);

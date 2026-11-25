@@ -22,6 +22,12 @@ export const daysForWeeks = (weeks: number): number => Math.ceil(weeks * 7);
 /** Nombre de semaines (entamées) d'un bloc de `days` jours. */
 export const weeksForDays = (days: number): number => Math.ceil(days / 7);
 
+/** « 2 semaines », « 1,5 semaine » : durée d'un bloc en jours, au demi-semaine près. */
+export function lengthLabel(days: number): string {
+  const w = Math.round(days / 3.5) / 2;
+  return `${String(w).replace('.', ',')} semaine${w >= 2 ? 's' : ''}`;
+}
+
 interface Block { cycle: CycleId; start: number; days: number; extra: number }
 
 /** Bloc qui contient `today` : le bloc stocké (durée + report), puis des blocs de la durée générale en alternant. */
@@ -106,14 +112,16 @@ export function cancelPostpone(state: CycleState, today: IsoDate): CycleState {
   return toState({ ...b, extra: b.extra - 7 }, state.lengthDays);
 }
 
-/**
- * Change la durée générale. Le bloc en cours devient durée + report, sans finir avant aujourd'hui :
- * le cycle du jour ne recule jamais (le surplus éventuel est ajouté au report).
- */
+/** Une durée est possible si le bloc en cours (durée + report) ne finirait pas avant aujourd'hui. */
+export function canSetCycleLength(state: CycleState, today: IsoDate, lengthDays: number): boolean {
+  const b = resolveBlock(state, today);
+  return lengthDays + b.extra > b.day;
+}
+
+/** Change la durée générale ; le report (multiple de 7, issu des seuls reports) reste inchangé. */
 export function setCycleLength(state: CycleState, today: IsoDate, lengthDays: number): CycleState {
   const b = resolveBlock(state, today);
-  const minExtra = Math.max(0, b.day + 1 - lengthDays);
-  return toState({ ...b, extra: Math.max(b.extra, minExtra) }, lengthDays);
+  return toState(b, lengthDays);
 }
 
 /** Passe manuellement à l'autre cycle à partir d'aujourd'hui, pour la durée générale. */

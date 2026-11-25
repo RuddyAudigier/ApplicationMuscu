@@ -13,6 +13,8 @@ interface Outcome {
   errors: string[];
 }
 
+const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
 function readText(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -61,7 +63,7 @@ export function CsvImportSheet({ open, onClose, exercises, exercisesStatus }: Cs
         return;
       }
       let parsed: ReturnType<typeof importPerformances>;
-      if (lower.endsWith('.xlsx')) {
+      if (lower.endsWith('.xlsx') || (!lower.endsWith('.csv') && file.type === XLSX_TYPE)) {
         let table: string[][];
         try {
           table = await readXlsxRows(file);

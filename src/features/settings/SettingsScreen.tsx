@@ -13,7 +13,7 @@ import {
   useResetBackend,
   useSaveCycleState,
 } from '@/data/queries';
-import { currentBlock, defaultCycleState } from '@/domain/cycles';
+import { currentBlock, defaultCycleState, lengthLabel } from '@/domain/cycles';
 import { compareIso, todayIso } from '@/domain/dates';
 import type { CycleId, CycleState } from '@/domain/model';
 import {
@@ -82,7 +82,7 @@ function CycleForm({ initial }: { initial: CycleState }) {
   return (
     <form className={styles.stack} onSubmit={submit} noValidate>
       <p className={styles.text}>
-        Corrige ici le cycle en cours si l’appli s’est trompée. La durée générale ({String(initial.lengthDays)} jours) se règle dans
+        Corrige ici le cycle en cours si l’appli s’est trompée. La durée générale ({lengthLabel(initial.lengthDays)}) se règle dans
         Programme.
       </p>
       <Segmented label="Cycle courant" options={CYCLE_OPTIONS} value={current} onChange={setCurrent} className={styles.segmented} />
@@ -415,7 +415,7 @@ export function SettingsScreen() {
       <DataSection />
       <Section title="À propos">
         <p className={styles.text}>
-          MyMuscle suit la méthode fontesque : deux cycles A/B alternés toutes les deux semaines, une tentative de PR
+          MyMuscle suit la méthode fontesque : deux cycles A/B alternés par blocs de quelques semaines, une tentative de PR
           choisie avant chaque série, et des séries modulables selon la forme du jour.
         </p>
       </Section>

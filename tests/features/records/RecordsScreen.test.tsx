@@ -162,7 +162,7 @@ describe('CSV import (menu ⋯)', () => {
   async function openMenu() {
     const user = userEvent.setup();
     await screen.findByText('92,5 kg');
-    await user.click(screen.getByRole('button', { name: "Plus d’options" }));
+    await user.click(screen.getByRole('button', { name: 'Importer un fichier' }));
     return { user, input: screen.getByLabelText(/Choisir un fichier/) };
   }
 
@@ -223,7 +223,7 @@ describe('CSV import (menu ⋯)', () => {
     vi.spyOn(backend.exercises, 'list').mockRejectedValue(new NetworkError('offline'));
     renderAt('/records', backend);
     await screen.findByText(/Impossible de charger les records/);
-    await user.click(screen.getByRole('button', { name: "Plus d’options" }));
+    await user.click(screen.getByRole('button', { name: 'Importer un fichier' }));
     expect(screen.getByLabelText(/Choisir un fichier/)).toBeDisabled();
     expect(screen.getByText(/import indisponible/)).toHaveAttribute('role', 'alert');
   });
@@ -233,7 +233,7 @@ describe('CSV import (menu ⋯)', () => {
     const backend = createMockBackend(localStorage);
     vi.spyOn(backend.exercises, 'list').mockReturnValue(new Promise(() => undefined));
     renderAt('/records', backend);
-    await user.click(screen.getByRole('button', { name: "Plus d’options" }));
+    await user.click(screen.getByRole('button', { name: 'Importer un fichier' }));
     expect(screen.getByLabelText(/Choisir un fichier/)).toBeDisabled();
     expect(screen.getByText('Chargement des exercices…')).toBeInTheDocument();
   });

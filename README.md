@@ -52,7 +52,7 @@ Le design est sombre, « noir & citron » : fond noir, accents jaune citron, typ
 ### Programme
 
 - Onglets **A** / **B** : les séances de chaque cycle et leurs exercices.
-- Durée du cycle en cours : **2 semaines** ou **3 semaines** (après une semaine manquée).
+- Durée du cycle en cours : de **1 à 4 semaines** par demi-semaine, et report du prochain cycle d’une semaine à la fois.
 - Démarrage d’une séance depuis la liste.
 - **Ma semaine** : une semaine type par cycle, réglée sous l’onglet A ou B. Pour chaque jour (lundi → dimanche), repos ou une séance du cycle, par exemple lundi : Haut du corps, jeudi : Bas du corps, samedi : Full body. Un cycle compte autant de séances que voulu. Pendant les semaines A, l’accueil suit la semaine A, puis la semaine B après la bascule.
 
@@ -72,7 +72,7 @@ Résumé de la séance (exercices, séries, PR obtenus), exportable en PDF et pa
 
 ### Bilan du bloc
 
-Synthèse d’un bloc de cycle (le bloc en cours ou l’un des précédents) : séances faites, prévues, sautées et manquées, PR obtenus, exercices sans PR, forme du jour, états par exercice et états généraux notés. Une zone « Ressenti du bloc » se saisit et s’enregistre dans le journal ; le bilan s’exporte en PDF pour le coach. Les blocs passés sont reconstitués par tranches de 14 jours (les prolongations passées ne sont pas mémorisées). Accessible depuis l’accueil, mise en avant dans les 3 derniers jours du bloc.
+Synthèse d’un bloc de cycle (le bloc en cours ou l’un des précédents) : séances faites, prévues, sautées et manquées, PR obtenus, exercices sans PR, forme du jour, états par exercice et états généraux notés. Une zone « Ressenti du bloc » se saisit et s’enregistre dans le journal ; le bilan s’exporte en PDF pour le coach. Les blocs passés sont reconstitués par tranches de la durée générale du cycle (les reports passés ne sont pas mémorisés). Accessible depuis l’accueil, mise en avant dans les 3 derniers jours du bloc.
 
 ### Records
 
@@ -105,18 +105,18 @@ Synthèse d’un bloc de cycle (le bloc en cours ou l’un des précédents) : s
 
 On travaille **les mêmes muscles** dans les deux cycles, mais avec **des mouvements différents** (autres exercices, autres variantes). Chaque séance appartient au cycle A ou au cycle B.
 
-### Alternance toutes les 2 semaines
+### Alternance par blocs
 
-Les cycles alternent par blocs de **2 semaines** : A, B, A, B… Changer de mouvements régulièrement :
+Les cycles alternent par blocs de **1 à 4 semaines** (2 par défaut, au choix par demi-semaine) : A, B, A, B… Changer de mouvements régulièrement :
 
 - laisse récupérer tendons et articulations, sollicités différemment d’un cycle à l’autre ;
 - garde la motivation : on retrouve un cycle avec ses records à battre.
 
 L’application calcule seule le cycle du jour à partir du début du cycle en cours et de sa durée.
 
-### Prolonger à 3 semaines
+### Reporter le prochain cycle
 
-Une semaine manquée (vacances, maladie) ? Le bloc en cours passe à **3 semaines** dans Programme, et la bascule vers l’autre cycle est décalée d’autant.
+Une semaine manquée (vacances, maladie) ? Programme permet de **reporter d’une semaine** (autant de fois que besoin, annulable) : la bascule vers l’autre cycle est décalée d’autant.
 
 ### Séries modulables
 

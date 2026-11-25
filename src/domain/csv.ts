@@ -133,9 +133,9 @@ export function importPerformanceRows(
   today: IsoDate = todayIso(),
 ): { rows: PerformanceInput[]; errors: string[] } {
   const [header, ...data] = table;
-  if (!header) return { rows: [], errors: ['Le fichier CSV est vide.'] };
+  if (!header) return { rows: [], errors: ['Le fichier est vide.'] };
   if (data.length === 0) {
-    return { rows: [], errors: ["Le CSV doit contenir une ligne d'en-tête et au moins une ligne de données."] };
+    return { rows: [], errors: ["Le fichier doit contenir une ligne d'en-tête et au moins une ligne de données."] };
   }
 
   const headers = header.map(normalizeHeader);

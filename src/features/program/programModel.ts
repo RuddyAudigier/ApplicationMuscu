@@ -1,4 +1,4 @@
-import { cycleStatus, daysForWeeks, nextBlockStart, postponedDays, weeksForDays } from '@/domain/cycles';
+import { cycleStatus, daysForWeeks, lengthLabel, nextBlockStart, postponedDays, weeksForDays } from '@/domain/cycles';
 import type { CycleId, CycleState, Id, IsoDate, Performance, Session } from '@/domain/model';
 import { normalizeSearch } from '@/domain/names';
 
@@ -60,12 +60,6 @@ export const LENGTH_OPTIONS = [1, 1.5, 2, 2.5, 3, 3.5, 4].map((w) => ({
 }));
 
 const plural = (n: number, word: string): string => `${String(n)} ${word}${n > 1 ? 's' : ''}`;
-
-/** « 2 semaines », « 1,5 semaine » : durée d'un bloc en jours, au demi-semaine près. */
-function lengthLabel(days: number): string {
-  const w = Math.round(days / 3.5) / 2;
-  return `${String(w).replace('.', ',')} semaine${w >= 2 ? 's' : ''}`;
-}
 
 /** « Prochain cycle B le jeudi 12 déc. » (+ « · reporté de N semaine(s) »). */
 export function nextCycleLine(state: CycleState, today: IsoDate): string {

@@ -1,7 +1,7 @@
 import { useId, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { useCycleState, useExercises, useJournal, usePerformances, useSaveCycleState, useSessions } from '@/data/queries';
-import { cancelPostpone, canCancelPostpone, cycleStatus, defaultCycleState, postponeCycle, setCycleLength } from '@/domain/cycles';
+import { cancelPostpone, canCancelPostpone, canSetCycleLength, cycleStatus, defaultCycleState, postponeCycle, setCycleLength } from '@/domain/cycles';
 import { todayIso } from '@/domain/dates';
 import type { CycleId, CycleState, Session } from '@/domain/model';
 import { warmupsForSession, type Form } from '@/domain/journal';
@@ -191,9 +191,14 @@ export function ProgramScreen() {
         onChange={(e) => { setLength(e.target.value); }}
       >
         {LENGTH_OPTIONS.map((o) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
+          <option key={o.value} value={o.value} disabled={!canSetCycleLength(cycleState, today, Number(o.value))}>
+            {o.label}
+          </option>
         ))}
       </Field>
+      {LENGTH_OPTIONS.some((o) => !canSetCycleLength(cycleState, today, Number(o.value))) && (
+        <p className={styles.hint}>Durée trop courte pour le bloc en cours : certaines durées sont indisponibles.</p>
+      )}
       <p className={styles.hint}>{nextCycleLine(cycleState, today)}</p>
       <div className={styles.postpone}>
         <Button

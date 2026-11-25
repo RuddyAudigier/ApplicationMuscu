@@ -14,7 +14,8 @@ export const storedCycleFields = {
 interface StoredCycle { weeks?: number | null; lengthDays?: number | null; extraDays?: number | null }
 
 export function cycleLengths(r: StoredCycle): Pick<CycleState, 'lengthDays' | 'extraDays'> {
-  if (r.lengthDays != null) return { lengthDays: r.lengthDays, extraDays: r.extraDays ?? 0 };
+  // Le report est un multiple de 7 ; une ancienne valeur quelconque est arrondie au-dessus (le changement de cycle n'avance jamais).
+  if (r.lengthDays != null) return { lengthDays: r.lengthDays, extraDays: Math.ceil((r.extraDays ?? 0) / 7) * 7 };
   const weeks = r.weeks ?? 2;
   return { lengthDays: 14, extraDays: Math.max(0, (weeks - 2) * 7) };
 }

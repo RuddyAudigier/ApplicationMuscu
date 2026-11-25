@@ -86,30 +86,19 @@ export function RecordsScreen() {
     <div className={styles.screen}>
       <PageHeader
         title="Records"
-        actions={
-          <>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setMenuOpen(true);
-              }}
-            >
-              Importer un fichier
-            </Button>
-            <button
-              type="button"
-              className={styles.moreButton}
-              aria-label="Plus d’options"
-              aria-haspopup="dialog"
-              onClick={() => {
-                setMenuOpen(true);
-              }}
-            >
-              <span aria-hidden="true">⋯</span>
-            </button>
-          </>
-        }
       />
+
+      <div className={styles.importRow}>
+        <Button
+          variant="ghost"
+          onClick={() => {
+            setMenuOpen(true);
+          }}
+        >
+          Importer un fichier
+        </Button>
+        <span className={styles.importHint}>Excel ou CSV : exercice, reps, poids, date</span>
+      </div>
 
       {loading && <Skeleton height={320} />}
       {!loading && failed && (
