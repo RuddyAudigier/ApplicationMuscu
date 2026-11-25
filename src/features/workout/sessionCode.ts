@@ -5,9 +5,5 @@ import type { CycleId, Id, Session } from '@/domain/model';
  */
 export function sessionCode(sessions: Session[], sessionId: Id, cycle: CycleId | null): string | null {
   if (cycle === null) return null;
-  const rank = sessions
-    .filter((s) => s.cycle === cycle)
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id))
-    .findIndex((s) => s.id === sessionId);
-  return rank < 0 ? null : `Cycle ${cycle}`;
+  return sessions.some((s) => s.cycle === cycle && s.id === sessionId) ? `Cycle ${cycle}` : null;
 }

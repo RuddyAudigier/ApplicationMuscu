@@ -259,14 +259,14 @@ describe('WorkoutScreen', { timeout: 20_000 }, () => {
     expect(loadActiveWorkout()?.exercises).toHaveLength(3);
   });
 
-  it('retour au programme garde la séance', async () => {
+  it('retour sans historique : accueil, la séance est gardée', async () => {
     const user = userEvent.setup();
     const backend = makeBackend();
     await seedWorkout(backend);
     renderWorkout(backend);
     await ready();
-    await user.click(screen.getByRole('button', { name: 'Retour au programme' }));
-    expect(await screen.findByRole('heading', { name: 'Programme' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Retour' }));
+    expect(await screen.findByRole('heading', { name: 'Accueil' })).toBeInTheDocument();
     expect(loadActiveWorkout()).not.toBeNull();
   });
 
@@ -535,14 +535,14 @@ describe('WorkoutScreen', { timeout: 20_000 }, () => {
     expect(screen.getByRole('button', { name: 'Ajouter une série' })).toHaveFocus();
   });
 
-  it('après « Valider la série », le focus revient sur les reps', async () => {
+  it('après « Valider la série », le focus va sur le titre de série (pas de clavier)', async () => {
     const user = userEvent.setup();
     const backend = makeBackend();
     await seedWorkout(backend);
     renderWorkout(backend);
     await ready();
     await doSerie(user, '5', '80');
-    expect(screen.getByLabelText('Reps')).toHaveFocus();
+    expect(screen.getByRole('heading', { name: 'Série 2' })).toHaveFocus();
   });
 
   it('en-tête : « Cycle A : nom » ou nom de la séance sans cycle', async () => {

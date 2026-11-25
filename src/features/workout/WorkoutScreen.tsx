@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router';
+import { Navigate, useLocation, useNavigate } from 'react-router';
 import type { Exercise, Performance, Variant } from '@/domain/model';
 import { formatDecimal, formatWeight, stepReps, stepWeight } from '@/domain/numbers';
 import { logFromWorkout, upsertLog } from '@/domain/journal';
@@ -16,6 +16,7 @@ import {
 import { todayIso } from '@/domain/dates';
 import { useAddPerformances, useExercises, usePerformances, useSessions } from '@/data/queries';
 import {
+  Badge,
   Button,
   cx,
   Field,
@@ -73,6 +74,7 @@ export function WorkoutScreen() {
 function WorkoutView() {
   const { state, dispatch, stopPersisting } = useWorkout();
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
   const confirm = useConfirm();
   const exercisesQuery = useExercises();
@@ -231,10 +233,11 @@ function WorkoutView() {
       <div className={styles.headerRow}>
         <IconButton
           icon="back"
-          label="Retour au programme"
+          label="Retour"
           variant="surface"
           onClick={() => {
-            void navigate('/program');
+            // Retour à l'écran d'origine ; entrée directe (lien, rechargement) : accueil.
+            void (location.key === 'default' ? navigate('/') : navigate(-1));
           }}
         />
         <span className={styles.session}>
@@ -294,7 +297,7 @@ function WorkoutView() {
         <span className={styles.moodLabel}>
           {moodFirstLine === '' ? 'Ajouter ton état général' : moodFirstLine}
         </span>
-        <Icon name="chevron" size={16} />
+        <Icon name="chevron" size={16} className={cx(styles.chev, moodOpen && styles.chevOpen)} />
       </button>
       {moodOpen && (
         <Field
@@ -313,20 +316,15 @@ function WorkoutView() {
   const warmupDone = state.warmup.filter((w) => w.done).length;
   const warmupAllDone = state.warmup.length > 0 && warmupDone === state.warmup.length;
   const warmupOpen = warmupChoice ?? (current === 0 && !warmupAllDone);
-  const warmupSection = state.warmup.length > 0 && (
-    <section className={styles.warmup} aria-labelledby="warmup-title">
-      {warmupOpen ? (
-        <h2 id="warmup-title" className={styles.warmupTitle}>
-          Échauffement
-        </h2>
-      ) : (
+  const warmupSection = state.warmup.length > 0 && (current === 0 || !warmupAllDone) && (
+    <section className={styles.warmup}>
+      <h2 className={styles.warmupHeading}>
         <button
           type="button"
-          id="warmup-title"
           className={styles.moodToggle}
-          aria-expanded={false}
+          aria-expanded={warmupOpen}
           onClick={() => {
-            setWarmupChoice(true);
+            setWarmupChoice(!warmupOpen);
           }}
         >
           <span className={styles.moodLabel}>
@@ -334,9 +332,13 @@ function WorkoutView() {
               ? `Échauffement fait (${String(state.warmup.length)})`
               : `Échauffement (${String(warmupDone)}/${String(state.warmup.length)})`}
           </span>
-          <Icon name="chevron" size={16} />
+          <Icon
+            name="chevron"
+            size={16}
+            className={cx(styles.chev, warmupOpen && styles.chevOpen)}
+          />
         </button>
-      )}
+      </h2>
       {warmupOpen && (
         <ul className={styles.warmupList}>
           {state.warmup.map((w, i) => (
@@ -359,18 +361,6 @@ function WorkoutView() {
             </li>
           ))}
         </ul>
-      )}
-      {warmupOpen && warmupAllDone && (
-        <button
-          type="button"
-          className={styles.moodToggle}
-          onClick={() => {
-            setWarmupChoice(false);
-          }}
-        >
-          <span className={styles.moodLabel}>Replier l’échauffement</span>
-          <Icon name="chevron" size={16} />
-        </button>
       )}
     </section>
   );
@@ -517,11 +507,9 @@ function WorkoutView() {
       {header}
       {dataBanner}
 
-      {moodSection}
+      <h1 className={styles.title}>{name}</h1>
 
       {warmupSection}
-
-      <h1 className={styles.title}>{name}</h1>
 
       {coachNotes !== '' && (
         <div className={styles.coach}>
@@ -692,6 +680,8 @@ function WorkoutView() {
         )}
       </div>
 
+      {moodSection}
+
       <RecordsSheet
         open={recordsOpen && exercise !== undefined}
         onClose={() => {
@@ -846,7 +836,7 @@ function DoneSeries({ we, prs, variants, onEdit }: DoneSeriesProps) {
               </span>
             </span>
             <span className={styles.doneActions}>
-              {prs[i] && <span className={styles.prBadge}>PR</span>}
+              {prs[i] && <Badge tone="pr">PR</Badge>}
               <button
                 type="button"
                 className={styles.editBtn}
@@ -916,7 +906,7 @@ function SerieForm({
   stopLabel,
   onStop,
 }: SerieFormProps) {
-  const repsRef = useRef<HTMLInputElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const repsId = useId();
   const kgId = useId();
   /** Même chemin que la saisie au clavier (la cible suit les reps). */
@@ -927,7 +917,7 @@ function SerieForm({
   return (
     <section className={styles.form} aria-labelledby="serie-title">
       <div className={styles.serieHead}>
-        <h2 id="serie-title" className={styles.serieTitle}>
+        <h2 id="serie-title" ref={titleRef} tabIndex={-1} className={styles.serieTitle}>
           Série {n}
         </h2>
         <span className={styles.serieActions}>
@@ -967,7 +957,6 @@ function SerieForm({
             <input
               id={repsId}
               type="text"
-              ref={repsRef}
               inputMode="numeric"
               placeholder="0"
               value={serie.reps}
@@ -1038,19 +1027,21 @@ function SerieForm({
 
       <div className={styles.spacer} />
 
-      <Button
-        variant="accent"
-        icon="check"
-        fullWidth
-        disabled={!canValidate(serie)}
-        onClick={() => {
-          onValidate();
-          // Série suivante : la saisie reprend directement sur les reps.
-          repsRef.current?.focus();
-        }}
-      >
-        Valider la série
-      </Button>
+      <div className={styles.validateBar}>
+        <Button
+          variant="accent"
+          icon="check"
+          fullWidth
+          disabled={!canValidate(serie)}
+          onClick={() => {
+            onValidate();
+            // Pas de focus sur un champ (le clavier s'ouvrirait à chaque série) : on reste sur le titre.
+            titleRef.current?.focus({ preventScroll: true });
+          }}
+        >
+          Valider la série
+        </Button>
+      </div>
       {stopLabel && (
         <button type="button" className={styles.stop} onClick={onStop}>
           {stopLabel}
