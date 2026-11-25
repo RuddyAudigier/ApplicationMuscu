@@ -36,66 +36,91 @@ Le design est sombre, « noir & citron » : fond noir, accents jaune citron, typ
 | Exercices et fiche exercice | `/exercises`, `/exercises/:id` |
 | Réglages | `/settings` |
 
+### Navigation
+
+- Barre du bas : Accueil, Programme, Records, Exercices.
+- **Glisser à gauche ou à droite** sur ces quatre écrans passe à l’onglet voisin. Le geste est ignoré s’il part d’un champ, d’une zone qui défile horizontalement ou d’une feuille ouverte.
+- Le changement d’onglet (barre ou glisser) joue une courte transition horizontale ; pas de transition sur les autres écrans, ni si « réduire les animations » est activé.
+
 ### Accueil
 
-- Cycle en cours (A ou B), semaine en cours et nombre de jours avant la bascule.
-- Frise des blocs passés, en cours et à venir.
-- « Séance du jour » avec son code (A1, A2, B1…) et le nombre de séries prévues, bouton **Démarrer**.
-- Avec une semaine réglée dans Programme :
-  - **séance manquée** (jour passé, séance non faite) : **La faire maintenant**, **Décaler…** (vers un jour d’ici dimanche) ou **Sauter cette semaine** (la séance reste au programme) ;
-  - **prochaine séance** : celle du jour, sinon la suivante de la semaine, qu’on peut démarrer **en avance** ;
-  - une séance compte comme faite dès qu’une série porte son nom cette semaine, même faite en avance ;
-  - un décalage ou un saut ne vaut que pour la semaine en cours, et peut être annulé.
-- Sans semaine réglée : la première séance du cycle pas encore faite depuis lundi.
-- « Derniers PR » : les records les plus récents, avec leur type (charge, reps, hybride).
+- Cycle en cours (A ou B), « semaine N sur M » et jours avant la bascule.
+- **Frise** des blocs passés, en cours et à venir.
+- **Séance du jour** (ou prochaine séance) : nom, exercices, séries prévues, bouton **Démarrer**.
+- Avec une **semaine type** réglée dans Programme :
+  - **séance manquée** : **La faire maintenant**, **Décaler…** (vers un jour d’ici dimanche) ou **Sauter cette semaine** ;
+  - **prochaine séance** : celle du jour, sinon la suivante de la semaine, démarrable **en avance** ;
+  - **Décaler…** et **Sauter cette semaine** se trouvent dans la carte citron de la séance, sous les séries ;
+  - une séance compte comme faite dès qu’une série porte son nom cette semaine ; décalage et saut ne valent que pour la semaine en cours et s’annulent.
+- Sans semaine type : la première séance du cycle pas encore faite depuis lundi.
+- **Ce mois-ci** : calendrier du mois (lundi → dimanche), un point par jour avec séance (A plein, B contour), aujourd’hui entouré, mois précédent / suivant, total de séances.
+- **Bilan du bloc** : carte d’accès, mise en avant les 3 derniers jours du bloc.
+- **Derniers PR** : records récents avec leur type (charge, reps, hybride).
 
 ### Programme
 
-- Onglets **A** / **B** : les séances de chaque cycle et leurs exercices.
-- Durée du cycle en cours : de **1 à 4 semaines** par demi-semaine, et report du prochain cycle d’une semaine à la fois.
-- Démarrage d’une séance depuis la liste.
-- **Ma semaine** : une semaine type par cycle, réglée sous l’onglet A ou B. Pour chaque jour (lundi → dimanche), repos ou une séance du cycle, par exemple lundi : Haut du corps, jeudi : Bas du corps, samedi : Full body. Un cycle compte autant de séances que voulu. Pendant les semaines A, l’accueil suit la semaine A, puis la semaine B après la bascule.
+- Onglets **A** / **B** : séances de chaque cycle et leurs exercices, démarrage d’une séance depuis la liste.
+- **Durée des cycles** : de **1 à 4 semaines** par demi-semaine (1 → 7 j, 1,5 → 11 j, 2 → 14 j, 2,5 → 18 j, 3 → 21 j, 3,5 → 25 j, 4 → 28 j).
+- **Reporter le prochain cycle d’une semaine** (+7 jours, sans limite) et **Annuler un report** (−7 jours). Le report ne vaut que pour le bloc en cours.
+- **Ma semaine** : une semaine type **par cycle**, réglée sous l’onglet A ou B. Pour chaque jour (lundi → dimanche) : repos ou une séance du cycle. L’accueil suit la semaine du cycle en cours.
+- **Échauffements** : catalogue d’échauffements généraux (nom + détail, ex. « Rotations d’épaules » / « 2 × 15 avec élastique »). Chaque séance choisit les siens dans le constructeur de séance.
 
 ### Séance en cours
 
-- Saisie des séries (reps, charge, RPE) exercice par exercice.
-- **Mes records** : le tableau des records 1 à 30 reps de l’exercice et de la variante, pour **choisir sa tentative avant la série**. Toucher une ligne fixe la cible.
-- **Séries modulables** : on ajoute ou retire des séries selon la forme du jour.
-- Détection en direct : chaque série validée est classée (PR charge, PR reps, hybride, égalé, en dessous, prise de données).
-- Corriger ou supprimer une série validée, retirer un exercice, abandonner la séance.
-- Choix de la date de la séance (utile pour saisir une séance passée).
+- **Forme du jour** au démarrage : **Frais** (séries prévues) ou **Fatigué** (séries prévues − 1, minimum 1).
+- En-tête : **anneau de progression** « séries validées / séries prévues » (ex. 9/14).
+- Saisie des séries (reps, charge, RPE) exercice par exercice, avec boutons **− / +** : **0,5 kg** pour la charge, **1 rep** pour les reps (champ vide : + met 0,5 kg ou 1 rep). Mêmes boutons sur les séries de chauffe.
+- **La cible suit les reps** : changer les reps d’une série cale la cible sur le record à ce nombre de reps (même variante) ; sans record, la cible est vide (« à conquérir »).
+- **Mes records** : tableau 1 à 30 reps de l’exercice et de la variante pour choisir sa tentative avant la série ; toucher une ligne fixe reps et cible.
+- **Variante** : rangée de puces sous le nom de l’exercice. **Mon état** : rangée séparée (fatigué, motivé, énergique, mou, ou aucun).
+- **État général** : texte libre, modifiable pendant la séance et dans le compte rendu.
+- **Échauffement** : bloc à cocher en tête de séance (choisi dans Programme). **Séries de chauffe** par exercice (« + Série de chauffe », reps × kg) : séparées des séries de travail, jamais comparées aux records, **jamais enregistrées comme performances**.
+- **Glisser à gauche ou à droite** passe à l’exercice suivant ou précédent ; le bouton « Exercice suivant › » reste.
+- **Séries modulables** : ajouter ou retirer des séries.
+- Détection en direct de chaque série validée : PR charge, PR reps, hybride, égalé, en dessous, prise de données.
+- **Valider** enregistre la série. Corriger ou supprimer une série validée, retirer un exercice, abandonner la séance, choisir la date (saisie d’une séance passée).
 - La séance en cours est conservée sur l’appareil : fermer l’application ne la perd pas.
 
-### Compte rendu (PDF pour le coach)
+### Compte rendu
 
-Résumé de la séance (exercices, séries, PR obtenus), exportable en PDF et partageable.
+- Résumé de la séance : exercices, séries, PR obtenus.
+- Forme du jour, état général, état de chaque exercice, échauffement fait et lignes « Chauffe : 10 × 40 kg, … » sous chaque exercice (style atténué).
+- Forme, état et échauffement sont **modifiables depuis l’écran** ; le **PDF** pour le coach reflète les modifications. Partageable.
+- Enregistré dans le journal (voir Base de données) à « Terminer » puis à chaque modification.
 
 ### Bilan du bloc
 
-Synthèse d’un bloc de cycle (le bloc en cours ou l’un des précédents) : séances faites, prévues, sautées et manquées, PR obtenus, exercices sans PR, forme du jour, états par exercice et états généraux notés. Une zone « Ressenti du bloc » se saisit et s’enregistre dans le journal ; le bilan s’exporte en PDF pour le coach. Les blocs passés sont reconstitués par tranches de la durée générale du cycle (les reports passés ne sont pas mémorisés). Accessible depuis l’accueil, mise en avant dans les 3 derniers jours du bloc.
+- Bloc en cours par défaut, sélecteur des **6 blocs précédents** (reconstitués par tranches de la durée générale du cycle ; les reports passés ne sont pas mémorisés).
+- Contenu : cycle et dates, séances faites / prévues / sautées / manquées, PR par exercice, exercices sans PR, répartition Frais / Fatigué, états par exercice, états généraux datés.
+- **Ressenti du bloc** : texte libre enregistré dans le journal.
+- Export **PDF** partageable pour le coach.
 
 ### Records
 
-- Tableau des records de 1 à 30 répétitions par exercice et par variante (poids, RPE, date). Les cases vides sont « à conquérir ».
+- Tableau des records de 1 à 30 répétitions par exercice et par variante (poids, RPE, date). Cases vides : « à conquérir ».
 - **Courbe** de progression de l’e1RM (formule d’Epley).
-- **Import Excel (.xlsx, première feuille) ou CSV** de performances via « Importer un fichier » (délimiteur CSV `;` ou `,` détecté sur l’en-tête). Les lignes invalides, à 0 rep ou datées dans le futur sont refusées avec un message.
+- **Importer un fichier** : bouton visible sur l’écran, avec rappel des colonnes. Formats **Excel (.xlsx, première feuille)** et **CSV** (délimiteur `;` ou `,` détecté sur l’en-tête). Les lignes invalides, à 0 rep ou datées dans le futur sont refusées avec un message ligne par ligne.
 - **Ajouter un PR hors séance** : exercice, variante, reps, kg, RPE, date (Aujourd’hui, Hier, Autre). L’écran annonce avant l’enregistrement si c’est un PR.
 
 ### Exercices et fiche exercice
 
 - Liste avec recherche et filtre par muscle, badges du cycle (A, B ou les deux).
-- Création et modification d’un exercice : nom, description, muscles.
+- Création et modification : nom, description, muscles.
 - **Variantes** (Classique, Pause, …) : chacune a ses propres records.
-- **Remarques du coach** sur l’exercice.
-- **Suppression protégée** : un exercice ou une variante qui a au moins une performance enregistrée ne peut pas être supprimé. Il faut le renommer.
+- **Remarques du coach** : un champ unique, visible pendant la séance.
+- **Suppression protégée** : un exercice ou une variante avec au moins une performance ne peut pas être supprimé ; il faut le renommer.
 
 ### Réglages
 
-- **Cycle en cours** : corriger manuellement le cycle (A/B) et sa date de début si l’application s’est trompée.
-- **Hors-ligne** : nombre de séries en attente, état de l’envoi, boutons **Synchroniser** et **Renvoyer les éléments archivés**.
+- **Cycle en cours** : corriger le cycle (A/B) et sa date de début.
+- **Rappels** (APK uniquement) : interrupteur et heure (8 h 00 par défaut).
+  - Rappel de séance à l’heure choisie, d’après la semaine type (séance décalée : à la date décalée ; rien pour un repos, une séance faite ou sautée).
+  - Rappel la veille d’une bascule de cycle, avec le bilan du bloc terminé.
+  - Permission de notification demandée à l’activation (Android 13+). **Alarmes exactes** utilisées seulement si Android les autorise déjà, sinon rappels non exacts.
+  - Reprogrammés à chaque ouverture et changement, sur 28 jours : sans ouvrir l’application pendant plus de 4 semaines, plus de rappels.
+- **Hors-ligne** : séries en attente, état de l’envoi, **Synchroniser** et **Renvoyer les éléments archivés**.
 - **Affichage** : réduire les animations, taille du texte (Normal, Grand, Très grand).
-- **Rappels** (APK uniquement) : rappel de séance à l’heure choisie et veille de bascule de cycle, d’après ta semaine type.
-- **Données** : source utilisée (Supabase ou démo) ; en mode démo, réinitialisation des données de démonstration.
+- **Données** : source utilisée (Supabase ou démo) ; en mode démo, réinitialisation des données.
 
 ---
 
@@ -107,7 +132,7 @@ On travaille **les mêmes muscles** dans les deux cycles, mais avec **des mouvem
 
 ### Alternance par blocs
 
-Les cycles alternent par blocs de **1 à 4 semaines** (2 par défaut, au choix par demi-semaine) : A, B, A, B… Changer de mouvements régulièrement :
+Les cycles alternent par blocs de **1 à 4 semaines** (2 par défaut, par demi-semaine) : A, B, A, B… Changer de mouvements régulièrement :
 
 - laisse récupérer tendons et articulations, sollicités différemment d’un cycle à l’autre ;
 - garde la motivation : on retrouve un cycle avec ses records à battre.
@@ -241,31 +266,22 @@ npm run dev:mock   # mode démo : données locales, aucune base nécessaire
 
 ## Base de données Supabase
 
-### Migration des cycles
+### Migrations
 
-Exécuter `scripts/sql/2026-11-23_cycles.sql` dans l’éditeur SQL de Supabase. Ce script est **additif et idempotent** : il peut être rejoué sans risque et ne modifie aucune donnée existante. Il ajoute :
+Chaque script est **additif et idempotent** : rejouable sans risque, sans modifier les données existantes. À exécuter dans l’éditeur SQL de Supabase, **dans cet ordre**, avant la première utilisation :
 
-- `sessions.cycle` : cycle (A ou B) de la séance ;
-- la table `cycle_state` : cycle en cours, date de début, durée ;
-- `session_exercises.position` : ordre des exercices dans la séance.
+| # | Script | Effet |
+| --- | --- | --- |
+| 1 | `scripts/sql/2026-11-23_cycles.sql` | `sessions.cycle` (A ou B), table `cycle_state` (cycle en cours, début, durée), `session_exercises.position` (ordre des exercices). |
+| 2 | `scripts/sql/2026-11-24_week_plan.sql` | Table `week_plan` : une semaine type par cycle, décalages et sauts. Convertit l’ancien format en planning vide. |
+| 3 | `scripts/sql/2026-11-25_journal.sql` | Table `journal` (une ligne, jsonb) : comptes rendus de séance (forme, état, échauffement, séries de chauffe), notes de bloc, catalogue d’échauffements. |
+| 4 | `scripts/sql/2026-11-25_cycle_length.sql` | `cycle_state.length_days` (durée générale, 7 à 28 jours) et `extra_days` (report du bloc en cours) ; retire la contrainte `weeks in (2,3)`. Les anciennes lignes à 3 semaines deviennent 14 jours + 7 jours de report. |
 
-Tant que ce script n’est pas joué, l’application enregistre le cycle **dans le stockage local de l’appareil** (clé `mymuscle_cycles_v1`) : rien n’est synchronisé entre appareils.
+`scripts/sql/reset_complet.sql` repart de zéro et **inclut déjà toutes ces migrations**.
+
+Tant qu’une migration n’est pas jouée, l’application garde la donnée correspondante **sur l’appareil** (clés `mymuscle_cycles_v1`, `mymuscle_week_plan_v1`, `mymuscle_journal_v1`) : rien n’est synchronisé entre appareils.
 
 Si la RLS est activée sur `cycle_state`, ajouter des politiques de lecture, d’insertion et de mise à jour, sinon l’application recevra une erreur `42501`.
-
-### Migration de la durée des cycles
-
-Exécuter `scripts/sql/2026-11-25_cycle_length.sql` (additif, idempotent) : colonnes `cycle_state.length_days` (durée générale d’un cycle, 7 à 28 jours) et `extra_days` (report du cycle en cours), et la contrainte `weeks in (2,3)` est retirée. Les anciennes lignes sont converties (3 semaines → 14 jours + 7 jours de report). Sans elle, l’état du cycle est gardé sur l’appareil (clé `mymuscle_cycles_v1`). Le script `reset_complet.sql` l’inclut déjà.
-
-### Migration du planning
-
-Exécuter `scripts/sql/2026-11-24_week_plan.sql` (additif, idempotent) : table `week_plan` (une semaine type par cycle, décalages). Le rejouer convertit l’ancien format (semaine commune aux deux cycles) en planning vide. Sans elle, le planning est gardé sur l’appareil (clé `mymuscle_week_plan_v1`). Le script `reset_complet.sql` l’inclut déjà.
-
-### Migration du journal
-
-Exécuter `scripts/sql/2026-11-25_journal.sql` (additif, idempotent) : table `journal` (comptes rendus de séance avec état et échauffements, notes de bloc, catalogue d’échauffements). Sans elle, le journal est gardé sur l’appareil (clé `mymuscle_journal_v1`). Le script `reset_complet.sql` l’inclut déjà.
-
-Jouer la migration avant la première utilisation : sinon le journal reste sur l'appareil.
 
 ### Attention
 
@@ -281,6 +297,7 @@ Jouer la migration avant la première utilisation : sinon le journal reste sur l
 - **Refus définitif** du serveur, ou envoi au résultat incertain (502/504, envoi interrompu) : la série est **archivée** pour éviter les doublons.
 - Dans Réglages : **Synchroniser** relance l’envoi, **Renvoyer les éléments archivés** remet les archives dans la file.
 - Les autres modifications (séances, exercices, cycles, remarques) demandent du réseau : hors-ligne, elles sont refusées avec un message explicite.
+- Le **journal** (compte rendu, état, chauffe) est aussi mis en file : en cas d’échec, un message l’indique, les données restent sur l’appareil et un nouvel essai a lieu à la modification suivante.
 
 ---
 
@@ -288,15 +305,21 @@ Jouer la migration avant la première utilisation : sinon le journal reste sur l
 
 Identifiant `com.mymuscle.app`, nom « MyMuscle », contenu web servi depuis `dist/`.
 
+### Reconstruire l’APK
+
 ```bash
 npm run build          # build web avec les variables de .env.local
-npm run android:sync   # copie dist/ dans android/
+npx cap sync android   # copie dist/ et les plugins dans android/ (= npm run android:sync)
 npm run android:open   # ouvre Android Studio
 ```
 
-Dans Android Studio : lancer sur un appareil, ou **Build > Generate Signed Bundle / APK** pour une version installable.
+Dans Android Studio : lancer sur un appareil, ou **Build > Generate Signed Bundle / APK** pour une version installable. À refaire après chaque changement de code ou de plugin.
 
-Les rappels utilisent `@capacitor/local-notifications` : `npx cap sync android` a été exécuté pour l’ajouter, l’APK doit donc être reconstruit.
+### Rappels et permissions
+
+- Les rappels utilisent `@capacitor/local-notifications`.
+- Permissions déclarées : `USE_EXACT_ALARM` et `SCHEDULE_EXACT_ALARM` (alarmes exactes) ; la permission de notification est demandée à l’activation (Android 13+).
+- Sur certains téléphones, l’**optimisation de la batterie** peut retarder ou bloquer les rappels : la désactiver pour MyMuscle (Paramètres > Applications > MyMuscle > Batterie > Sans restriction).
 
 ---
 
