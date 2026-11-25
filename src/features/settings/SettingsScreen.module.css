@@ -1,0 +1,147 @@
+/* Réglages : même langage que Programme / Accueil (noir & citron, cartes #161615). */
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 var(--gutter) var(--space-6);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.card {
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.text {
+  flex: 1;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.big {
+  color: var(--color-accent);
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+}
+
+.warning {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-soft);
+  color: var(--color-text-soft);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.badge {
+  flex: 0 0 auto;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+}
+
+/* Champs sur carte : fond enfoncé pour rester visibles. */
+.card input {
+  background: var(--color-surface-2);
+}
+
+/* Segmented en pilule compacte (cf. durée du cycle dans Programme). */
+.segmented {
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+}
+
+.segmented > button {
+  min-height: var(--touch-target);
+  border-color: transparent;
+  font-size: 0.8125rem;
+}
+
+/* Interrupteur : 52×32, cible tactile élargie à 44 px. */
+.switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 52px;
+  height: 32px;
+  margin: 6px 0;
+  padding: 0;
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-3);
+  transition: background-color var(--duration-fast) ease;
+}
+
+.switch::before {
+  position: absolute;
+  inset: -7px -2px;
+  content: '';
+}
+
+.knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-text);
+  transition: transform var(--duration-base) var(--ease-out);
+}
+
+.switch[aria-checked='true'] {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+}
+
+.switch[aria-checked='true'] .knob {
+  background: var(--color-on-accent);
+  transform: translateX(20px);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-3);
+}

@@ -1,0 +1,138 @@
+/* Boutons pilule de la maquette (accent citron 56–60 px, secondaire #161615). */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: var(--touch-target);
+  min-width: var(--touch-target);
+  padding: 0 var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  line-height: 1.2;
+  text-decoration: none;
+  user-select: none;
+  transition:
+    background-color var(--duration-fast) ease,
+    border-color var(--duration-fast) ease,
+    color var(--duration-fast) ease,
+    transform var(--duration-fast) ease,
+    opacity var(--duration-fast) ease;
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.button[aria-busy='true'] {
+  cursor: progress;
+  opacity: 0.8;
+}
+
+.md {
+  min-height: 44px;
+}
+
+.lg {
+  min-height: 58px;
+  padding: 0 var(--space-6);
+  font-size: 1.0625rem;
+  font-weight: var(--weight-bold);
+}
+
+.full {
+  display: flex;
+  width: 100%;
+}
+
+.accent {
+  min-height: 56px;
+  padding: 0 var(--space-6);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: 1.0625rem;
+  font-weight: var(--weight-bold);
+}
+
+.accent.lg {
+  min-height: 58px;
+}
+
+.accent:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-accent) 90%, white);
+}
+
+.primary {
+  background: var(--color-inverse);
+  color: var(--color-on-inverse);
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--color-text-soft);
+}
+
+.secondary {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.secondary:hover:not(:disabled) {
+  background: var(--color-surface-3);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--color-text-muted);
+  font-weight: var(--weight-medium);
+}
+
+.ghost:hover:not(:disabled) {
+  color: var(--color-text);
+}
+
+.danger {
+  background: var(--color-danger-solid);
+  color: var(--color-on-danger);
+}
+
+.danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-danger-solid) 88%, black);
+}
+
+.dangerGhost {
+  background: transparent;
+  color: var(--color-danger);
+  font-weight: var(--weight-medium);
+}
+
+.dangerGhost:hover:not(:disabled) {
+  background: var(--color-danger-soft);
+}
+
+.label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spinner {
+  width: 1.1em;
+  height: 1.1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: var(--radius-full);
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

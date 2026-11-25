@@ -1,0 +1,40 @@
+.ring {
+  position: relative;
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+}
+
+.svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.track {
+  fill: none;
+  stroke: var(--color-border-control);
+  stroke-width: 4;
+}
+
+.bar {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 4;
+  stroke-linecap: round;
+  /* Coupée par la règle globale `data-reduce-motion` / `prefers-reduced-motion` (global.css). */
+  transition: stroke-dashoffset 0.4s ease;
+}
+
+.label {
+  position: relative;
+  color: var(--color-text);
+  font-size: 0.6875rem;
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}

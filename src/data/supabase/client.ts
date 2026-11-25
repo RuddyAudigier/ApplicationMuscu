@@ -1,0 +1,111 @@
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { BackendError, NetworkError } from '../ports';
+
+/** Erreur renvoyée par PostgREST / supabase-js. */
+export interface PgError { code?: string; message: string }
+/** `status` : code HTTP (0 quand `fetch` a échoué, cf. postgrest-js). */
+export interface PgResult { data: unknown; error: PgError | null; status?: number }
+
+/**
+ * Sous-ensemble chaînable du query builder supabase-js utilisé par les repos.
+ * Les résultats restent `unknown` : chaque ligne est validée par Zod (mappers).
+ */
+interface Query extends PromiseLike<PgResult> {
+  select(columns?: string): Query;
+  insert(rows: object[]): Query;
+  update(values: object): Query;
+  upsert(rows: object[], options: { onConflict: string }): Query;
+  delete(): Query;
+  eq(column: string, value: unknown): Query;
+  in(column: string, values: readonly unknown[]): Query;
+  order(column: string, options: { ascending: boolean }): Query;
+  range(from: number, to: number): Query;
+  single(): Query;
+}
+export interface Db { from(table: string): Query }
+
+/** Seul point de conversion : le client typé est vu via l'interface minimale `Db`. */
+export function asDb(client: SupabaseClient): Db {
+  return client as unknown as Db;
+}
+
+export function createSupabaseClient(url: string, anonKey: string): SupabaseClient {
+  // Sans types de schéma générés : on fige la forme par défaut de `SupabaseClient`.
+  const client: unknown = createClient(url, anonKey);
+  return client as SupabaseClient;
+}
+
+/**
+ * Codes « schéma incomplet » tolérés (INV §2.4) : table absente (`42P01`, `PGRST205` du cache
+ * PostgREST) ou colonne absente (`42703`, `PGRST204`).
+ */
+const SCHEMA_GAP_CODES: readonly string[] = ['42P01', '42703', 'PGRST204', 'PGRST205'];
+export const NO_ROWS = 'PGRST116';
+
+export function isSchemaGap(error: PgError, keyword?: string): boolean {
+  if (error.code !== undefined && SCHEMA_GAP_CODES.includes(error.code)) return true;
+  return keyword !== undefined && error.message.toLowerCase().includes(keyword);
+}
+
+/**
+ * Rejouable uniquement si la requête n'a pas atteint PostgREST : `fetch` échoué (status 0)
+ * ou passerelle indisponible (502/503/504). Une erreur sans `code` (401 Kong, 413, page HTML…)
+ * n'est PAS réseau : la rejouer en boucle ne servirait à rien (D8).
+ */
+const RETRYABLE_STATUS: readonly number[] = [0, 502, 503, 504];
+/**
+ * Écriture non idempotente (insert) : seuls `fetch` échoué (status 0) et 503 (service indisponible,
+ * requête non transmise) sont rejouables. 502/504 peuvent arriver APRÈS un insert validé : les
+ * rejouer créerait des doublons.
+ */
+const WRITE_RETRYABLE_STATUS: readonly number[] = [0, 503];
+const WRITE_UNCERTAIN_STATUS: readonly number[] = [502, 504];
+
+export interface RunOptions { /** `false` pour un insert : pas de rejeu sur réponse perdue. */ idempotent?: boolean }
+
+/**
+ * Exécute une requête. Panne réseau (rejet `TypeError`/fetch, status 0, 502-504) → `NetworkError`.
+ * Pour une écriture non idempotente, 502/504 → `BackendError` « a peut-être abouti » (non mis en file).
+ * Les erreurs PostgREST codées sont renvoyées à l'appelant (fallbacks tolérés).
+ */
+export async function run(query: PromiseLike<PgResult>, context: string, opts: RunOptions = {}): Promise<PgResult> {
+  const idempotent = opts.idempotent ?? true;
+  let res: PgResult;
+  try {
+    res = await query;
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    if (e instanceof TypeError || /fetch|network/i.test(message)) {
+      throw new NetworkError(`${context} : réseau indisponible (${message}).`);
+    }
+    throw e;
+  }
+  if (res.error && res.status !== undefined) {
+    if ((idempotent ? RETRYABLE_STATUS : WRITE_RETRYABLE_STATUS).includes(res.status)) {
+      throw new NetworkError(`${context} : réseau indisponible (${res.error.message}).`);
+    }
+    if (!idempotent && WRITE_UNCERTAIN_STATUS.includes(res.status)) {
+      throw new BackendError(
+        `${context} : réponse du serveur perdue (${String(res.status)}), l'enregistrement a peut-être abouti. `
+        + 'Vérifiez vos performances avant de réessayer.',
+        { status: res.status, ...(res.error.code ? { code: res.error.code } : {}) },
+      );
+    }
+  }
+  return res;
+}
+
+/** Lève une `BackendError` (statut HTTP + code) ; le message reste lisible pour l'utilisateur. */
+export function fail(error: PgError, context: string, status?: number): never {
+  throw new BackendError(`${context} : ${error.message}${error.code ? ` (${error.code})` : ''}`, {
+    ...(status === undefined ? {} : { status }),
+    ...(error.code ? { code: error.code } : {}),
+  });
+}
+
+/** Exécute et lève sur toute erreur ; renvoie `data`. */
+export async function must(query: PromiseLike<PgResult>, context: string, opts: RunOptions = {}): Promise<unknown> {
+  const { data, error, status } = await run(query, context, opts);
+  if (error) fail(error, context, status);
+  return data;
+}

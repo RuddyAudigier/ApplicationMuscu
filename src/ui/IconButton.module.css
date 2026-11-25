@@ -1,0 +1,59 @@
+.button {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  transition:
+    background-color var(--duration-fast) ease,
+    transform var(--duration-fast) ease;
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.ghost {
+  background: transparent;
+  color: var(--color-text);
+}
+
+.ghost:hover:not(:disabled) {
+  background: var(--color-surface);
+}
+
+.surface {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.surface:hover:not(:disabled) {
+  background: var(--color-surface-3);
+}
+
+[role='dialog'] .surface,
+[role='alertdialog'] .surface {
+  background: var(--color-surface-3);
+}
+
+.primary {
+  background: var(--color-primary-solid);
+  color: var(--color-on-primary);
+}
+
+.danger {
+  background: transparent;
+  color: var(--color-danger);
+}
+
+.danger:hover:not(:disabled) {
+  background: var(--color-danger-soft);
+}

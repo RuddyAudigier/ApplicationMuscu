@@ -1,0 +1,145 @@
+/* Liste des exercices : même langage que la fiche (maquette Exercice.dc.html). */
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 var(--gutter) 0;
+}
+
+.count {
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+
+.search:focus-within {
+  border-color: var(--color-accent);
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--touch-target);
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: var(--weight-medium);
+}
+
+.search input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.filters {
+  display: flex;
+  gap: 8px;
+  margin: 0 calc(var(--gutter) * -1);
+  padding: 2px var(--gutter);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.filters::-webkit-scrollbar {
+  display: none;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 16px;
+  gap: 10px;
+  align-items: center;
+  min-height: 60px;
+  padding: 8px 0;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.rowText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rowName {
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+}
+
+.rowMeta {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chevron {
+  color: var(--color-text-subtle);
+}
+
+/* Panneau de création */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.legend {
+  margin-bottom: 8px;
+  padding: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fieldError {
+  color: var(--color-danger);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}

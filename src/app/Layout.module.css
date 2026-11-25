@@ -1,0 +1,22 @@
+/* Transition d'onglet : glissement horizontal court + fondu ; coupée en mouvement réduit (global.css). */
+.page {
+  overflow-x: clip;
+}
+
+.page[data-slide='next'] {
+  animation: slide-from-right 200ms ease-out;
+}
+
+.page[data-slide='prev'] {
+  animation: slide-from-left 200ms ease-out;
+}
+
+@keyframes slide-from-right {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes slide-from-left {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: none; }
+}

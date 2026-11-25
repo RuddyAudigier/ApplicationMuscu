@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>MyMuscle — Séance en cours</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f5f5f4}a:hover{color:#ffffff}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0a0a0a; color: #f5f5f4; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; padding: 24px; position: relative; overflow: hidden">
+  <div style="display: flex; justify-content: space-between; align-items: center">
+    <a href="Seances.dc.html" aria-label="Retour au programme" style="width: 44px; height: 44px; border-radius: 999px; background: #161615; display: flex; align-items: center; justify-content: center; color: #f5f5f4">
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+    </a>
+    <span style="font-size: 13px; color: #a8a29e"><span style="color: {{accent}}; font-weight: 700">A1</span> · exercice 1 sur 5</span>
+    <button type="button" style="height: 44px; padding: 0 16px; border-radius: 999px; border: none; background: #161615; color: #f5f5f4; font: 600 14px Inter, sans-serif; cursor: pointer">Terminer</button>
+  </div>
+
+  <h1 style="margin: 16px 0 0; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 32px; line-height: 1.05; letter-spacing: -0.03em">Développé couché</h1>
+
+  <div style="margin-top: 10px; display: flex; gap: 10px; align-items: flex-start; padding: 10px 14px; border-radius: 16px; background: #161615">
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+    <span style="font-size: 13px; line-height: 1.4; color: #d6d3d1"><span style="color: #f5f5f4; font-weight: 600">Coach :</span> garder les coudes ouverts. Rack à 8.</span>
+  </div>
+
+  <div role="radiogroup" aria-label="Variante" style="display: flex; gap: 6px; margin-top: 10px">
+    <sc-for list="{{variants}}" as="v" hint-placeholder-count="3">
+      <button type="button" role="radio" aria-checked="{{v.checked}}" onClick="{{v.pick}}" style="height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid {{v.border}}; background: {{v.bg}}; color: {{v.fg}}; font-family: Inter, sans-serif; font-size: 13px; font-weight: {{v.weight}}; cursor: pointer; white-space: nowrap">{{v.name}}</button>
+    </sc-for>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 12px; height: 46px; margin-top: 16px; border-top: 1px solid #1f1f1d; border-bottom: 1px solid #1f1f1d">
+    <span style="font-size: 13px; color: #a8a29e">S1</span>
+    <span style="font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700">4 × 100 <span style="font-size: 13px; color: #a8a29e; font-weight: 500">kg · RPE 9</span></span>
+    <span style="font-size: 11px; font-weight: 700; color: #0a0a0a; background: {{accent}}; padding: 4px 8px; border-radius: 999px">PR</span>
+  </div>
+
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px">
+    <span style="font-size: 17px; font-weight: 600">Série 2</span>
+    <button type="button" onClick="{{openSheet}}" style="height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid #3f3f3c; background: transparent; color: #f5f5f4; font: 600 13px Inter, sans-serif; display: flex; align-items: center; gap: 8px; cursor: pointer">
+      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16M9 4v16"></path></svg>
+      Mes records
+    </button>
+  </div>
+
+  <div style="margin-top: 10px; min-height: 44px; border-radius: 16px; background: #161615; display: flex; align-items: center; gap: 10px; padding: 0 14px">
+    <span style="width: 8px; height: 8px; border-radius: 999px; background: {{targetDot}}"></span>
+    <span style="font-size: 14px; color: {{targetColor}}">{{targetText}}</span>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px">
+    <label style="background: #161615; border-radius: 20px; padding: 12px 16px; display: flex; flex-direction: column; gap: 2px">
+      <span style="font-size: 12px; color: #a8a29e">Reps</span>
+      <input type="text" inputmode="numeric" value="{{reps}}" onChange="{{onReps}}" placeholder="0" style="background: transparent; border: none; outline: none; color: #f5f5f4; font-family: 'Space Grotesk', sans-serif; font-size: 34px; font-weight: 700; width: 100%; padding: 0">
+    </label>
+    <label style="background: #161615; border-radius: 20px; padding: 12px 16px; display: flex; flex-direction: column; gap: 2px">
+      <span style="font-size: 12px; color: #a8a29e">Poids (kg)</span>
+      <input type="text" inputmode="decimal" value="{{kg}}" onChange="{{onKg}}" placeholder="0" style="background: transparent; border: none; outline: none; color: #f5f5f4; font-family: 'Space Grotesk', sans-serif; font-size: 34px; font-weight: 700; width: 100%; padding: 0">
+    </label>
+  </div>
+
+  <span style="font-size: 12px; color: #a8a29e; margin-top: 14px">RPE</span>
+  <div role="radiogroup" aria-label="RPE" style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 6px">
+    <sc-for list="{{rpes}}" as="r" hint-placeholder-count="5">
+      <button type="button" role="radio" aria-checked="{{r.checked}}" onClick="{{r.pick}}" style="height: 44px; border-radius: 999px; border: 1px solid {{r.border}}; background: {{r.bg}}; color: {{r.fg}}; font-family: Inter, sans-serif; font-size: 15px; font-weight: {{r.weight}}; cursor: pointer">{{r.label}}</button>
+    </sc-for>
+  </div>
+
+  <div style="flex-grow: 1"></div>
+
+  <button type="button" style="height: 56px; flex-shrink: 0; border-radius: 999px; border: none; background: {{accent}}; color: #0a0a0a; font: 700 17px Inter, sans-serif; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px">
+    <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"></path></svg>
+    Valider la série
+  </button>
+  <button type="button" style="height: 44px; margin-top: 4px; border: none; background: transparent; color: #a8a29e; font: 500 14px Inter, sans-serif; cursor: pointer">Fatigué ? Arrêter à 2 séries</button>
+
+  <sc-if value="{{sheetOpen}}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.6); display: flex; flex-direction: column; justify-content: flex-end">
+      <button type="button" aria-label="Fermer le tableau" onClick="{{closeSheet}}" style="flex-grow: 1; border: none; background: transparent; cursor: pointer"></button>
+      <div role="dialog" aria-label="Mes records" style="height: 600px; background: #141413; border-radius: 28px 28px 0 0; padding: 10px 20px 20px; display: flex; flex-direction: column; box-sizing: border-box">
+        <span style="align-self: center; width: 40px; height: 4px; border-radius: 999px; background: #3f3f3c"></span>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; flex-shrink: 0">
+          <div style="display: flex; flex-direction: column; gap: 2px">
+            <span style="font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700">Mes records</span>
+            <span style="font-size: 13px; color: #a8a29e">Développé couché · touche ta cible</span>
+          </div>
+          <button type="button" aria-label="Fermer" onClick="{{closeSheet}}" style="width: 44px; height: 44px; border-radius: 999px; border: none; background: #262624; color: #f5f5f4; display: flex; align-items: center; justify-content: center; cursor: pointer">
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+          </button>
+        </div>
+        <div role="radiogroup" aria-label="Variante du tableau" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; flex-shrink: 0">
+          <sc-for list="{{variants}}" as="v" hint-placeholder-count="3">
+            <button type="button" role="radio" aria-checked="{{v.checked}}" onClick="{{v.pickInSheet}}" style="height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid {{v.sheetBorder}}; background: {{v.sheetBg}}; color: {{v.sheetFg}}; font-family: Inter, sans-serif; font-size: 13px; font-weight: {{v.weight}}; cursor: pointer; white-space: nowrap; flex-shrink: 0">{{v.name}}</button>
+          </sc-for>
+        </div>
+        <div style="display: grid; grid-template-columns: 56px minmax(0, 1fr) 44px 56px; gap: 8px; padding: 14px 12px 6px; font-size: 11px; color: #78716c; flex-shrink: 0">
+          <span>Reps</span><span>Record</span><span>RPE</span><span style="text-align: right">Date</span>
+        </div>
+        <div style="flex: 1 1 0; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; border-radius: 16px; background: #0d0d0c">
+          <sc-for list="{{rows}}" as="row" hint-placeholder-count="10">
+            <button type="button" onClick="{{row.pick}}" style="display: grid; grid-template-columns: 56px minmax(0, 1fr) 44px 56px; gap: 8px; align-items: center; min-height: 46px; flex-shrink: 0; padding: 0 12px; border: none; border-bottom: 1px solid #1c1c1a; background: {{row.bg}}; color: {{row.fg}}; font-family: Inter, sans-serif; cursor: pointer; text-align: left">
+              <span style="font-size: 14px">{{row.repsLabel}}</span>
+              <span style="font-family: 'Space Grotesk', sans-serif; font-size: {{row.wsize}}; font-weight: {{row.wweight}}; opacity: {{row.wop}}">{{row.weight}}</span>
+              <span style="font-size: 13px; opacity: 0.7">{{row.rpe}}</span>
+              <span style="font-size: 12px; text-align: right; opacity: 0.7">{{row.date}}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#d4f53c","options":["#d4f53c","#ff6b3d","#7dd3fc","#f5f5f4"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { variant: 'classique', target: null, reps: '', kg: '', rpe: 9, sheetOpen: false };
+  }
+  renderVals() {
+    const accent = this.props.accent ?? '#d4f53c';
+    const tables = {
+      classique: { 1: ['115', '10', '12/10'], 2: ['107,5', '9', '26/10'], 3: ['102,5', '9', '02/11'], 4: ['100', '9', 'auj.'], 5: ['95', '8', '16/11'], 7: ['87,5', '9', '09/11'], 8: ['85', '9', '09/11'], 10: ['77,5', '8', '19/10'], 12: ['70', '9', '05/10'], 15: ['60', '10', '28/09'] },
+      pause: { 3: ['90', '9', '04/11'], 5: ['82,5', '9', '11/11'], 6: ['80', '9', '18/11'], 8: ['72,5', '8', '28/10'] },
+      serree: { 5: ['87,5', '9', '06/11'], 8: ['80', '9', '13/11'], 10: ['72,5', '9', '20/11'] }
+    };
+    const names = { classique: 'Classique', pause: 'Pausé 2 ct', serree: 'Prise serrée' };
+    const variants = Object.keys(names).map((id) => {
+      const on = this.state.variant === id;
+      return {
+        name: names[id],
+        checked: on ? 'true' : 'false',
+        border: on ? '#f5f5f4' : '#292524',
+        bg: on ? '#f5f5f4' : 'transparent',
+        fg: on ? '#0a0a0a' : '#a8a29e',
+        weight: on ? '700' : '500',
+        sheetBorder: on ? accent : '#3f3f3c',
+        sheetBg: on ? accent : 'transparent',
+        sheetFg: on ? '#0a0a0a' : '#d6d3d1',
+        pick: () => this.setState({ variant: id, target: null }),
+        pickInSheet: () => this.setState({ variant: id, target: null })
+      };
+    });
+    const t = tables[this.state.variant];
+    const rows = [];
+    for (let r = 1; r <= 30; r++) {
+      const rec = t[r];
+      const sel = this.state.target === r;
+      rows.push({
+        repsLabel: r + ' rep' + (r > 1 ? 's' : ''),
+        weight: rec ? rec[0] + ' kg' : 'vide',
+        rpe: rec ? rec[1] : '',
+        date: rec ? rec[2] : '',
+        bg: sel ? accent : 'transparent',
+        fg: sel ? '#0a0a0a' : '#f5f5f4',
+        wsize: rec ? '17px' : '13px',
+        wweight: rec ? '700' : '400',
+        wop: rec ? '1' : '0.5',
+        pick: () => this.setState({ target: r, reps: String(r), kg: rec ? rec[0] : '', sheetOpen: false })
+      });
+    }
+    const cur = this.state.target ? t[this.state.target] : null;
+    const targetText = this.state.target
+      ? (cur ? 'Cible : battre ' + this.state.target + ' × ' + cur[0] + ' kg' : 'Cible : premier record à ' + this.state.target + ' reps')
+      : 'Pas encore de cible · ouvre « Mes records »';
+    const rpes = [6, 7, 8, 9, 10].map((v) => {
+      const on = this.state.rpe === v;
+      return {
+        label: String(v),
+        checked: on ? 'true' : 'false',
+        border: on ? '#f5f5f4' : '#292524',
+        bg: on ? '#f5f5f4' : 'transparent',
+        fg: on ? '#0a0a0a' : '#a8a29e',
+        weight: on ? '700' : '500',
+        pick: () => this.setState({ rpe: v })
+      };
+    });
+    return {
+      accent,
+      variants,
+      rows,
+      rpes,
+      variantName: names[this.state.variant],
+      targetText,
+      targetDot: this.state.target ? accent : '#57534e',
+      targetColor: this.state.target ? '#f5f5f4' : '#a8a29e',
+      reps: this.state.reps,
+      kg: this.state.kg,
+      onReps: (e) => this.setState({ reps: e.target.value }),
+      onKg: (e) => this.setState({ kg: e.target.value }),
+      sheetOpen: this.state.sheetOpen,
+      openSheet: () => this.setState({ sheetOpen: true }),
+      closeSheet: () => this.setState({ sheetOpen: false })
+    };
+  }
+}
+</script>
+</body>
+</html>

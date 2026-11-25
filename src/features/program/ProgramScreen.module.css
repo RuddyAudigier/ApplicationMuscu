@@ -1,0 +1,184 @@
+/* Maquette docs/design/maquette/Seances.dc.html */
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 0 var(--gutter) 0;
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.9375rem;
+  font-weight: var(--weight-medium);
+  transition:
+    background-color var(--duration-fast) ease,
+    color var(--duration-fast) ease;
+}
+
+.tabLetter {
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: var(--weight-bold);
+}
+
+.tabSelected {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: var(--weight-bold);
+}
+
+.tabSelected .tabLetter {
+  color: var(--color-on-accent);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.duration {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.sessions {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.session {
+  position: relative;
+  border-top: 1px solid var(--color-border);
+}
+
+.session:last-child {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sessionMain {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 18px 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
+}
+
+.sessionMain:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.sessionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-right: 52px; /* place du bouton « Modifier » */
+}
+
+.sessionTitle {
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+}
+
+.code {
+  color: var(--color-accent);
+}
+
+.badge {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+}
+
+.when {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.exercises {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--text-sm);
+}
+
+.exercise {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.edit {
+  position: absolute;
+  top: 8px;
+  right: -8px;
+  color: var(--color-text-muted);
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.unassigned {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.postpone {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.postpone > button {
+  flex: 1;
+}

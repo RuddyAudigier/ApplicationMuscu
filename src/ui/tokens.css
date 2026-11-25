@@ -1,0 +1,117 @@
+/*
+ * Design tokens MyMuscle v2 — « noir & citron » (maquette docs/design/maquette).
+ * Thème sombre uniquement. Contrastes (WCAG AA) :
+ *   texte #f5f5f4 / #0a0a0a ≈ 18:1 ; secondaire #a8a29e / #0a0a0a ≈ 7.9:1 ;
+ *   noir #0a0a0a sur citron #d4f53c ≈ 16:1 ; tertiaire #78716c / #0a0a0a ≈ 4.1:1
+ *   (réservé au texte non essentiel : en-têtes de colonnes, légendes ; pas les placeholders).
+ */
+:root {
+  color-scheme: dark;
+
+  /* Palette maquette */
+  --color-bg: #0a0a0a;
+  --color-surface: #161615; /* cartes, nav, champs */
+  --color-surface-2: #111110; /* surface enfoncée */
+  --color-surface-3: #262624; /* surface relevée (bouton fermer) */
+  --color-sheet: #141413; /* panneau du bas */
+  --color-sheet-inset: #0d0d0c; /* tableau dans le panneau */
+  --color-border: #1f1f1d;
+  --color-border-strong: #292524;
+  --color-border-control: #3f3f3c; /* contours de boutons, poignée */
+  --color-text: #f5f5f4;
+  --color-text-muted: #a8a29e;
+  --color-text-subtle: #78716c;
+  --color-text-soft: #d6d3d1;
+  --color-inverse: #f5f5f4; /* pastille / item actif clair */
+  --color-on-inverse: #0a0a0a;
+
+  /* Accent citron (texte noir dessus) */
+  --color-accent: #d4f53c;
+  --color-on-accent: #0a0a0a;
+  --color-accent-soft: rgb(212 245 60 / 0.14);
+
+  /* Alias sémantiques historiques (composants existants) */
+  --color-primary: var(--color-accent);
+  --color-primary-solid: var(--color-accent);
+  --color-primary-soft: var(--color-accent-soft);
+  --color-on-primary: var(--color-on-accent);
+  --color-secondary: #a8a29e;
+  --color-success: #4ade80;
+  --color-success-soft: rgb(74 222 128 / 0.14);
+  --color-warning: #fbbf24;
+  --color-warning-soft: rgb(251 191 36 / 0.14);
+  --color-danger: #f87171;
+  --color-danger-solid: #dc2626;
+  --color-on-danger: #ffffff; /* sur danger-solid ≈ 4.8:1 */
+  --color-danger-soft: rgb(239 68 68 / 0.16);
+  --color-pr: var(--color-accent);
+  --color-pr-soft: var(--color-accent-soft);
+  --color-overlay: rgb(0 0 0 / 0.6);
+  --color-focus: #d4f53c;
+
+  /* Espacements (pas de 4 px) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-7: 1.75rem;
+  --space-8: 2rem;
+
+  /* Rayons */
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-full: 999px;
+
+  /* Ombres */
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 8px 24px rgb(0 0 0 / 0.45);
+  --shadow-lg: 0 -12px 40px rgb(0 0 0 / 0.6);
+
+  /* Typographie */
+  --font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --font-display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  --font-scale: 1;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 2rem;
+  --text-3xl: 2.5rem;
+  --text-number: 2.125rem; /* 34 px : grands nombres de saisie */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --line-height: 1.5;
+  --tracking-tight: -0.02em;
+  --tracking-tighter: -0.03em;
+
+  /* Mise en page */
+  --touch-target: 44px;
+  --gutter: 24px;
+  --bottom-nav-height: 64px;
+  --bottom-nav-gap: 24px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+
+  /* Mouvement */
+  --duration-fast: 120ms;
+  --duration-base: 220ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Échelle de texte */
+:root[data-font-scale='110'] {
+  --font-scale: 1.1;
+}
+
+:root[data-font-scale='120'] {
+  --font-scale: 1.2;
+}

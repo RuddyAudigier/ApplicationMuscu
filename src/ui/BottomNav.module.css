@@ -1,0 +1,61 @@
+/* Pilule flottante : maquette Main.dc.html (64 px, #161615, item actif clair). */
+.nav {
+  position: fixed;
+  right: calc(var(--gutter) + var(--safe-right));
+  bottom: calc(var(--bottom-nav-gap) + var(--safe-bottom));
+  left: calc(var(--gutter) + var(--safe-left));
+  z-index: 20;
+  max-width: 480px;
+  height: var(--bottom-nav-height);
+  margin: 0 auto;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+.list {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 52px;
+  min-width: var(--touch-target);
+  border-radius: var(--radius-full);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  transition:
+    background-color var(--duration-base) var(--ease-out),
+    color var(--duration-fast) ease;
+}
+
+.link:hover:not(.active) {
+  color: var(--color-text);
+}
+
+.link:focus-visible {
+  outline-offset: -3px;
+}
+
+.active {
+  background: var(--color-inverse);
+  color: var(--color-on-inverse);
+}
+
+/* Anneau citron illisible sur la pilule claire (~1.1:1) : anneau sombre à l'intérieur. */
+.active:focus-visible {
+  outline-color: var(--color-on-inverse);
+}
