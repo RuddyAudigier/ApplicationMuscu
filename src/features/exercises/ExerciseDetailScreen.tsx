@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { useDeleteExercise, useExercises, usePerformances, useSessions } from '@/data/queries';
 import type { Exercise } from '@/domain/model';
-import { Button, Icon, Sheet, Skeleton, useToast } from '@/ui';
+import { Button, Icon, iconButtonClasses, PageHeader, Sheet, Skeleton, useToast } from '@/ui';
 import { CoachNotesField } from './CoachNotesField';
 import { CycleBadgesFor } from './CycleBadges';
 import { EditExerciseSheet } from './EditExerciseSheet';
@@ -12,19 +12,23 @@ import { MuscleMap } from './MuscleMap';
 import { VariantsSection, type PerfState } from './VariantsSection';
 import styles from './ExerciseDetailScreen.module.css';
 
-function TopBar({ exerciseId }: { exerciseId?: string }) {
+function TopBar({ exerciseId, title = 'Exercice', heading = false }: { exerciseId?: string; title?: string; heading?: boolean }) {
+  const navigate = useNavigate();
   return (
-    <div className={styles.topBar}>
-      <Link to="/exercises" aria-label="Retour aux exercices" className={styles.round}>
-        <Icon name="back" size={20} />
-      </Link>
-      {exerciseId && (
-        <Link to={`/records/${exerciseId}`} className={styles.recordsLink}>
-          <Icon name="table" size={18} />
-          Records
-        </Link>
-      )}
-    </div>
+    <PageHeader
+      title={title}
+      decorative={!heading}
+      onBack={() => {
+        void navigate('/exercises');
+      }}
+      actions={
+        exerciseId && (
+          <Link to={`/records/${exerciseId}`} aria-label="Records" title="Records" className={iconButtonClasses('surface')}>
+            <Icon name="table" size={22} />
+          </Link>
+        )
+      }
+    />
   );
 }
 
@@ -52,8 +56,7 @@ export function ExerciseDetailScreen() {
   if (!exercise) {
     return (
       <div className={styles.screen}>
-        <TopBar />
-        <h1 className={styles.title}>{exercises.isError ? 'Fiche indisponible' : 'Exercice introuvable'}</h1>
+        <TopBar heading title={exercises.isError ? 'Fiche indisponible' : 'Exercice introuvable'} />
         <p className={styles.sheetText} role={exercises.isError ? 'alert' : undefined}>
           {exercises.isError
             ? 'Impossible de charger les exercices. Vérifie ta connexion puis réessaie.'

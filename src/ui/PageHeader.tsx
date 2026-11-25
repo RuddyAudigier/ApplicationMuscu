@@ -4,7 +4,6 @@ import { IconButton } from './IconButton';
 
 export interface PageHeaderProps {
   title: ReactNode;
-  subtitle?: string;
   /** Affiche un bouton « Retour » à gauche. */
   onBack?: () => void;
   /** Actions à droite (IconButton, Button…). */
@@ -18,7 +17,7 @@ export interface PageHeaderProps {
  * pour que les titres tombent à la même hauteur d'un onglet à l'autre.
  * La zone sûre du haut est déjà réservée par le body.
  */
-export function PageHeader({ title, subtitle, onBack, actions, decorative }: PageHeaderProps) {
+export function PageHeader({ title, onBack, actions, decorative }: PageHeaderProps) {
   return (
     <header className={styles.header}>
       {onBack && (
@@ -30,7 +29,6 @@ export function PageHeader({ title, subtitle, onBack, actions, decorative }: Pag
         ) : (
           <h1 className={styles.title}>{title}</h1>
         )}
-        {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
       </div>
       {actions && <div className={styles.actions}>{actions}</div>}
     </header>

@@ -113,7 +113,7 @@ export function CsvImportSheet({ open, onClose, exercises, exercisesStatus }: Cs
           id={inputId}
           type="file"
           accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-          className={cx(styles.srOnly, styles.fileInput)}
+          className={cx('visually-hidden', styles.fileInput)}
           disabled={busy || !ready}
           onChange={(e) => {
             void onFile(e);

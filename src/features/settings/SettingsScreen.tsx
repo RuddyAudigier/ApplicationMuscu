@@ -25,9 +25,10 @@ import {
   saveReminderPrefs,
   type ReminderPrefs,
 } from '@/platform/notifications';
-import { Button, Field, PageHeader, Segmented, Sheet, Skeleton, useToast } from '@/ui';
+import { Button, ConfirmDialog, Field, PageHeader, SectionTitle, Segmented, Skeleton, useToast } from '@/ui';
 import { applyPreferences, loadPreferences, savePreferences, type DisplayPreferences, type FontScale } from './preferences';
-import { plural, safeStorage, syncMessage } from './settingsModel';
+import { plural } from '@/domain/text';
+import { safeStorage, syncMessage } from './settingsModel';
 import styles from './SettingsScreen.module.css';
 
 const CYCLE_OPTIONS: { value: CycleId; label: string }[] = [
@@ -45,7 +46,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   const id = useId();
   return (
     <section aria-labelledby={id} className={styles.section}>
-      <h2 id={id} className={styles.sectionTitle}>{title}</h2>
+      <SectionTitle id={id} level="eyebrow">{title}</SectionTitle>
       <div className={styles.card}>{children}</div>
     </section>
   );
@@ -341,7 +342,6 @@ function DataSection() {
   const reset = useResetBackend();
   const toast = useToast();
   const [confirming, setConfirming] = useState(false);
-  const descId = useId();
   const isMock = backend.kind === 'mock';
 
   const confirm = () => {
@@ -373,24 +373,15 @@ function DataSection() {
           </Button>
         )}
       </div>
-      <Sheet
+      <ConfirmDialog
         open={confirming}
-        onClose={() => { setConfirming(false); }}
         title="Réinitialiser les données de démo ?"
-        role="alertdialog"
-        aria-describedby={descId}
-        footer={
-          <div className={styles.actions}>
-            <Button variant="secondary" fullWidth onClick={() => { setConfirming(false); }}>Annuler</Button>
-            <Button variant="danger" fullWidth onClick={confirm}>Réinitialiser</Button>
-          </div>
-        }
-      >
-        <p id={descId} className={styles.text}>
-          Séances, exercices et performances de démo reviennent à leur état initial, et la file hors-ligne (lots en
-          attente et archives) est vidée. Ce que tu as saisi en mode démo sera perdu.
-        </p>
-      </Sheet>
+        message="Séances, exercices et performances de démo reviennent à leur état initial, et la file hors-ligne (lots en attente et archives) est vidée. Ce que tu as saisi en mode démo sera perdu."
+        confirmLabel="Réinitialiser"
+        danger
+        onConfirm={confirm}
+        onCancel={() => { setConfirming(false); }}
+      />
     </Section>
   );
 }

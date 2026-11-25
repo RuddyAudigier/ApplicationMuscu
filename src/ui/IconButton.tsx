@@ -14,6 +14,11 @@ export interface IconButtonProps extends Omit<
   variant?: 'ghost' | 'surface' | 'primary' | 'danger';
 }
 
+/** Classes d'un IconButton, pour un <Link> qui doit en avoir l'allure. */
+export function iconButtonClasses(variant: NonNullable<IconButtonProps['variant']> = 'ghost'): string {
+  return cx(styles.button, styles[variant]);
+}
+
 export function IconButton({
   icon,
   label,
@@ -28,7 +33,7 @@ export function IconButton({
       type={type}
       aria-label={label}
       title={label}
-      className={cx(styles.button, styles[variant], className)}
+      className={cx(iconButtonClasses(variant), className)}
     >
       <Icon name={icon} size={22} />
     </button>

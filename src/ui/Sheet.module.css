@@ -72,6 +72,11 @@
   flex: 1;
 }
 
+/* Action principale d'un pied de panneau : deux fois plus large que le reste. */
+.footer > [data-grow='2'] {
+  flex: 2;
+}
+
 @keyframes slide-up {
   from {
     transform: translateY(100%);

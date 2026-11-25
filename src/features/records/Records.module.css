@@ -1,14 +1,5 @@
 /* Records + Ajouter un PR — maquettes Performances.dc.html / AjoutPR.dc.html. */
 
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
-
 .screen {
   display: flex;
   flex-direction: column;
@@ -27,23 +18,8 @@
 }
 
 .importHint {
-  color: var(--color-text-muted, var(--color-text));
+  color: var(--color-text-muted);
   font-size: var(--text-sm);
-}
-
-.moreButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--touch-target);
-  height: var(--touch-target);
-  border: none;
-  border-radius: var(--radius-full);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-size: 1.25rem;
-  font-weight: var(--weight-bold);
-  line-height: 1;
 }
 
 .error {
@@ -92,7 +68,7 @@
   min-height: 52px;
   padding: 8px 16px;
   border: none;
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
   color: var(--color-text);
   text-align: left;
@@ -128,7 +104,7 @@
   min-height: 52px;
   padding: 0 16px;
   border: 1px solid var(--color-border-strong);
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background: transparent;
   color: var(--color-text);
   font-size: var(--text-md);
@@ -359,7 +335,7 @@
   gap: 2px;
   min-height: 56px;
   padding: 8px 16px;
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background: var(--color-surface-3);
   color: var(--color-text);
   font-weight: var(--weight-semibold);
@@ -411,28 +387,7 @@
   max-width: 480px;
   min-height: calc(100dvh - var(--bottom-nav-height) - var(--bottom-nav-gap) * 2 - var(--safe-bottom));
   margin: 0 auto;
-  padding: var(--gutter);
-}
-
-.addTop {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.addContext {
-  color: var(--color-text-muted);
-  font-size: 0.8125rem;
-}
-
-.addSpacer {
-  width: var(--touch-target);
-}
-
-.addTitle {
-  margin-top: 16px;
-  font-size: 2.125rem;
-  letter-spacing: var(--tracking-tighter);
+  padding: 0 var(--gutter) var(--gutter);
 }
 
 .addForm {
@@ -448,7 +403,7 @@
 
 .inputs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-top: 16px;
 }
@@ -459,7 +414,7 @@
   gap: 2px;
   padding: 10px 14px;
   border: 1px solid transparent;
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
 }
 
@@ -504,6 +459,17 @@
   font-size: var(--text-xs);
 }
 
+.rpeChoices {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.historyError {
+  margin-top: 18px;
+}
+
 .dateChoices {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -531,7 +497,7 @@
   margin-top: 6px;
   padding: 0 14px;
   border: 1px solid var(--color-border-strong);
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   background: var(--color-surface);
   color: var(--color-text);
   color-scheme: dark;
@@ -554,16 +520,6 @@
   font-size: var(--text-sm);
 }
 
-.historyError {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
-  margin-top: 18px;
-  color: var(--color-danger);
-  font-size: var(--text-sm);
-}
-
 .prBox {
   display: flex;
   align-items: center;
@@ -571,28 +527,13 @@
   margin-top: 18px;
   padding: 14px 16px;
   border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent);
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
 
 .prBoxMuted {
   border-color: var(--color-border-strong);
   background: var(--color-surface);
-}
-
-.prBadge {
-  flex-shrink: 0;
-  padding: 4px 8px;
-  border-radius: var(--radius-full);
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-  font-size: 0.6875rem;
-  font-weight: var(--weight-bold);
-}
-
-.prBadgeMuted {
-  background: var(--color-surface-3);
-  color: var(--color-text);
 }
 
 .prText {

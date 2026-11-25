@@ -2,6 +2,7 @@ import type { IsoDate } from '@/domain/model';
 import { classify } from '@/domain/records';
 import type { Reference } from '@/domain/model';
 import { isoToShortFr, todayIso } from '@/domain/dates';
+import { plural } from '@/domain/text';
 import { formatWeight } from '@/domain/numbers';
 
 /** Lundi de la semaine de `today` (semaine ISO, fuseau local). */
@@ -42,7 +43,6 @@ export { cx } from '@/ui/cx';
 
 export const kg =(n: number): string => `${formatWeight(n)} kg`;
 
-const plural = (n: number, word: string): string => `${String(n)} ${word}${Math.abs(n) > 1 ? 's' : ''}`;
 
 export type PrTone = 'pr' | 'equal' | 'below' | 'new';
 

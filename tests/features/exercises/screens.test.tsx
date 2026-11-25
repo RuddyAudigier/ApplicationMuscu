@@ -116,7 +116,7 @@ describe('ExerciseDetailScreen', () => {
     setup('/exercises/inconnu');
     expect(screen.getByRole('heading', { name: 'Fiche exercice' })).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'Exercice introuvable' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Retour aux exercices' })).toHaveAttribute('href', '/exercises');
+    expect(screen.getByRole('button', { name: 'Retour' })).toBeInTheDocument();
   });
 
   it('shows cycles, muscles, variants with best e1RM, the muscle map and the records link', async () => {
@@ -195,7 +195,7 @@ describe('ExerciseDetailScreen', () => {
     const { user } = setup(`/exercises/${id}`, backend);
     const notes = await screen.findByRole('textbox', { name: /Remarques du coach/ });
     await user.type(notes, 'perdu ?');
-    await user.click(screen.getByRole('link', { name: 'Retour aux exercices' }));
+    await user.click(screen.getByRole('button', { name: 'Retour' }));
     await screen.findByRole('heading', { level: 1, name: 'Exercices' });
     reject(new Error('réseau'));
     expect(await screen.findByText(/Remarques du coach de « Développé couché » non enregistrées/)).toBeInTheDocument();

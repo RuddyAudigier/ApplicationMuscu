@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { useExercises, useSessions } from '@/data/queries';
 import { MUSCLE_CATALOG } from '@/domain/muscles';
-import { Chip, EmptyState, Icon, IconButton, PageHeader, Skeleton } from '@/ui';
+import { Chip, EmptyState, ErrorNotice, Icon, IconButton, PageHeader, Skeleton } from '@/ui';
 import { CreateExerciseSheet } from './CreateExerciseSheet';
 import { CycleBadgesFor } from './CycleBadges';
 import { SessionsError } from './SessionsError';
@@ -28,8 +28,7 @@ export function ExercisesScreen() {
           <IconButton
             icon="plus"
             label="Créer un exercice"
-            variant="primary"
-            className={styles.add}
+            variant="surface"
             onClick={() => {
               setCreating(true);
             }}
@@ -95,9 +94,12 @@ export function ExercisesScreen() {
         />
       )}
       {exercises.isError && (
-        <p role="alert" className={styles.error}>
-          Impossible de charger les exercices. Vérifie ta connexion puis réessaie.
-        </p>
+        <ErrorNotice
+          message="Impossible de charger les exercices. Vérifie ta connexion puis réessaie."
+          onRetry={() => {
+            void exercises.refetch();
+          }}
+        />
       )}
 
       {exercises.data &&

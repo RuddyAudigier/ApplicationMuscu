@@ -4,7 +4,7 @@ import { cx } from './cx';
 import { Icon, type IconName } from './Icon';
 
 /** `accent` = citron (action principale) ; `primary` = pilule claire. */
-export type ButtonVariant = 'accent' | 'primary' | 'secondary' | 'ghost' | 'danger';
+export type ButtonVariant = 'accent' | 'primary' | 'secondary' | 'ghost' | 'danger' | 'dangerGhost';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -15,6 +15,11 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: IconName;
   /** Désactive le bouton et affiche un indicateur de chargement. */
   loading?: boolean;
+}
+
+/** Classes d'un bouton, pour un <Link> qui doit en avoir l'allure. */
+export function buttonClasses(variant: ButtonVariant = 'primary', size: 'md' | 'lg' = 'md', fullWidth = false): string {
+  return cx(styles.button, styles[variant], styles[size], fullWidth && styles.full);
 }
 
 export function Button({
@@ -35,13 +40,7 @@ export function Button({
       type={type}
       disabled={disabled === true || loading}
       aria-busy={loading || undefined}
-      className={cx(
-        styles.button,
-        styles[variant],
-        styles[size],
-        fullWidth && styles.full,
-        className,
-      )}
+      className={cx(buttonClasses(variant, size, fullWidth), className)}
     >
       {loading ? (
         <span className={styles.spinner} aria-hidden="true" />

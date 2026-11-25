@@ -158,13 +158,11 @@ describe('PageHeader', () => {
     render(
       <PageHeader
         title="Exercices"
-        subtitle="12 au total"
         onBack={onBack}
         actions={<button type="button">Plus</button>}
       />,
     );
     expect(screen.getByRole('heading', { level: 1, name: 'Exercices' })).toBeInTheDocument();
-    expect(screen.getByText('12 au total')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Retour' }));
     expect(onBack).toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Plus' })).toBeInTheDocument();

@@ -84,10 +84,13 @@ export function E1rmChart({ points }: { points: DayPoint[] }) {
             onMouseLeave={() => {
               setActive(null);
             }}
+            onClick={() => {
+              setActive(i);
+            }}
           />
         ))}
       </svg>
-      <table className={styles.srOnly}>
+      <table className="visually-hidden">
         <caption>1RM estimé par date</caption>
         <thead>
           <tr>

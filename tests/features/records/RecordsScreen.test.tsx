@@ -145,7 +145,7 @@ describe('RecordsScreen', () => {
     const backend = createMockBackend(localStorage);
     vi.spyOn(backend.performances, 'list').mockRejectedValue(new NetworkError('offline'));
     renderAt('/records', backend);
-    expect(await screen.findByText(/Impossible de charger les records/)).toHaveAttribute('role', 'alert');
+    expect((await screen.findByText(/Impossible de charger les records/)).closest('[role="alert"]')).not.toBeNull();
   });
 
   it('shows an empty state without exercises', async () => {

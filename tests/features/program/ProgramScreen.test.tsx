@@ -58,13 +58,13 @@ describe('ProgramScreen', () => {
   it('reporte le prochain cycle d’une semaine puis annule le report', async () => {
     const { backend, user } = setup();
     await seedRow();
-    await user.click(screen.getByRole('button', { name: 'Reporter le prochain cycle d’une semaine' }));
+    await user.click(screen.getByRole('button', { name: 'Reporter d’une semaine' }));
     await waitFor(async () => {
       expect(await backend.cycles.get()).toEqual({ current: 'A', startedOn: todayIso(), lengthDays: 14, extraDays: 7 });
     });
     expect(await screen.findByText(/Prochain cycle B le .* · reporté de 1 semaine/)).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /B dans 21 j/ })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Annuler un report' }));
+    await user.click(screen.getByRole('button', { name: 'Annuler le report' }));
     await waitFor(async () => {
       expect((await backend.cycles.get())?.extraDays).toBe(0);
     });
@@ -102,7 +102,7 @@ describe('ProgramScreen', () => {
     expect(row).toBeDisabled();
     await user.click(row);
     expect(loadActiveWorkout()).toBeNull();
-    expect(screen.getByRole('button', { name: 'Recharger les exercices' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Réessayer' })).toBeInTheDocument();
   });
 
   it('demande confirmation avant d’abandonner une autre séance en cours', async () => {
@@ -233,7 +233,7 @@ describe('ProgramScreen', () => {
     backend.cycles.save = () => Promise.reject(new Error('réseau'));
     const { user } = setup(backend);
     await seedRow();
-    await user.click(screen.getByRole('button', { name: 'Reporter le prochain cycle d’une semaine' }));
+    await user.click(screen.getByRole('button', { name: 'Reporter d’une semaine' }));
     expect(await screen.findByText('Le cycle n’a pas pu être enregistré. Réessaie.')).toBeInTheDocument();
   });
 
@@ -250,7 +250,7 @@ describe('ProgramScreen', () => {
     release();
     expect(await screen.findByRole('tab', { name: /B En cours/ })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('combobox', { name: 'Durée des cycles' })).toHaveValue('14');
-    expect(screen.getByRole('button', { name: 'Annuler un report' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Annuler le report' })).toBeEnabled();
   });
 
   it('cycle illisible : erreur avec Réessayer, jamais le cycle par défaut', async () => {

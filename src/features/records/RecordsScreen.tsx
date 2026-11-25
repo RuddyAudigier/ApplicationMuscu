@@ -8,7 +8,7 @@ import { progressionFor } from '@/domain/progression';
 import { getDefaultVariant, variantLabel, variantMatches } from '@/domain/variants';
 import { recordsTable } from '@/domain/workout';
 import { useExercises, usePerformances } from '@/data/queries';
-import { Button, cx, EmptyState, PageHeader, Pill, Segmented, Skeleton, StatTile } from '@/ui';
+import { Button, cx, EmptyState, ErrorNotice, PageHeader, Pill, Segmented, Skeleton, StatTile } from '@/ui';
 import { CsvImportSheet } from './CsvImportSheet';
 import { E1rmChart } from './E1rmChart';
 import { ExercisePicker } from './ExercisePicker';
@@ -102,9 +102,13 @@ export function RecordsScreen() {
 
       {loading && <Skeleton height={320} />}
       {!loading && failed && (
-        <p role="alert" className={styles.error}>
-          Impossible de charger les records. Vérifie ta connexion puis réessaie.
-        </p>
+        <ErrorNotice
+          message="Impossible de charger les records. Vérifie ta connexion puis réessaie."
+          onRetry={() => {
+            if (exercisesQuery.isError) void exercisesQuery.refetch();
+            if (perfsQuery.isError) void perfsQuery.refetch();
+          }}
+        />
       )}
       {!loading && !failed && !exercise && (
         <EmptyState title="Aucun exercice" message="Crée un exercice pour suivre tes records." />
@@ -127,7 +131,6 @@ export function RecordsScreen() {
             {exercise.variants.map((v) => (
               <Pill
                 key={v.id ?? v.name}
-                tone="accent"
                 selected={v.id === variant.id && v.name === variant.name}
                 onSelect={() => {
                   selectVariant(v);
@@ -190,7 +193,7 @@ function RecordsTable({ rows, today, weekStart }: TableProps) {
   return (
     <div className={styles.tableWrap}>
       <table className={styles.table}>
-        <caption className={styles.srOnly}>Records de 1 à 30 répétitions</caption>
+        <caption className="visually-hidden">Records de 1 à 30 répétitions</caption>
         <thead>
           <tr className={styles.headRow}>
             <th scope="col">Reps</th>
@@ -218,7 +221,7 @@ function RecordsTable({ rows, today, weekStart }: TableProps) {
                   )}
                 >
                   {empty ? 'à conquérir' : kg(row.weight ?? 0)}
-                  {fresh && <span className={styles.srOnly}> (PR cette semaine)</span>}
+                  {fresh && <span className="visually-hidden"> (PR cette semaine)</span>}
                 </td>
                 <td className={styles.rpe}>{formatDecimal(row.rpe)}</td>
                 <td className={cx(styles.date, fresh && styles.dateFresh)}>

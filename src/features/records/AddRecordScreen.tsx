@@ -2,18 +2,20 @@ import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { performanceTimestamp, todayIso } from '@/domain/dates';
 import type { Exercise, IsoDate, PerformanceInput, Variant } from '@/domain/model';
-import { parseReps, parseRpe, parseWeight } from '@/domain/numbers';
+import { parseReps, parseWeight } from '@/domain/numbers';
 import { defaultCycleState } from '@/domain/cycles';
 import { classify, findPreviousBest } from '@/domain/records';
 import { MANUAL_SESSION, sessionNameForDay } from '@/domain/sessions';
 import { getDefaultVariant, variantLabel, variantMatches } from '@/domain/variants';
 import { useAddPerformances, useCycleState, useExercises, useHistoryIndex, usePerformances, useSessions } from '@/data/queries';
-import { Button, Icon, IconButton, Pill, Skeleton, useToast } from '@/ui';
+import { Badge, Button, ErrorNotice, Icon, PageHeader, Pill, Skeleton, useToast } from '@/ui';
 import { ExercisePicker } from './ExercisePicker';
 import { cx, longDateFr, nextDayIso, prMessage, yesterdayIso } from './format';
 import styles from './Records.module.css';
 
 type DateChoice = 'today' | 'yesterday' | 'other';
+
+const RPE_VALUES = [6, 7, 8, 9, 10];
 
 function initialVariant(exercise: Exercise | null, name: string | null): Variant | null {
   if (!exercise) return null;
@@ -39,7 +41,7 @@ export function AddRecordScreen() {
   const [variantName, setVariantName] = useState<string | null>(params.get('variant'));
   const [reps, setReps] = useState('');
   const [weight, setWeight] = useState('');
-  const [rpe, setRpe] = useState('');
+  const [rpe, setRpe] = useState(9);
   const [choice, setChoice] = useState<DateChoice>('today');
   const today = todayIso();
   const [otherDate, setOtherDate] = useState<IsoDate>(yesterdayIso(today));
@@ -55,12 +57,11 @@ export function AddRecordScreen() {
 
   const repsN = parseReps(reps);
   const weightN = parseWeight(weight);
-  const rpeN = rpe.trim() === '' ? null : parseRpe(rpe);
+  const rpeN = rpe;
   const repsError = repsN === null || repsN < 1 ? 'Reps : nombre entier ≥ 1.' : null;
   const weightError = weightN === null ? 'Kg : nombre ≥ 0.' : null;
-  const rpeError = rpe.trim() !== '' && rpeN === null ? 'RPE : entier de 6 à 10.' : null;
   const dateError = dateValid ? null : 'Date invalide ou dans le futur.';
-  const valid = !repsError && !weightError && !rpeError && !dateError && exercise !== null && variant !== null;
+  const valid = !repsError && !weightError && !dateError && exercise !== null && variant !== null;
 
   /** Séance de rattachement : séance prévue du cycle ce jour-là si faite, sinon la plus fréquente. */
   const session = useMemo(() => {
@@ -128,26 +129,21 @@ export function AddRecordScreen() {
 
   return (
     <div className={styles.addScreen}>
-      <div className={styles.addTop}>
-        <IconButton
-          icon="x"
-          label="Fermer"
-          variant="surface"
-          onClick={() => {
-            void navigate(backHref);
-          }}
-        />
-        <span className={styles.addContext}>Hors séance</span>
-        <span className={styles.addSpacer} />
-      </div>
-
-      <h1 className={styles.addTitle}>Ajouter un PR</h1>
+      <PageHeader
+        title="Ajouter un PR"
+        onBack={() => {
+          void navigate(backHref);
+        }}
+      />
 
       {exercisesQuery.isPending && <Skeleton height={200} />}
       {exercisesQuery.isError && (
-        <p role="alert" className={styles.error}>
-          Impossible de charger les exercices. Vérifie ta connexion puis réessaie.
-        </p>
+        <ErrorNotice
+          message="Impossible de charger les exercices. Vérifie ta connexion puis réessaie."
+          onRetry={() => {
+            void exercisesQuery.refetch();
+          }}
+        />
       )}
       {exercisesQuery.isSuccess && !exercise && <p className={styles.error}>Aucun exercice : crée d'abord un exercice.</p>}
 
@@ -187,9 +183,18 @@ export function AddRecordScreen() {
           <div className={styles.inputs}>
             <BigInput label="Reps" mode="numeric" value={reps} onChange={setReps} error={show(repsError)} />
             <BigInput label="Kg" mode="decimal" value={weight} onChange={setWeight} error={show(weightError)} />
-            <BigInput label="RPE" mode="numeric" value={rpe} onChange={setRpe} error={rpeError} placeholder="—" />
           </div>
-          {[show(repsError), show(weightError), rpeError].filter(Boolean).map((err) => (
+          <span id="pr-rpe-label" className={styles.dateLabel}>
+            RPE
+          </span>
+          <div role="radiogroup" aria-labelledby="pr-rpe-label" className={styles.rpeChoices}>
+            {RPE_VALUES.map((v) => (
+              <Pill key={v} selected={rpe === v} onSelect={() => { setRpe(v); }}>
+                {v}
+              </Pill>
+            ))}
+          </div>
+          {[show(repsError), show(weightError)].filter(Boolean).map((err) => (
             <p key={err} className={styles.fieldError}>
               {err}
             </p>
@@ -239,17 +244,13 @@ export function AddRecordScreen() {
 
           {perfsQuery.isPending && <p className={styles.historyState}>Chargement de ton historique…</p>}
           {perfsQuery.isError && (
-            <div className={styles.historyError}>
-              <p role="alert">Impossible de charger ton historique : pas de comparaison ni d'enregistrement possibles.</p>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  void perfsQuery.refetch();
-                }}
-              >
-                Réessayer
-              </Button>
-            </div>
+            <ErrorNotice
+              className={styles.historyError}
+              message="Impossible de charger ton historique : pas de comparaison ni d'enregistrement possibles."
+              onRetry={() => {
+                void perfsQuery.refetch();
+              }}
+            />
           )}
 
           {preview && (
@@ -259,9 +260,7 @@ export function AddRecordScreen() {
               role="status"
               aria-live="polite"
             >
-              <span className={cx(styles.prBadge, preview.message.tone !== 'pr' && styles.prBadgeMuted)}>
-                {preview.message.badge}
-              </span>
+              <Badge tone={preview.message.tone === 'pr' ? 'pr' : 'neutral'}>{preview.message.badge}</Badge>
               <span className={styles.prText}>
                 {preview.message.lead}
                 {preview.message.strong && <strong>{preview.message.strong}</strong>}

@@ -2,7 +2,7 @@ import { useId, useMemo, useState } from 'react';
 import { useDeleteSession, useExercises, useJournal, useSaveSession, useSessions } from '@/data/queries';
 import type { CycleId, Exercise, Id, Session } from '@/domain/model';
 import { normalizeSearch } from '@/domain/names';
-import { Button, ConfirmDialog, Field, Icon, IconButton, Segmented, Sheet, useToast } from '@/ui';
+import { Button, ConfirmDialog, Field, Icon, IconButton, SectionTitle, Segmented, Sheet, useToast } from '@/ui';
 import { loadActiveWorkout, saveActiveWorkout, useJournalSync } from '@/features/workout';
 import { DEFAULT_SERIES, MAX_SERIES, MIN_SERIES, isDuplicateName } from './programModel';
 import styles from './SessionBuilder.module.css';
@@ -187,11 +187,11 @@ export function SessionBuilder({ session, defaultCycle, onClose }: SessionBuilde
         footer={
           <>
             {session && (
-              <Button variant="danger" size="lg" icon="trash" onClick={() => { setConfirmDelete(true); }}>
+              <Button variant="dangerGhost" size="lg" icon="trash" onClick={() => { setConfirmDelete(true); }}>
                 Supprimer
               </Button>
             )}
-            <Button variant="accent" size="lg" loading={save.isPending || syncing} disabled={syncing} onClick={onSave}>
+            <Button variant="accent" size="lg" data-grow="2" loading={save.isPending || syncing} disabled={syncing} onClick={onSave}>
               Enregistrer
             </Button>
           </>
@@ -209,14 +209,14 @@ export function SessionBuilder({ session, defaultCycle, onClose }: SessionBuilde
           />
 
           <div className={styles.group}>
-            <span className={styles.groupLabel} aria-hidden="true">Cycle</span>
+            <SectionTitle level="eyebrow" as="span">Cycle</SectionTitle>
             <Segmented label="Cycle de la séance" options={CYCLE_OPTIONS} value={cycle} onChange={setCycle} />
           </div>
 
           <section className={styles.group} aria-labelledby={`${ids}-composition`}>
-            <h3 className={styles.groupLabel} id={`${ids}-composition`}>
+            <SectionTitle level="eyebrow" as="h3" id={`${ids}-composition`}>
               Composition ({items.length})
-            </h3>
+            </SectionTitle>
             {items.length === 0 ? (
               <p className={itemsError ? styles.error : styles.muted} role={itemsError ? 'alert' : undefined}>
                 {itemsError ?? 'Ta séance est vide : ajoute des exercices ci-dessous.'}
@@ -257,7 +257,7 @@ export function SessionBuilder({ session, defaultCycle, onClose }: SessionBuilde
           </section>
 
           <section className={styles.group} aria-labelledby={`${ids}-warmup`}>
-            <h3 className={styles.groupLabel} id={`${ids}-warmup`}>Échauffement ({warmupIds.length})</h3>
+            <SectionTitle level="eyebrow" as="h3" id={`${ids}-warmup`}>Échauffement ({warmupIds.length})</SectionTitle>
             {catalog.length === 0 ? (
               <p className={styles.muted}>Crée tes échauffements dans Programme → Échauffements.</p>
             ) : (
@@ -304,7 +304,7 @@ export function SessionBuilder({ session, defaultCycle, onClose }: SessionBuilde
           </section>
 
           <section className={styles.group} aria-labelledby={`${ids}-library`}>
-            <h3 className={styles.groupLabel} id={`${ids}-library`}>Exercices</h3>
+            <SectionTitle level="eyebrow" as="h3" id={`${ids}-library`}>Exercices</SectionTitle>
             <Field
               label="Rechercher un exercice"
               type="search"

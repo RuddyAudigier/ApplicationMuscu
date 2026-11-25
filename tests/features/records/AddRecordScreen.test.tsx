@@ -15,7 +15,7 @@ async function fill(reps: string, kg: string, rpe?: string) {
   const user = userEvent.setup();
   await user.type(await screen.findByLabelText('Reps'), reps);
   await user.type(screen.getByLabelText('Kg'), kg);
-  if (rpe !== undefined) await user.type(screen.getByLabelText('RPE'), rpe);
+  if (rpe !== undefined) await user.click(screen.getByRole('radio', { name: rpe }));
   return user;
 }
 
@@ -25,7 +25,6 @@ describe('AddRecordScreen', () => {
   it('renders the mockup layout with the default exercise', async () => {
     renderAt('/records/add');
     expect(screen.getByRole('heading', { name: 'Ajouter un PR' })).toBeInTheDocument();
-    expect(screen.getByText('Hors séance')).toBeInTheDocument();
     expect(screen.queryByText(/rattaché à/)).toBeNull();
     expect(await screen.findByRole('button', { name: /Exercice : Développé couché/ })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Classique' })).toHaveAttribute('aria-checked', 'true');
@@ -154,8 +153,7 @@ describe('AddRecordScreen', () => {
     const backend = createMockBackend(localStorage);
     const add = vi.spyOn(backend.performances, 'add');
     renderAt('/records/add', backend);
-    await user.type(await screen.findByLabelText('RPE'), '12');
-    expect(screen.getByText('RPE : entier de 6 à 10.')).toBeInTheDocument();
+    await screen.findByLabelText('Reps');
     await user.click(screen.getByRole('button', { name: 'Enregistrer le PR' }));
     expect(screen.getByText('Reps : nombre entier ≥ 1.')).toBeInTheDocument();
     expect(screen.getByText('Kg : nombre ≥ 0.')).toBeInTheDocument();
@@ -205,7 +203,7 @@ describe('AddRecordScreen', () => {
     const { bench } = await exerciseIds(backend);
     const { router } = renderAt(`/records/add?exerciseId=${bench}`, backend);
     await screen.findByRole('button', { name: /Développé couché/ });
-    await user.click(screen.getByRole('button', { name: 'Fermer' }));
+    await user.click(screen.getByRole('button', { name: 'Retour' }));
     expect(router.state.location.pathname).toBe(`/records/${bench}`);
   });
 
@@ -287,7 +285,7 @@ describe('AddRecordScreen', () => {
     const add = vi.spyOn(backend.performances, 'add');
     renderAt('/records/add', backend);
     await fill('6', '95');
-    expect(await screen.findByText(/Impossible de charger ton historique/)).toHaveAttribute('role', 'alert');
+    expect((await screen.findByText(/Impossible de charger ton historique/)).closest('[role="alert"]')).not.toBeNull();
     expect(screen.queryByTestId('pr-box')).toBeNull();
     expect(screen.getByRole('button', { name: 'Enregistrer le PR' })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: 'Réessayer' }));

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useLayoutEffect, useState } from 'react';
 import { matchPath, Outlet, useLocation, useNavigate } from 'react-router';
 import { useOfflineQueueSync } from '../data/queries';
 import { useReminderSync } from '../features/settings';
@@ -12,7 +12,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Accueil', icon: 'home' },
   { to: '/program', label: 'Programme', icon: 'dumbbell' },
   { to: '/records', label: 'Records', icon: 'trend' },
-  { to: '/exercises', label: 'Exercices', icon: 'search' },
+  { to: '/exercises', label: 'Exercices', icon: 'list' },
 ];
 
 /** Écrans plein écran (séance, compte rendu) : pas de navigation. */
@@ -25,6 +25,10 @@ const NAV_CLEARANCE =
 export function Layout() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  // Chaque navigation repart en haut de page.
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
   const goBack = useCallback((delta: number) => {
     void navigate(delta);
   }, [navigate]);

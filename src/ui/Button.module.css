@@ -106,6 +106,16 @@
   background: color-mix(in srgb, var(--color-danger-solid) 88%, black);
 }
 
+.dangerGhost {
+  background: transparent;
+  color: var(--color-danger);
+  font-weight: var(--weight-medium);
+}
+
+.dangerGhost:hover:not(:disabled) {
+  background: var(--color-danger-soft);
+}
+
 .label {
   overflow: hidden;
   text-overflow: ellipsis;

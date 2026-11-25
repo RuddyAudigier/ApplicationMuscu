@@ -4,7 +4,7 @@ import type { CycleId, Session } from '@/domain/model';
 import { emptyWeekPlan, setPlanDay, WEEKDAYS } from '@/domain/planning';
 import { sessionCode, sessionsOfCycle } from '@/domain/sessions';
 import { useSaveWeekPlan, useWeekPlan } from '@/data/queries';
-import { Button, Field, Skeleton, useToast } from '@/ui';
+import { ErrorNotice, Field, SectionTitle, Skeleton, useToast } from '@/ui';
 import styles from './WeekPlanSection.module.css';
 
 /**
@@ -21,10 +21,7 @@ export function WeekPlanSection({ sessions, cycle }: { sessions: Session[]; cycl
   let body;
   if (planQuery.isError) {
     body = (
-      <div className={styles.error} role="alert">
-        <p>Impossible de charger ton planning.</p>
-        <Button variant="secondary" onClick={() => { void planQuery.refetch(); }}>Réessayer</Button>
-      </div>
+      <ErrorNotice message="Impossible de charger ton planning." onRetry={() => { void planQuery.refetch(); }} />
     );
   } else if (planQuery.isPending) {
     body = <Skeleton height={160} />;
@@ -49,6 +46,7 @@ export function WeekPlanSection({ sessions, cycle }: { sessions: Session[]; cycl
               <Field
                 as="select"
                 label={name}
+                className={styles.day}
                 value={value}
                 disabled={save.isPending}
                 onChange={(e) => { change(day, e.target.value); }}
@@ -67,7 +65,7 @@ export function WeekPlanSection({ sessions, cycle }: { sessions: Session[]; cycl
 
   return (
     <section className={styles.section} aria-labelledby={`${id}-title`}>
-      <h2 id={`${id}-title`} className={styles.title}>Ma semaine · cycle {cycle}</h2>
+      <SectionTitle id={`${id}-title`}>Ma semaine · cycle {cycle}</SectionTitle>
       <p className={styles.hint}>
         Choisis la séance de chaque jour pendant les semaines du cycle {cycle}. Change d’onglet pour régler
         l’autre cycle : la bascule A/B est automatique.

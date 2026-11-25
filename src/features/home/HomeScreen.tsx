@@ -6,6 +6,7 @@ import type { CycleId, CycleState, Exercise, Performance, Session, WeekPlan } fr
 import { normalizeVariantName } from '@/domain/names';
 import { formatWeight } from '@/domain/numbers';
 import { latestPrs } from '@/domain/records';
+import { plural } from '@/domain/text';
 import { DEFAULT_VARIANT, variantLabel } from '@/domain/variants';
 import { warmupsForSession, type Form } from '@/domain/journal';
 import { startWorkout, type WorkoutState } from '@/domain/workout';
@@ -20,7 +21,7 @@ import {
   saveLastReport,
   usePendingReportSync,
 } from '@/features/workout';
-import { Button, Icon, IconButton, PageHeader, Skeleton } from '@/ui';
+import { buttonClasses, cx, ErrorNotice, Icon, IconButton, iconButtonClasses, PageHeader, SectionTitle, Skeleton } from '@/ui';
 import { monthGrid, nextPlannedSession, PR_LABEL, relativeDay, weekSegments, type WeekSegment } from './homeLogic';
 import styles from './HomeScreen.module.css';
 import { ScheduledSessions } from './ScheduledSessions';
@@ -44,7 +45,7 @@ function MonthCalendar({ perfs, cycleState, today }: { perfs: Performance[]; cyc
     <section className={styles.calendar} aria-labelledby="home-month">
       <div className={styles.calHead}>
         <div className={styles.calTitles}>
-          <h2 id="home-month" className={styles.prsTitle}>Ce mois-ci</h2>
+          <SectionTitle id="home-month">Ce mois-ci</SectionTitle>
           <span className={styles.calMonth}>{name} {year}</span>
         </div>
         <div className={styles.calNav}>
@@ -67,19 +68,24 @@ function MonthCalendar({ perfs, cycleState, today }: { perfs: Performance[]; cyc
               data-trained={cell.trained || undefined}
               data-cycle={cell.cycle}
               data-today={cell.isToday || undefined}
->
+            >
               <span className="visually-hidden">{label}</span>
               <span className={styles.calNum} aria-hidden="true">{day}</span>
             </span>
           );
         })}
       </div>
-      <p className={styles.calTotal}>{plural(grid.sessions, 'séance', 'séances')}</p>
+      <div className={styles.calFoot}>
+        <p className={styles.calTotal}>{plural(grid.sessions, 'séance', 'séances')}</p>
+        <p className={styles.calLegend} aria-hidden="true">
+          <span className={styles.legendA}>Cycle A</span>
+          <span className={styles.legendB}>Cycle B</span>
+        </p>
+      </div>
     </section>
   );
 }
 
-const plural = (n: number, one: string, many: string): string => `${String(n)} ${n > 1 ? many : one}`;
 
 /** Vue minimale d'une requête (données dérivées possibles, ex. cycle courant). */
 interface Query<T> {
@@ -94,16 +100,6 @@ interface Query<T> {
 const retry = (...queries: Query<unknown>[]) => (): void => {
   for (const q of queries) if (q.isError) void q.refetch();
 };
-
-/** Erreur de chargement honnête (D8) avec relance. */
-function LoadError({ message, onRetry }: { message: string; onRetry: () => void }) {
-  return (
-    <div className={styles.notice} role="alert">
-      <p className={styles.noticeText}>{message}</p>
-      <Button variant="secondary" onClick={onRetry}>Réessayer</Button>
-    </div>
-  );
-}
 
 function Timeline({ segments }: { segments: WeekSegment[] }) {
   const current = segments.find((s) => s.status === 'current');
@@ -179,7 +175,7 @@ function SessionCard({
 }) {
   if (sessionsQuery.isError) {
     return (
-      <LoadError message="Impossible de charger les séances. Vérifie ta connexion puis réessaie." onRetry={retry(sessionsQuery)} />
+      <ErrorNotice message="Impossible de charger les séances. Vérifie ta connexion puis réessaie." onRetry={retry(sessionsQuery)} />
     );
   }
   if (sessionsQuery.data?.length === 0) {
@@ -187,13 +183,13 @@ function SessionCard({
       <div className={styles.empty}>
         <h2 className={styles.emptyTitle}>Aucune séance</h2>
         <p className={styles.emptyText}>Crée les séances de tes cycles A et B pour commencer.</p>
-        <Link to="/program" className={styles.cta}>Créer mon programme</Link>
+        <Link to="/program" className={buttonClasses('accent')}>Créer mon programme</Link>
       </div>
     );
   }
   if (perfsQuery.isError || cycle.isError) {
     return (
-      <LoadError
+      <ErrorNotice
         message="Impossible de déterminer la séance du jour : historique ou cycle indisponible."
         onRetry={retry(perfsQuery, cycle)}
       />
@@ -234,7 +230,7 @@ function SessionCard({
             ? `Toutes les séances du cycle ${day.cycle} sont faites cette semaine.`
             : `Ajoute une séance au cycle ${day.cycle} dans ton programme.`}
         </p>
-        <Link to="/program" className={styles.cta}>Voir le programme</Link>
+        <Link to="/program" className={buttonClasses('accent')}>Voir le programme</Link>
       </div>
     );
   }
@@ -272,7 +268,7 @@ function SessionCard({
         </div>
       </button>
       {exercisesQuery.isError && (
-        <LoadError
+        <ErrorNotice
           message="Impossible de charger les exercices : la séance ne peut pas démarrer."
           onRetry={retry(exercisesQuery)}
         />
@@ -327,7 +323,7 @@ export function HomeScreen() {
         decorative
         title={<>mymuscle<span className={styles.dot}>.</span></>}
         actions={
-          <Link to="/settings" aria-label="Réglages" className={styles.settings}>
+          <Link to="/settings" aria-label="Réglages" title="Réglages" className={iconButtonClasses('surface')}>
             <Icon name="sliders" size={20} />
           </Link>
         }
@@ -335,7 +331,7 @@ export function HomeScreen() {
 
       <section className={styles.cycle} aria-label="Cycle en cours" aria-busy={cycleQuery.isPending || undefined}>
         {cycleQuery.isError && (
-          <LoadError message="Impossible de charger ton cycle A/B. Vérifie ta connexion puis réessaie." onRetry={retry(cycleQuery)} />
+          <ErrorNotice message="Impossible de charger ton cycle A/B. Vérifie ta connexion puis réessaie." onRetry={retry(cycleQuery)} />
         )}
         {cycleQuery.isPending && (
           <>
@@ -360,9 +356,7 @@ export function HomeScreen() {
                 <span className={styles.switchDays}>dans {plural(status.daysLeft, 'jour', 'jours')}</span>
               </p>
             </div>
-            <Link to="/bilan" className={styles.timelineLink}>
-              <Timeline segments={segments} />
-            </Link>
+            <Timeline segments={segments} />
           </>
         )}
       </section>
@@ -399,7 +393,7 @@ export function HomeScreen() {
       )}
 
       {status && (
-        <Link to="/bilan" className={[styles.review, status.daysLeft <= 3 && styles.reviewAccent].filter(Boolean).join(' ')}>
+        <Link to="/bilan" className={cx(styles.review, status.daysLeft <= 3 && styles.reviewAccent)}>
           <span className={styles.reportTitles}>
             <span className={styles.reportKicker}>
               {status.daysLeft <= 1 ? 'Dernier jour du bloc' : status.daysLeft <= 3 ? `Fin du bloc dans ${plural(status.daysLeft, 'jour', 'jours')}` : 'Cycle ' + status.current}
@@ -414,11 +408,11 @@ export function HomeScreen() {
 
       <section className={styles.prs} aria-labelledby="home-prs">
         <div className={styles.prsHead}>
-          <h2 id="home-prs" className={styles.prsTitle}>Derniers PR</h2>
+          <SectionTitle id="home-prs">Derniers PR</SectionTitle>
           <Link to="/records" className={styles.seeAll}>Tout voir</Link>
         </div>
         {perfsQuery.isError ? (
-          <LoadError message="Impossible de charger tes performances : PR indisponibles." onRetry={retry(perfsQuery)} />
+          <ErrorNotice message="Impossible de charger tes performances : PR indisponibles." onRetry={retry(perfsQuery)} />
         ) : prs.length === 0 ? (
           <p className={styles.prsEmpty}>
             {perfsQuery.isPending ? 'Chargement…' : 'Aucun PR pour l’instant. Ta prochaine séance en fera tomber.'}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 import { useCycleState, useJournal, usePerformances, useSessions, useWeekPlan } from '@/data/queries';
 import { blockReview, feelingCountsLabel, recentBlocks, type BlockRange, type BlockReview } from '@/domain/blockReview';
 import { defaultCycleState } from '@/domain/cycles';
@@ -7,7 +8,7 @@ import { setBlockNote, type Journal } from '@/domain/journal';
 import { buildPdf, preloadPdf } from '@/platform/pdf';
 import { shareFile } from '@/platform/share';
 import { useJournalSync } from '@/features/workout';
-import { Button, Field, PageHeader, Skeleton, StatTile, useToast } from '@/ui';
+import { Button, ErrorNotice, Field, PageHeader, SectionTitle, Skeleton, StatTile, useToast } from '@/ui';
 import styles from './ReviewScreen.module.css';
 import { blockLabel, prLabel, prValue, reviewFileName, reviewPdfModel } from './format';
 
@@ -33,7 +34,7 @@ function BlockNote({ block, journal, onNote }: { block: BlockRange; journal: Jou
   );
   return (
     <section className={styles.section} aria-labelledby="review-note">
-      <h2 id="review-note" className={styles.sectionTitle}>Ressenti du bloc</h2>
+      <SectionTitle id="review-note">Ressenti du bloc</SectionTitle>
       <Field
         as="textarea"
         label="Ressenti du bloc"
@@ -58,7 +59,7 @@ function Counts({ r }: { r: BlockReview }) {
   return (
     <>
       <section className={styles.section} aria-labelledby="review-pr">
-        <h2 id="review-pr" className={styles.sectionTitle}>Records</h2>
+        <SectionTitle id="review-pr">Records</SectionTitle>
         {r.prs.length === 0 ? (
           <p className={styles.none}>Aucun PR sur ce bloc.</p>
         ) : (
@@ -77,7 +78,7 @@ function Counts({ r }: { r: BlockReview }) {
       </section>
 
       <section className={styles.section} aria-labelledby="review-nopr">
-        <h2 id="review-nopr" className={styles.sectionTitle}>Sans PR</h2>
+        <SectionTitle id="review-nopr">Sans PR</SectionTitle>
         {r.exercisesWithoutPr.length === 0 ? (
           <p className={styles.none}>Aucun exercice sans PR.</p>
         ) : (
@@ -92,12 +93,12 @@ function Counts({ r }: { r: BlockReview }) {
       </section>
 
       <section className={styles.section} aria-labelledby="review-form">
-        <h2 id="review-form" className={styles.sectionTitle}>Forme</h2>
+        <SectionTitle id="review-form">Forme</SectionTitle>
         <p className={styles.line}>Frais : {r.forms.frais} · Fatigué : {r.forms.fatigue}</p>
       </section>
 
       <section className={styles.section} aria-labelledby="review-feel">
-        <h2 id="review-feel" className={styles.sectionTitle}>États par exercice</h2>
+        <SectionTitle id="review-feel">États par exercice</SectionTitle>
         {r.feelings.length === 0 ? (
           <p className={styles.none}>Aucun ressenti noté.</p>
         ) : (
@@ -113,7 +114,7 @@ function Counts({ r }: { r: BlockReview }) {
       </section>
 
       <section className={styles.section} aria-labelledby="review-mood">
-        <h2 id="review-mood" className={styles.sectionTitle}>États généraux</h2>
+        <SectionTitle id="review-mood">États généraux</SectionTitle>
         {r.moods.length === 0 ? (
           <p className={styles.none}>Aucun état général noté.</p>
         ) : (
@@ -133,6 +134,8 @@ function Counts({ r }: { r: BlockReview }) {
 
 export function ReviewScreen() {
   const toast = useToast();
+  const navigate = useNavigate();
+  const location = useLocation();
   const today = todayIso();
   const cycleQuery = useCycleState();
   const sessionsQuery = useSessions();
@@ -203,20 +206,22 @@ export function ReviewScreen() {
 
   return (
     <div className={styles.screen}>
-      <PageHeader title="Bilan du bloc" />
+      <PageHeader
+        title="Bilan du bloc"
+        onBack={() => {
+          // Arrivée directe (lien, rechargement) : pas d'historique où revenir.
+          if (location.key === 'default') void navigate('/');
+          else void navigate(-1);
+        }}
+      />
 
       {failed.length > 0 && (
-        <div className={styles.notice} role="alert">
-          <p className={styles.noticeText}>Impossible de charger le bilan. Vérifie ta connexion puis réessaie.</p>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              for (const q of failed) void q.refetch();
-            }}
-          >
-            Réessayer
-          </Button>
-        </div>
+        <ErrorNotice
+          message="Impossible de charger le bilan. Vérifie ta connexion puis réessaie."
+          onRetry={() => {
+            for (const q of failed) void q.refetch();
+          }}
+        />
       )}
 
       {loading && (
@@ -245,13 +250,14 @@ export function ReviewScreen() {
 
           <div className={styles.stats}>
             <StatTile
+              size="sm"
               tone="accent"
               value={`${String(review.sessionsDone)}/${String(review.sessionsPlanned)}`}
               label="séances faites"
             />
-            <StatTile value={review.sessionsSkipped} label={review.sessionsSkipped > 1 ? 'sautées' : 'sautée'} />
-            <StatTile value={review.sessionsMissed} label={review.sessionsMissed > 1 ? 'manquées' : 'manquée'} />
-            <StatTile value={review.prs.length} label="PR" />
+            <StatTile size="sm" value={review.sessionsSkipped} label={review.sessionsSkipped > 1 ? 'sautées' : 'sautée'} />
+            <StatTile size="sm" value={review.sessionsMissed} label={review.sessionsMissed > 1 ? 'manquées' : 'manquée'} />
+            <StatTile size="sm" value={review.prs.length} label="PR" />
           </div>
 
           <Counts r={review} />

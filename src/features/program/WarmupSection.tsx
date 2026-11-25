@@ -2,7 +2,7 @@ import { useId, useState } from 'react';
 import { useJournal } from '@/data/queries';
 import { removeWarmupItem, type Journal, type WarmupItem } from '@/domain/journal';
 import { useJournalSync } from '@/features/workout';
-import { Button, ConfirmDialog, EmptyState, Field, IconButton, Sheet, Skeleton, useToast } from '@/ui';
+import { Button, ConfirmDialog, EmptyState, ErrorNotice, Field, IconButton, SectionTitle, Sheet, Skeleton, useToast } from '@/ui';
 import styles from './WarmupSection.module.css';
 
 const SAVE_ERROR = 'Échauffements non enregistrés. Vérifie ta connexion et réessaie.';
@@ -66,10 +66,7 @@ export function WarmupSection() {
   let body;
   if (journalQuery.isError) {
     body = (
-      <div className={styles.error} role="alert">
-        <p>Impossible de charger tes échauffements.</p>
-        <Button variant="secondary" onClick={() => { void journalQuery.refetch(); }}>Réessayer</Button>
-      </div>
+      <ErrorNotice message="Impossible de charger tes échauffements." onRetry={() => { void journalQuery.refetch(); }} />
     );
   } else if (journalQuery.isPending) {
     body = <Skeleton height={64} />;
@@ -100,7 +97,7 @@ export function WarmupSection() {
   return (
     <section className={styles.section} aria-labelledby={`${id}-title`}>
       <div className={styles.head}>
-        <h2 id={`${id}-title`} className={styles.title}>Échauffements</h2>
+        <SectionTitle id={`${id}-title`}>Échauffements</SectionTitle>
         <Button
           variant="secondary"
           icon="plus"
@@ -119,11 +116,11 @@ export function WarmupSection() {
         footer={
           <>
             {editing && (
-              <Button variant="danger" size="lg" icon="trash" disabled={busy} onClick={() => { setConfirmDelete(true); }}>
+              <Button variant="dangerGhost" size="lg" icon="trash" disabled={busy} onClick={() => { setConfirmDelete(true); }}>
                 Supprimer
               </Button>
             )}
-            <Button variant="accent" size="lg" loading={busy} onClick={() => { void onSave(); }}>
+            <Button variant="accent" size="lg" data-grow="2" loading={busy} onClick={() => { void onSave(); }}>
               Enregistrer
             </Button>
           </>

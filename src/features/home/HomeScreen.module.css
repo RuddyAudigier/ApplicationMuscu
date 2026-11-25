@@ -12,21 +12,6 @@
   color: var(--color-accent);
 }
 
-.settings {
-  width: var(--touch-target);
-  height: var(--touch-target);
-  border-radius: var(--radius-full);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-muted);
-  margin-right: calc(var(--space-3) * -1);
-}
-
-.settings:hover {
-  color: var(--color-text);
-}
-
 /* Cycle en cours */
 .cycle {
   display: flex;
@@ -89,12 +74,6 @@
 }
 
 /* Frise semaine par semaine */
-.timelineLink {
-  display: block;
-  color: inherit;
-  text-decoration: none;
-}
-
 .timeline {
   display: grid;
   gap: 6px;
@@ -254,39 +233,6 @@
   color: var(--color-text-muted);
 }
 
-.cta {
-  margin-top: var(--space-3);
-  min-height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-full);
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-  font-weight: var(--weight-semibold);
-  text-decoration: none;
-}
-
-.cta:hover {
-  color: var(--color-on-accent);
-}
-
-.notice {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border-radius: var(--radius-lg);
-  background: var(--color-danger-soft);
-  color: var(--color-text);
-  font-size: var(--text-sm);
-}
-
-.noticeText {
-  margin: 0;
-}
-
 /* Dernier compte rendu */
 .report {
   display: flex;
@@ -367,13 +313,6 @@
   align-items: baseline;
 }
 
-.prsTitle {
-  margin: 0;
-  font-size: 13px;
-  font-weight: var(--weight-regular);
-  color: var(--color-text-muted);
-}
-
 .seeAll {
   font-size: 13px;
   color: var(--color-text-muted);
@@ -451,7 +390,7 @@
   flex-direction: column;
   gap: var(--space-3);
   background: var(--color-surface);
-  border-radius: var(--radius-lg, 16px);
+  border-radius: var(--radius-lg);
   padding: var(--space-4);
 }
 
@@ -467,7 +406,7 @@
 }
 
 .calMonth {
-  font-size: var(--text-md, 16px);
+  font-size: var(--text-md);
   color: var(--color-text);
   text-transform: capitalize;
 }
@@ -503,7 +442,7 @@
 
 .calDay[data-today] {
   color: var(--color-text);
-  font-weight: var(--weight-bold, 700);
+  font-weight: var(--weight-bold);
 }
 
 .calDay::after {
@@ -537,4 +476,35 @@
   margin: 0;
   font-size: 13px;
   color: var(--color-text-muted);
+}
+
+.calFoot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.calLegend {
+  display: flex;
+  gap: var(--space-3);
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.legendA::before,
+.legendB::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: var(--radius-full);
+  box-sizing: border-box;
+  border: 2px solid var(--color-accent);
+}
+
+.legendA::before {
+  background: var(--color-accent);
 }

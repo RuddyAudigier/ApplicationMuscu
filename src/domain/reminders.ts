@@ -1,5 +1,6 @@
 import { currentBlock, cycleStatus } from './cycles';
 import { parseDateToIso } from './dates';
+import { plural } from './text';
 import type { CycleState, IsoDate, Performance, Session, WeekPlan } from './model';
 import { latestPrs } from './records';
 import { addDays, mondayOf, weekOccurrences } from './planning';
@@ -15,7 +16,6 @@ export interface Reminder {
 }
 
 const idOf = (date: IsoDate, rank: number): number => Number(date.replaceAll('-', '')) * 10 + rank;
-const plural = (n: number, one: string, many: string): string => `${String(n)} ${n === 1 ? one : many}`;
 
 /**
  * Rappels des `days` prochains jours (aujourd'hui compris) : une notification par séance prévue

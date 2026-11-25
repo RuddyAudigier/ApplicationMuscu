@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { cycleOn } from '@/domain/cycles';
+import { plural } from '@/domain/text';
 import type { CycleState, Exercise, IsoDate, Performance, Session, WeekPlan } from '@/domain/model';
 import {
   dayLabel,
@@ -16,7 +17,6 @@ import { Button, cx, Icon, Sheet, useToast } from '@/ui';
 import styles from './HomeScreen.module.css';
 import own from './ScheduledSessions.module.css';
 
-const plural = (n: number, one: string, many: string): string => `${String(n)} ${n > 1 ? many : one}`;
 
 /** Choix du jour où décaler une séance (cette semaine, d'aujourd'hui à dimanche). */
 function MoveSheet({

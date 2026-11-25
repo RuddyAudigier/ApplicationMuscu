@@ -1,7 +1,7 @@
+import { plural } from '@/domain/text';
 import type { FlushResult } from '@/data/queries';
 import type { ToastKind } from '@/ui';
 
-export const plural = (n: number, one: string, many: string): string => `${String(n)} ${n > 1 ? many : one}`;
 
 /** Message de fin de synchro manuelle ; `success` seulement si tout est parti sans refus. */
 export function syncMessage(r: FlushResult): { text: string; kind: ToastKind } {

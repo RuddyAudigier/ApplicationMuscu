@@ -14,7 +14,7 @@ import {
   saveLastReport,
   usePendingReportSync,
 } from '@/features/workout';
-import { Button, ConfirmDialog, EmptyState, Field, IconButton, PageHeader, Skeleton, useToast } from '@/ui';
+import { Button, ConfirmDialog, cx, EmptyState, ErrorNotice, Field, IconButton, PageHeader, SectionTitle, Skeleton, useToast } from '@/ui';
 import {
   LENGTH_OPTIONS,
   lastDoneLabel,
@@ -169,12 +169,10 @@ export function ProgramScreen() {
 
   const duration = !cycleState || !status ? (
     cycleQuery.isError ? (
-      <div className={styles.errorBox} role="alert">
-        <p>Impossible de charger ton cycle A/B. Vérifie ta connexion puis réessaie.</p>
-        <Button variant="secondary" onClick={() => { void cycleQuery.refetch(); }}>
-          Réessayer
-        </Button>
-      </div>
+      <ErrorNotice
+        message="Impossible de charger ton cycle A/B. Vérifie ta connexion puis réessaie."
+        onRetry={() => { void cycleQuery.refetch(); }}
+      />
     ) : (
       <div className={styles.loading} aria-busy="true">
         <span className="visually-hidden">Chargement du cycle…</span>
@@ -206,14 +204,14 @@ export function ProgramScreen() {
           disabled={saveCycle.isPending}
           onClick={() => { saveState(postponeCycle(cycleState, today)); }}
         >
-          Reporter le prochain cycle d’une semaine
+          Reporter d’une semaine
         </Button>
         <Button
           variant="secondary"
           disabled={saveCycle.isPending || !canCancelPostpone(cycleState, today)}
           onClick={() => { saveState(cancelPostpone(cycleState, today)); }}
         >
-          Annuler un report
+          Annuler le report
         </Button>
       </div>
     </>
@@ -231,7 +229,7 @@ export function ProgramScreen() {
           <IconButton
             icon="plus"
             label="Ajouter une séance"
-            className={styles.add}
+            variant="surface"
             onClick={() => { setBuilder({ session: null }); }}
           />
         }
@@ -249,7 +247,7 @@ export function ProgramScreen() {
               aria-selected={selected}
               aria-controls={`${ids}-panel`}
               tabIndex={selected ? 0 : -1}
-              className={[styles.tab, selected && styles.tabSelected].filter(Boolean).join(' ')}
+              className={cx(styles.tab, selected && styles.tabSelected)}
               onClick={() => { setTab(c); }}
               onKeyDown={onTabKey}
             >
@@ -263,12 +261,10 @@ export function ProgramScreen() {
         <div className={styles.duration}>{duration}</div>
 
         {exercisesQuery.isError && (
-          <div className={styles.errorBox} role="alert">
-            <p>Impossible de charger les exercices : le démarrage d’une séance est indisponible.</p>
-            <Button variant="secondary" onClick={() => { void exercisesQuery.refetch(); }}>
-              Recharger les exercices
-            </Button>
-          </div>
+          <ErrorNotice
+            message="Impossible de charger les exercices : le démarrage d’une séance est indisponible."
+            onRetry={() => { void exercisesQuery.refetch(); }}
+          />
         )}
 
         {cycleUnknown && cycleQuery.isError ? null : sessionsPending ? (
@@ -278,12 +274,7 @@ export function ProgramScreen() {
             <Skeleton height={96} />
           </div>
         ) : sessionsQuery.isError ? (
-          <div className={styles.errorBox} role="alert">
-            <p>Impossible de charger les séances.</p>
-            <Button variant="secondary" onClick={() => { void sessionsQuery.refetch(); }}>
-              Réessayer
-            </Button>
-          </div>
+          <ErrorNotice message="Impossible de charger les séances." onRetry={() => { void sessionsQuery.refetch(); }} />
         ) : list.length === 0 ? (
           <EmptyState
             icon="list"
@@ -303,7 +294,7 @@ export function ProgramScreen() {
 
         {unassigned.length > 0 && (
           <section className={styles.unassigned} aria-labelledby={`${ids}-unassigned`}>
-            <h2 id={`${ids}-unassigned`} className={styles.sectionTitle}>Sans cycle</h2>
+            <SectionTitle id={`${ids}-unassigned`}>Sans cycle</SectionTitle>
             <p className={styles.hint}>Modifie ces séances pour les ranger dans le cycle A ou B.</p>
             <ul className={styles.sessions} aria-label="Séances sans cycle">
               {unassigned.map((s) => renderSession(s, null))}

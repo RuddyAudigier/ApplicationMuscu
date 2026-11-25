@@ -1,5 +1,6 @@
 import { isoToFr, isoToShortFr, todayIso } from '@/domain/dates';
 import { FEELINGS, type Form } from '@/domain/journal';
+import { plural } from '@/domain/text';
 import { formatDecimal, formatWeight } from '@/domain/numbers';
 import type { Report } from '@/domain/report';
 import type { PdfReportModel } from '@/platform/pdf';
@@ -71,7 +72,6 @@ export function formatWarmupSets(sets: Report['exercises'][number]['warmupSets']
 /** « Rotations d'épaules (2 × 15) » */
 export const warmupLabel = (w: Report['warmup'][number]): string => (w.detail === '' ? w.name : `${w.name} (${w.detail})`);
 
-const plural = (n: number, one: string, many: string): string => `${String(n)} ${n > 1 ? many : one}`;
 
 export function summaryLine(r: Report): string {
   return [plural(r.prCount, 'PR', 'PR'), plural(r.seriesCount, 'série', 'séries'), plural(r.exerciseCount, 'exercice', 'exercices')].join(' · ');

@@ -75,7 +75,7 @@ test('3. cycle prolongé à 3 semaines : bascule annoncée dans 11 jours', async
 
   await page.getByRole('link', { name: 'Programme' }).click();
   await expect(page.getByRole('heading', { name: 'Programme', level: 1 })).toBeVisible();
-  await page.getByRole('button', { name: 'Reporter le prochain cycle d’une semaine' }).click();
+  await page.getByRole('button', { name: 'Reporter d’une semaine' }).click();
   await expect(page.getByText(/reporté de 1 semaine/)).toBeVisible();
 
   await page.getByRole('link', { name: 'Accueil' }).click();
