@@ -5,7 +5,7 @@
   gap: var(--space-7);
   max-width: 480px;
   margin: 0 auto;
-  padding: calc(32px + var(--safe-top)) var(--gutter) var(--space-6);
+  padding: 0 var(--gutter) var(--space-6);
 }
 
 .header {

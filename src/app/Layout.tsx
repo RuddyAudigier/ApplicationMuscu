@@ -4,7 +4,7 @@ import { useOfflineQueueSync } from '../data/queries';
 import { useReminderSync } from '../features/settings';
 import { useAndroidBackButton } from '../platform/backButton';
 import { useReminderTap } from '../platform/notifications';
-import { BottomNav, type NavItem } from '../ui';
+import { BottomNav, type NavItem, useSwipe } from '../ui';
 import { closeTopSheet } from '../ui/Sheet';
 
 const NAV_ITEMS: NavItem[] = [
@@ -40,6 +40,17 @@ export function Layout() {
   // (séance persistée, l'accueil propose « Reprendre »).
   useAndroidBackButton(goBack, closeTopSheet);
   const showNav = !NAV_HIDDEN.includes(pathname);
+  // Glisser entre les 4 onglets (gauche → suivant, droite → précédent) ; ailleurs, sans effet.
+  const tab = NAV_ITEMS.findIndex((item) => item.to === pathname);
+  const goTab = (delta: number) => {
+    const target = NAV_ITEMS[tab + delta];
+    if (target) void navigate(target.to);
+  };
+  useSwipe({
+    enabled: tab >= 0,
+    onSwipeLeft: () => { goTab(1); },
+    onSwipeRight: () => { goTab(-1); },
+  });
   return (
     <>
       <main style={showNav ? { paddingBottom: NAV_CLEARANCE } : undefined}>

@@ -5,7 +5,7 @@
   gap: var(--space-5);
   max-width: 480px;
   margin: 0 auto;
-  padding: calc(var(--space-6) + var(--safe-top)) var(--gutter) var(--space-6);
+  padding: 0 var(--gutter) var(--space-6);
 }
 
 .skeletons {

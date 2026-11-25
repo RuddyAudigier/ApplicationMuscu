@@ -20,7 +20,7 @@ import {
   saveLastReport,
   usePendingReportSync,
 } from '@/features/workout';
-import { Button, Icon, Skeleton } from '@/ui';
+import { Button, Icon, PageHeader, Skeleton } from '@/ui';
 import { nextPlannedSession, PR_LABEL, relativeDay, weekSegments, type WeekSegment } from './homeLogic';
 import styles from './HomeScreen.module.css';
 import { ScheduledSessions } from './ScheduledSessions';
@@ -269,12 +269,15 @@ export function HomeScreen() {
   return (
     <div className={styles.screen}>
       <h1 className="visually-hidden">Accueil</h1>
-      <header className={styles.top}>
-        <span className={styles.brand}>mymuscle<span className={styles.dot}>.</span></span>
-        <Link to="/settings" aria-label="Réglages" className={styles.settings}>
-          <Icon name="sliders" size={20} />
-        </Link>
-      </header>
+      <PageHeader
+        decorative
+        title={<>mymuscle<span className={styles.dot}>.</span></>}
+        actions={
+          <Link to="/settings" aria-label="Réglages" className={styles.settings}>
+            <Icon name="sliders" size={20} />
+          </Link>
+        }
+      />
 
       <section className={styles.cycle} aria-label="Cycle en cours" aria-busy={cycleQuery.isPending || undefined}>
         {cycleQuery.isError && (

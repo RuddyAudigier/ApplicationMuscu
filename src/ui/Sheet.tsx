@@ -36,6 +36,10 @@ export function closeTopSheet(): boolean {
   top.close();
   return true;
 }
+/** Vrai si au moins une modale est ouverte. */
+export function hasOpenSheet(): boolean {
+  return openStack.length > 0;
+}
 /** overflow du body avant l'ouverture de la première modale de la pile. */
 let savedOverflow = '';
 

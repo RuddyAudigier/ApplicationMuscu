@@ -8,7 +8,7 @@ import { progressionFor } from '@/domain/progression';
 import { getDefaultVariant, variantLabel, variantMatches } from '@/domain/variants';
 import { recordsTable } from '@/domain/workout';
 import { useExercises, usePerformances } from '@/data/queries';
-import { Button, cx, EmptyState, Pill, Segmented, Skeleton, StatTile } from '@/ui';
+import { Button, cx, EmptyState, PageHeader, Pill, Segmented, Skeleton, StatTile } from '@/ui';
 import { CsvImportSheet } from './CsvImportSheet';
 import { E1rmChart } from './E1rmChart';
 import { ExercisePicker } from './ExercisePicker';
@@ -76,20 +76,22 @@ export function RecordsScreen() {
 
   return (
     <div className={styles.screen}>
-      <div className={styles.titleRow}>
-        <h1 className={styles.title}>Records</h1>
-        <button
-          type="button"
-          className={styles.moreButton}
-          aria-label="Plus d’options"
-          aria-haspopup="dialog"
-          onClick={() => {
-            setMenuOpen(true);
-          }}
-        >
-          <span aria-hidden="true">⋯</span>
-        </button>
-      </div>
+      <PageHeader
+        title="Records"
+        actions={
+          <button
+            type="button"
+            className={styles.moreButton}
+            aria-label="Plus d’options"
+            aria-haspopup="dialog"
+            onClick={() => {
+              setMenuOpen(true);
+            }}
+          >
+            <span aria-hidden="true">⋯</span>
+          </button>
+        }
+      />
 
       {loading && <Skeleton height={320} />}
       {!loading && failed && (

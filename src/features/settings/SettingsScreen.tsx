@@ -25,7 +25,7 @@ import {
   saveReminderPrefs,
   type ReminderPrefs,
 } from '@/platform/notifications';
-import { Button, Field, IconButton, Segmented, Sheet, Skeleton, useToast } from '@/ui';
+import { Button, Field, PageHeader, Segmented, Sheet, Skeleton, useToast } from '@/ui';
 import { applyPreferences, loadPreferences, savePreferences, type DisplayPreferences, type FontScale } from './preferences';
 import { plural, safeStorage, syncMessage } from './settingsModel';
 import styles from './SettingsScreen.module.css';
@@ -407,10 +407,7 @@ export function SettingsScreen() {
   };
   return (
     <div className={styles.screen}>
-      <header className={styles.header}>
-        <IconButton icon="back" label="Retour" className={styles.back} onClick={goBack} />
-        <h1 className={styles.title}>Réglages</h1>
-      </header>
+      <PageHeader title="Réglages" onBack={goBack} />
       <CycleSection />
       <OfflineSection />
       <DisplaySection />

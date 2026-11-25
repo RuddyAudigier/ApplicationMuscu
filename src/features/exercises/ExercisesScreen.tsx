@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { useExercises, useSessions } from '@/data/queries';
 import { MUSCLE_CATALOG } from '@/domain/muscles';
-import { Chip, EmptyState, Icon, IconButton, Skeleton } from '@/ui';
+import { Chip, EmptyState, Icon, IconButton, PageHeader, Skeleton } from '@/ui';
 import { CreateExerciseSheet } from './CreateExerciseSheet';
 import { CycleBadgesFor } from './CycleBadges';
 import { SessionsError } from './SessionsError';
@@ -22,27 +22,27 @@ export function ExercisesScreen() {
 
   return (
     <div className={styles.screen}>
-      <header className={styles.header}>
-        <div className={styles.titles}>
-          <h1 className={styles.title}>Exercices</h1>
-          {exercises.data && (
-            <p className={styles.count}>
-              {list.length === all.length
-                ? `${String(all.length)} exercice${all.length > 1 ? 's' : ''}`
-                : `${String(list.length)} sur ${String(all.length)}`}
-            </p>
-          )}
-        </div>
-        <IconButton
-          icon="plus"
-          label="Créer un exercice"
-          variant="primary"
-          className={styles.add}
-          onClick={() => {
-            setCreating(true);
-          }}
-        />
-      </header>
+      <PageHeader
+        title="Exercices"
+        actions={
+          <IconButton
+            icon="plus"
+            label="Créer un exercice"
+            variant="primary"
+            className={styles.add}
+            onClick={() => {
+              setCreating(true);
+            }}
+          />
+        }
+      />
+      {exercises.data && (
+        <p className={styles.count}>
+          {list.length === all.length
+            ? `${String(all.length)} exercice${all.length > 1 ? 's' : ''}`
+            : `${String(list.length)} sur ${String(all.length)}`}
+        </p>
+      )}
 
       <label className={styles.search}>
         <Icon name="search" size={18} />

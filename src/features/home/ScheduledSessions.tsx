@@ -12,7 +12,7 @@ import {
   type Occurrence,
 } from '@/domain/planning';
 import { useSaveWeekPlan } from '@/data/queries';
-import { Button, Icon, Sheet, useToast } from '@/ui';
+import { Button, cx, Icon, Sheet, useToast } from '@/ui';
 import styles from './HomeScreen.module.css';
 import own from './ScheduledSessions.module.css';
 
@@ -103,8 +103,8 @@ export function ScheduledSessions({
   const start = (o: Occurrence): void => {
     if (exercises) onStart(o.session, exercises);
   };
-  const actions = (o: Occurrence) => (
-    <div className={own.actions}>
+  const actions = (o: Occurrence, onAccent = false) => (
+    <div className={cx(own.actions, onAccent && own.onAccent)}>
       <Button variant="ghost" disabled={save.isPending} onClick={() => { setMoving(o); }}>Décaler…</Button>
       <Button
         variant="ghost"
@@ -134,10 +134,10 @@ export function ScheduledSessions({
       ))}
 
       {next ? (
-        <>
+        <div className={own.nextCard}>
           <button
             type="button"
-            className={styles.dayCard}
+            className={own.startButton}
             onClick={() => { start(next); }}
             disabled={exercises === null}
           >
@@ -161,8 +161,8 @@ export function ScheduledSessions({
               </span>
             </div>
           </button>
-          {actions(next)}
-        </>
+          {actions(next, true)}
+        </div>
       ) : (
         missed.length === 0 && (
           occurrences.length === 0 ? (

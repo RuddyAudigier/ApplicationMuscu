@@ -14,7 +14,7 @@ import {
   saveLastReport,
   usePendingReportSync,
 } from '@/features/workout';
-import { Button, ConfirmDialog, EmptyState, Field, IconButton, Skeleton, useToast } from '@/ui';
+import { Button, ConfirmDialog, EmptyState, Field, IconButton, PageHeader, Skeleton, useToast } from '@/ui';
 import {
   LENGTH_OPTIONS,
   lastDoneLabel,
@@ -220,15 +220,17 @@ export function ProgramScreen() {
 
   return (
     <div className={styles.screen}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>Programme</h1>
-        <IconButton
-          icon="plus"
-          label="Ajouter une séance"
-          className={styles.add}
-          onClick={() => { setBuilder({ session: null }); }}
-        />
-      </header>
+      <PageHeader
+        title="Programme"
+        actions={
+          <IconButton
+            icon="plus"
+            label="Ajouter une séance"
+            className={styles.add}
+            onClick={() => { setBuilder({ session: null }); }}
+          />
+        }
+      />
 
       <div role="tablist" aria-label="Cycle" className={styles.tabs}>
         {CYCLES.map((c) => {

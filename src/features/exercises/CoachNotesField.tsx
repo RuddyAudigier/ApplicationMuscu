@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSaveCoachNotes } from '@/data/queries';
 import type { Exercise, Id } from '@/domain/model';
-import { Button, useToast } from '@/ui';
+import { Button, Field, useToast } from '@/ui';
 import styles from './ExerciseDetailScreen.module.css';
 
 type Status = 'idle' | 'saving' | 'saved' | 'error';
@@ -61,27 +61,21 @@ export function CoachNotesField({ exercise }: { exercise: Exercise }) {
 
   return (
     <div className={styles.notesBlock}>
-      <label className={styles.notes}>
-        <span className={styles.notesLabel}>
-          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-          Remarques du coach · affichées en séance
-        </span>
-        <textarea
-          rows={2}
-          value={text}
-          placeholder="Consignes d’exécution, tempo, points de vigilance…"
-          className={styles.notesInput}
-          onChange={(e) => {
-            setText(e.target.value);
-            if (status !== 'saving') setStatus('idle');
-          }}
-          onBlur={() => {
-            void persist();
-          }}
-        />
-      </label>
+      <Field
+        as="textarea"
+        label="Remarques du coach"
+        hint="Affichées en séance."
+        rows={2}
+        value={text}
+        placeholder="Consignes d’exécution, tempo, points de vigilance…"
+        onChange={(e) => {
+          setText(e.target.value);
+          if (status !== 'saving') setStatus('idle');
+        }}
+        onBlur={() => {
+          void persist();
+        }}
+      />
       <p role="status" className={styles.notesStatus}>
         {status === 'saving' && 'Enregistrement…'}
         {status === 'saved' && 'Remarques enregistrées.'}
