@@ -163,7 +163,7 @@ describe('CSV import (menu ⋯)', () => {
     const user = userEvent.setup();
     await screen.findByText('92,5 kg');
     await user.click(screen.getByRole('button', { name: "Plus d’options" }));
-    return { user, input: screen.getByLabelText(/Importer un CSV/) };
+    return { user, input: screen.getByLabelText(/Choisir un fichier/) };
   }
 
   it('imports valid lines and lists per-line errors', async () => {
@@ -211,7 +211,7 @@ describe('CSV import (menu ⋯)', () => {
     const { input } = await openMenu();
     fireEvent.change(input, { target: { files: [] } });
     await waitFor(() => {
-      expect(screen.getByText('Importer un CSV')).toBeInTheDocument();
+      expect(screen.getByText('Choisir un fichier (.xlsx ou .csv)')).toBeInTheDocument();
     });
     expect(screen.queryByText(/importée/)).toBeNull();
   });
@@ -224,7 +224,7 @@ describe('CSV import (menu ⋯)', () => {
     renderAt('/records', backend);
     await screen.findByText(/Impossible de charger les records/);
     await user.click(screen.getByRole('button', { name: "Plus d’options" }));
-    expect(screen.getByLabelText(/Importer un CSV/)).toBeDisabled();
+    expect(screen.getByLabelText(/Choisir un fichier/)).toBeDisabled();
     expect(screen.getByText(/import indisponible/)).toHaveAttribute('role', 'alert');
   });
 
@@ -234,7 +234,7 @@ describe('CSV import (menu ⋯)', () => {
     vi.spyOn(backend.exercises, 'list').mockReturnValue(new Promise(() => undefined));
     renderAt('/records', backend);
     await user.click(screen.getByRole('button', { name: "Plus d’options" }));
-    expect(screen.getByLabelText(/Importer un CSV/)).toBeDisabled();
+    expect(screen.getByLabelText(/Choisir un fichier/)).toBeDisabled();
     expect(screen.getByText('Chargement des exercices…')).toBeInTheDocument();
   });
 });

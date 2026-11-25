@@ -123,7 +123,15 @@ export function importPerformances(
   exercises: Exercise[],
   today: IsoDate = todayIso(),
 ): { rows: PerformanceInput[]; errors: string[] } {
-  const table = parseCsv(text);
+  return importPerformanceRows(parseCsv(text), exercises, today);
+}
+
+/** Même import à partir de lignes déjà découpées (CSV ou feuille Excel) : mêmes règles et messages. */
+export function importPerformanceRows(
+  table: string[][],
+  exercises: Exercise[],
+  today: IsoDate = todayIso(),
+): { rows: PerformanceInput[]; errors: string[] } {
   const [header, ...data] = table;
   if (!header) return { rows: [], errors: ['Le fichier CSV est vide.'] };
   if (data.length === 0) {
@@ -131,6 +139,9 @@ export function importPerformances(
   }
 
   const headers = header.map(normalizeHeader);
+  if (!headers.some((h) => Object.values(ALIASES).some((names) => (names as readonly string[]).includes(h)))) {
+    return { rows: [], errors: ["Aucune colonne connue dans l'en-tête (exercice, reps, poids…)."] };
+  }
   const columnIndex = (c: Column): number => headers.findIndex((h) => (ALIASES[c] as readonly string[]).includes(h));
   const indexes = Object.fromEntries(
     (Object.keys(ALIASES) as Column[]).map((c) => [c, columnIndex(c)]),

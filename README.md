@@ -78,7 +78,7 @@ Synthèse d’un bloc de cycle (le bloc en cours ou l’un des précédents) : s
 
 - Tableau des records de 1 à 30 répétitions par exercice et par variante (poids, RPE, date). Les cases vides sont « à conquérir ».
 - **Courbe** de progression de l’e1RM (formule d’Epley).
-- **Import CSV** de performances (délimiteur `;` ou `,` détecté sur l’en-tête). Les lignes invalides, à 0 rep ou datées dans le futur sont refusées avec un message.
+- **Import Excel (.xlsx, première feuille) ou CSV** de performances via « Importer un fichier » (délimiteur CSV `;` ou `,` détecté sur l’en-tête). Les lignes invalides, à 0 rep ou datées dans le futur sont refusées avec un message.
 - **Ajouter un PR hors séance** : exercice, variante, reps, kg, RPE, date (Aujourd’hui, Hier, Autre). L’écran annonce avant l’enregistrement si c’est un PR.
 
 ### Exercices et fiche exercice

@@ -19,7 +19,11 @@ type View = 'table' | 'curve';
 const EMPTY: Performance[] = [];
 
 /** Exercice affiché : celui de l'URL, sinon le premier ayant des performances, sinon le premier. */
-function pickExercise(exercises: Exercise[], perfs: Performance[], id: string | undefined): Exercise | null {
+function pickExercise(
+  exercises: Exercise[],
+  perfs: Performance[],
+  id: string | undefined,
+): Exercise | null {
   if (id) {
     const found = exercises.find((e) => e.id === id);
     if (found) return found;
@@ -28,7 +32,10 @@ function pickExercise(exercises: Exercise[], perfs: Performance[], id: string | 
 }
 
 function pickVariant(exercise: Exercise, name: string | null): Variant {
-  const found = name === null ? undefined : exercise.variants.find((v) => variantMatches(v, { variantId: null, variantName: name }));
+  const found =
+    name === null
+      ? undefined
+      : exercise.variants.find((v) => variantMatches(v, { variantId: null, variantName: name }));
   return found ?? getDefaultVariant(exercise.variants);
 }
 
@@ -56,7 +63,8 @@ export function RecordsScreen() {
     [perfs, exercise, variant],
   );
   const progression = useMemo(
-    () => (exercise && variant ? progressionFor(perfs, exercise.id, progressionKey(variant)) : null),
+    () =>
+      exercise && variant ? progressionFor(perfs, exercise.id, progressionKey(variant)) : null,
     [perfs, exercise, variant],
   );
 
@@ -79,17 +87,27 @@ export function RecordsScreen() {
       <PageHeader
         title="Records"
         actions={
-          <button
-            type="button"
-            className={styles.moreButton}
-            aria-label="Plus d’options"
-            aria-haspopup="dialog"
-            onClick={() => {
-              setMenuOpen(true);
-            }}
-          >
-            <span aria-hidden="true">⋯</span>
-          </button>
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setMenuOpen(true);
+              }}
+            >
+              Importer un fichier
+            </Button>
+            <button
+              type="button"
+              className={styles.moreButton}
+              aria-label="Plus d’options"
+              aria-haspopup="dialog"
+              onClick={() => {
+                setMenuOpen(true);
+              }}
+            >
+              <span aria-hidden="true">⋯</span>
+            </button>
+          </>
         }
       />
 
@@ -203,7 +221,13 @@ function RecordsTable({ rows, today, weekStart }: TableProps) {
                 <th scope="row" className={styles.reps}>
                   {row.reps}
                 </th>
-                <td className={cx(styles.weight, empty && styles.weightEmpty, fresh && styles.weightFresh)}>
+                <td
+                  className={cx(
+                    styles.weight,
+                    empty && styles.weightEmpty,
+                    fresh && styles.weightFresh,
+                  )}
+                >
                   {empty ? 'à conquérir' : kg(row.weight ?? 0)}
                   {fresh && <span className={styles.srOnly}> (PR cette semaine)</span>}
                 </td>
@@ -232,7 +256,12 @@ function RecordsTable({ rows, today, weekStart }: TableProps) {
 function Curve({ progression }: { progression: ReturnType<typeof progressionFor> }) {
   const { points, stats } = progression;
   if (points.length === 0) {
-    return <EmptyState title="Pas encore de données" message="Enregistre une série pour voir ta courbe." />;
+    return (
+      <EmptyState
+        title="Pas encore de données"
+        message="Enregistre une série pour voir ta courbe."
+      />
+    );
   }
   const best = roundE1rm(stats.maxE1rm) ?? 0;
   const delta = stats.deltaE1rm === null ? null : roundE1rm(stats.deltaE1rm);
@@ -243,7 +272,11 @@ function Curve({ progression }: { progression: ReturnType<typeof progressionFor>
       <E1rmChart points={points} />
       <div className={styles.stats}>
         <StatTile label="1RM estimé max" value={formatWeight(best)} unit="kg" tone="accent" />
-        <StatTile label="Dernière séance" value={last === null ? '—' : formatWeight(last)} unit="kg" />
+        <StatTile
+          label="Dernière séance"
+          value={last === null ? '—' : formatWeight(last)}
+          unit="kg"
+        />
         <StatTile
           label="Progression 1RM"
           value={delta === null ? '—' : `${delta >= 0 ? '+' : ''}${formatWeight(delta)}`}
@@ -251,7 +284,11 @@ function Curve({ progression }: { progression: ReturnType<typeof progressionFor>
         />
         <StatTile label="Charge max" value={formatWeight(stats.maxWeight)} unit="kg" />
         <StatTile label="Séances" value={stats.sessions} />
-        <StatTile label="Volume total" value={formatWeight(Math.round(stats.totalVolume))} unit="kg" />
+        <StatTile
+          label="Volume total"
+          value={formatWeight(Math.round(stats.totalVolume))}
+          unit="kg"
+        />
       </div>
     </div>
   );

@@ -1,9 +1,10 @@
 import { useId, useState, type ChangeEvent } from 'react';
-import { importPerformances } from '@/domain/csv';
+import { importPerformanceRows, importPerformances } from '@/domain/csv';
 import type { Exercise } from '@/domain/model';
 import { useAddPerformances } from '@/data/queries';
 import { cx, Sheet } from '@/ui';
 import styles from './Records.module.css';
+import { readXlsxRows } from './readSpreadsheet';
 
 interface Outcome {
   /** Message de synthèse honnête (D8). */
@@ -27,7 +28,7 @@ function readText(file: File): Promise<string> {
 
 const lines = (n: number): string => `${String(n)} ligne${n > 1 ? 's' : ''}`;
 
-/** Menu « ⋯ » : import CSV des performances, avec retour ligne par ligne. */
+/** Import d'un fichier Excel (.xlsx) ou CSV de performances, avec retour ligne par ligne. */
 interface CsvImportSheetProps {
   open: boolean;
   onClose: () => void;
@@ -50,8 +51,30 @@ export function CsvImportSheet({ open, onClose, exercises, exercisesStatus }: Cs
     setBusy(true);
     setOutcome(null);
     try {
-      const text = await readText(file);
-      const { rows, errors } = importPerformances(text, exercises);
+      const lower = file.name.toLowerCase();
+      if (lower.endsWith('.xls')) {
+        setOutcome({
+          summary: 'Format .xls non pris en charge : enregistre le fichier en .xlsx ou .csv.',
+          kind: 'error',
+          errors: [],
+        });
+        return;
+      }
+      let parsed: ReturnType<typeof importPerformances>;
+      if (lower.endsWith('.xlsx')) {
+        let table: string[][];
+        try {
+          table = await readXlsxRows(file);
+        } catch (e) {
+          const message = e instanceof Error ? e.message : String(e);
+          setOutcome({ summary: `Fichier illisible : ${message}`, kind: 'error', errors: [] });
+          return;
+        }
+        parsed = importPerformanceRows(table, exercises);
+      } else {
+        parsed = importPerformances(await readText(file), exercises);
+      }
+      const { rows, errors } = parsed;
       if (rows.length === 0) {
         setOutcome({ summary: 'Aucune ligne importée.', kind: 'error', errors });
         return;
@@ -81,13 +104,13 @@ export function CsvImportSheet({ open, onClose, exercises, exercisesStatus }: Cs
         setOutcome(null);
         onClose();
       }}
-      title="Options"
+      title="Importer un fichier"
     >
       <div className={styles.menu}>
         <input
           id={inputId}
           type="file"
-          accept=".csv,text/csv"
+          accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           className={cx(styles.srOnly, styles.fileInput)}
           disabled={busy || !ready}
           onChange={(e) => {
@@ -99,8 +122,11 @@ export function CsvImportSheet({ open, onClose, exercises, exercisesStatus }: Cs
           className={cx(styles.menuItem, !ready && styles.menuItemDisabled)}
           aria-busy={busy || undefined}
         >
-          {busy ? 'Import en cours…' : 'Importer un CSV'}
-          <span className={styles.menuHint}>Colonnes : exercice, reps, poids, rpe, variante, date</span>
+          {busy ? 'Import en cours…' : 'Choisir un fichier (.xlsx ou .csv)'}
+          <span className={styles.menuHint}>
+            Première feuille, avec une ligne d’en-tête. Colonnes acceptées : exercise_name / exercise / exercice,
+            variant / variante, reps, weight / poids, rpe, performance_date / date, session_name / session
+          </span>
         </label>
         {exercisesStatus === 'pending' && <p className={styles.importSummary}>Chargement des exercices…</p>}
         {exercisesStatus === 'error' && (
