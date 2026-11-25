@@ -8,19 +8,6 @@
 }
 
 /* En-tête : marque + réglages */
-.top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.brand {
-  font-family: var(--font-display);
-  font-weight: var(--weight-bold);
-  font-size: var(--text-lg);
-  letter-spacing: var(--tracking-tight);
-}
-
 .dot {
   color: var(--color-accent);
 }

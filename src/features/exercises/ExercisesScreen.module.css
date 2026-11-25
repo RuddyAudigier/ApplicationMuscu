@@ -8,25 +8,6 @@
   padding: 0 var(--gutter) 0;
 }
 
-.header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.titles {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.title {
-  font-size: var(--text-3xl);
-  letter-spacing: var(--tracking-tighter);
-}
-
 .count {
   color: var(--color-text-muted);
   font-size: 13px;

@@ -18,17 +18,6 @@
   padding: 0 var(--gutter) 0;
 }
 
-.titleRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.title {
-  font-size: var(--text-3xl);
-  letter-spacing: var(--tracking-tighter);
-}
-
 .moreButton {
   display: inline-flex;
   align-items: center;

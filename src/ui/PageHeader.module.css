@@ -3,7 +3,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 56px;
+  height: 56px;
   padding-top: var(--space-8);
   box-sizing: content-box;
 }

@@ -12,6 +12,8 @@ export interface SwipeHandlers {
 
 const MIN_DX = 60;
 const RATIO = 1.5;
+/** Bande de chaque bord réservée au geste retour du système. */
+const EDGE = 24;
 const IGNORED = 'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [data-no-swipe]';
 
 /** Vrai si un ancêtre peut défiler horizontalement (carrousel, tableau…). */
@@ -46,7 +48,8 @@ export function useSwipe({ onSwipeLeft, onSwipeRight, enabled = true }: SwipeHan
       const target = e.target;
       if (target instanceof Element && (target.closest(IGNORED) || inHorizontalScroller(target))) return;
       const t = e.touches[0];
-      if (t) start = { x: t.clientX, y: t.clientY };
+      if (!t || t.clientX < EDGE || t.clientX > window.innerWidth - EDGE) return;
+      start = { x: t.clientX, y: t.clientY };
     };
     const onEnd = (e: TouchEvent) => {
       const from = start;
