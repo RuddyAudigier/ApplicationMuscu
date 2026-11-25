@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router';
 import type { Exercise, Performance, Variant } from '@/domain/model';
-import { formatDecimal, formatWeight } from '@/domain/numbers';
+import { formatDecimal, formatWeight, stepReps, stepWeight } from '@/domain/numbers';
 import { logFromWorkout, upsertLog } from '@/domain/journal';
 import { buildReport } from '@/domain/report';
 import { variantLabel } from '@/domain/variants';
@@ -15,7 +15,7 @@ import {
 } from '@/domain/workout';
 import { todayIso } from '@/domain/dates';
 import { useAddPerformances, useExercises, usePerformances, useSessions } from '@/data/queries';
-import { Button, cx, Field, Icon, IconButton, Pill, Sheet, Skeleton, useConfirm, useToast } from '@/ui';
+import { Button, cx, Field, Icon, IconButton, Pill, ProgressRing, Sheet, Skeleton, useConfirm, useSwipe, useToast } from '@/ui';
 import { AddExerciseSheet } from './AddExerciseSheet';
 import { FeelingChips } from './FeelingChips';
 import { isSameVariant, livePrFlags, prSignature, variantKeyOf, variantsOf } from './livePr';
@@ -99,6 +99,19 @@ function WorkoutView() {
   const total = state.exercises.length;
   const current = Math.min(exIdx, Math.max(0, total - 1));
   const we = state.exercises[current];
+  const plannedSeries = state.exercises.reduce((n, e) => n + e.series.length, 0);
+  const doneSeries = state.exercises.reduce((n, e) => n + e.series.filter((x) => x.validated).length, 0);
+
+  // Glisser entre exercices (borné, sans boucle) ; ignoré dans les champs et les feuilles (useSwipe).
+  useSwipe({
+    enabled: total > 1,
+    onSwipeLeft: () => {
+      setExIdx(Math.min(current + 1, total - 1));
+    },
+    onSwipeRight: () => {
+      setExIdx(Math.max(current - 1, 0));
+    },
+  });
 
   const retryData = (): void => {
     if (perfsQuery.isError) void perfsQuery.refetch();
@@ -214,6 +227,13 @@ function WorkoutView() {
           </>
         )}
       </span>
+      {plannedSeries > 0 && (
+        <ProgressRing
+          label={`Séries faites : ${String(doneSeries)} sur ${String(plannedSeries)}`}
+          value={doneSeries}
+          max={plannedSeries}
+        />
+      )}
       <IconButton
         icon="more"
         label="Options de la séance"
@@ -667,6 +687,12 @@ interface WarmupSetsProps {
 
 /** Séries de chauffe : atténuées, jamais validées ni classées (hors performances et PR). */
 function WarmupSets({ we, onAdd, onChange, onRemove }: WarmupSetsProps) {
+  const step = (index: number, field: 'reps' | 'kg', dir: 1 | -1): void => {
+    const w = we.warmupSets[index];
+    if (!w) return;
+    const next = field === 'reps' ? stepReps(w.reps, dir) : stepWeight(w.kg, dir);
+    if (next !== null && next !== w[field]) onChange(index, field, next);
+  };
   return (
     <div className={styles.warmupSets}>
       {we.warmupSets.length > 0 && (
@@ -674,29 +700,61 @@ function WarmupSets({ we, onAdd, onChange, onRemove }: WarmupSetsProps) {
           {we.warmupSets.map((w, i) => (
             <li key={i} className={styles.warmupSet}>
               <span className={styles.warmupSetN}>Chauffe</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                placeholder="Reps"
-                aria-label={`Reps de la série de chauffe ${String(i + 1)}`}
-                value={w.reps}
-                className={styles.warmupInput}
-                onChange={(e) => {
-                  onChange(i, 'reps', e.target.value);
-                }}
-              />
+              <span className={styles.warmupGroup}>
+                <StepButton
+                  dir="minus"
+                  label="Retirer une rep (chauffe)"
+                  onClick={() => {
+                    step(i, 'reps', -1);
+                  }}
+                />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="Reps"
+                  aria-label={`Reps de la série de chauffe ${String(i + 1)}`}
+                  value={w.reps}
+                  className={styles.warmupInput}
+                  onChange={(e) => {
+                    onChange(i, 'reps', e.target.value);
+                  }}
+                />
+                <StepButton
+                  dir="plus"
+                  label="Ajouter une rep (chauffe)"
+                  onClick={() => {
+                    step(i, 'reps', 1);
+                  }}
+                />
+              </span>
               <span aria-hidden="true">×</span>
-              <input
-                type="text"
-                inputMode="decimal"
-                placeholder="kg"
-                aria-label={`Poids de la série de chauffe ${String(i + 1)}`}
-                value={w.kg}
-                className={styles.warmupInput}
-                onChange={(e) => {
-                  onChange(i, 'kg', e.target.value);
-                }}
-              />
+              <span className={styles.warmupGroup}>
+                <StepButton
+                  dir="minus"
+                  label="Retirer 0,5 kg (chauffe)"
+                  onClick={() => {
+                    step(i, 'kg', -1);
+                  }}
+                />
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="kg"
+                  aria-label={`Poids de la série de chauffe ${String(i + 1)}`}
+                  value={w.kg}
+                  className={styles.warmupInput}
+                  onChange={(e) => {
+                    onChange(i, 'kg', e.target.value);
+                  }}
+                />
+                <StepButton
+                  dir="plus"
+                  label="Ajouter 0,5 kg (chauffe)"
+                  onClick={() => {
+                    step(i, 'kg', 1);
+                  }}
+                />
+              </span>
               <IconButton
                 icon="trash"
                 label={`Supprimer la série de chauffe ${String(i + 1)}`}
@@ -761,6 +819,15 @@ function DoneSeries({ we, prs, variants, onEdit }: DoneSeriesProps) {
   );
 }
 
+/** Bouton − / + d'un champ numérique (cible tactile de 44 px). */
+function StepButton({ dir, label, onClick }: { dir: 'minus' | 'plus'; label: string; onClick: () => void }) {
+  return (
+    <button type="button" className={styles.stepBtn} aria-label={label} onClick={onClick}>
+      <span aria-hidden="true">{dir === 'minus' ? '−' : '+'}</span>
+    </button>
+  );
+}
+
 interface SerieFormProps {
   serie: SerieEntry;
   n: number;
@@ -796,6 +863,13 @@ function SerieForm({
   onStop,
 }: SerieFormProps) {
   const repsRef = useRef<HTMLInputElement>(null);
+  const repsId = useId();
+  const kgId = useId();
+  /** Même chemin que la saisie au clavier (la cible suit les reps). */
+  const step = (field: 'reps' | 'kg', dir: 1 | -1): void => {
+    const next = field === 'reps' ? stepReps(serie.reps, dir) : stepWeight(serie.kg, dir);
+    if (next !== null && next !== serie[field]) onChange(field, next);
+  };
   return (
     <section className={styles.form} aria-labelledby="serie-title">
       <div className={styles.serieHead}>
@@ -817,33 +891,71 @@ function SerieForm({
       </p>
 
       <div className={styles.inputs}>
-        <label className={styles.inputBox}>
-          <span className={styles.inputLabel}>Reps</span>
-          <input
-            type="text"
-            ref={repsRef}
-            inputMode="numeric"
-            placeholder="0"
-            value={serie.reps}
-            onChange={(e) => {
-              onChange('reps', e.target.value);
-            }}
-            className={styles.input}
-          />
-        </label>
-        <label className={styles.inputBox}>
-          <span className={styles.inputLabel}>Poids (kg)</span>
-          <input
-            type="text"
-            inputMode="decimal"
-            placeholder="0"
-            value={serie.kg}
-            onChange={(e) => {
-              onChange('kg', e.target.value);
-            }}
-            className={styles.input}
-          />
-        </label>
+        <div className={styles.inputBox}>
+          <label className={styles.inputLabel} htmlFor={repsId}>
+            Reps
+          </label>
+          <div className={styles.stepRow}>
+            <StepButton
+              dir="minus"
+              label="Retirer une rep"
+              onClick={() => {
+                step('reps', -1);
+              }}
+            />
+            <input
+              id={repsId}
+              type="text"
+              ref={repsRef}
+              inputMode="numeric"
+              placeholder="0"
+              value={serie.reps}
+              onChange={(e) => {
+                onChange('reps', e.target.value);
+              }}
+              className={styles.input}
+            />
+            <StepButton
+              dir="plus"
+              label="Ajouter une rep"
+              onClick={() => {
+                step('reps', 1);
+              }}
+            />
+          </div>
+        </div>
+        <div className={styles.inputBox}>
+          <label className={styles.inputLabel} htmlFor={kgId}>
+            Poids (kg)
+          </label>
+          <div className={styles.stepRow}>
+            <StepButton
+              dir="minus"
+              label="Retirer 0,5 kg"
+              onClick={() => {
+                step('kg', -1);
+              }}
+            />
+            <input
+              id={kgId}
+              type="text"
+              inputMode="decimal"
+              placeholder="0"
+              value={serie.kg}
+              onChange={(e) => {
+                onChange('kg', e.target.value);
+              }}
+              className={styles.input}
+            />
+            <StepButton
+              dir="plus"
+              label="Ajouter 0,5 kg"
+              onClick={() => {
+                step('kg', 1);
+              }}
+            />
+          </div>
+        </div>
       </div>
 
       <span className={styles.inputLabel} id="rpe-label">

@@ -18,6 +18,7 @@ export { NumberField, type NumberFieldProps } from './NumberField';
 export { PageHeader, type PageHeaderProps } from './PageHeader';
 export { Pill, type PillProps } from './Pill';
 export { ProgressBar, type ProgressBarProps } from './ProgressBar';
+export { ProgressRing, type ProgressRingProps } from './ProgressRing';
 export { Segmented, type SegmentedOption, type SegmentedProps } from './Segmented';
 export { hasOpenSheet, Sheet, type SheetProps } from './Sheet';
 export { useSwipe, type SwipeHandlers } from './useSwipe';

@@ -284,8 +284,40 @@
   margin-top: 0;
 }
 
+.stepRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.stepBtn {
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.stepBtn:active {
+  background: var(--color-border-strong);
+}
+
+.stepBtn:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
 .input {
   width: 100%;
+  min-width: 0;
+  text-align: center;
   padding: 0;
   border: none;
   outline: none;
@@ -593,8 +625,15 @@
   list-style: none;
 }
 
+.warmupGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .warmupSet {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
   min-height: 46px;
@@ -608,7 +647,8 @@
 }
 
 .warmupInput {
-  width: 72px;
+  width: 52px;
+  text-align: center;
   min-height: 36px;
   padding: 0 var(--space-2);
   border: 1px solid var(--color-border);

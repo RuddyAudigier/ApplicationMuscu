@@ -55,3 +55,26 @@ export function formatSignedWeight(v: unknown): string {
   const r = round2(n);
   return `${r >= 0 ? '+' : '-'}${String(Math.abs(r)).replace('.', ',')}`;
 }
+
+/** Pas des boutons − / + : kilos au demi-kilo, reps à l'unité. */
+export const WEIGHT_STEP = 0.5;
+export const REPS_STEP = 1;
+
+/**
+ * Nouvelle saisie de kilos après un appui sur − (`-1`) ou + (`1`), à la française (« 62,5 »).
+ * Champ vide : + donne un pas, − ne change rien. Jamais sous 0. `null` = saisie illisible, rien à faire.
+ */
+export function stepWeight(raw: string, dir: 1 | -1): string | null {
+  if (raw.trim() === '') return dir > 0 ? formatDecimal(WEIGHT_STEP) : null;
+  const n = parseWeight(raw);
+  if (n === null) return null;
+  return formatDecimal(Math.max(0, round2(n + dir * WEIGHT_STEP)));
+}
+
+/** Idem pour les reps : entier, jamais sous 1. */
+export function stepReps(raw: string, dir: 1 | -1): string | null {
+  if (raw.trim() === '') return dir > 0 ? String(REPS_STEP) : null;
+  const n = parseReps(raw);
+  if (n === null) return null;
+  return String(Math.max(1, n + dir * REPS_STEP));
+}
