@@ -67,9 +67,8 @@ function MonthCalendar({ perfs, cycleState, today }: { perfs: Performance[]; cyc
               data-trained={cell.trained || undefined}
               data-cycle={cell.cycle}
               data-today={cell.isToday || undefined}
-              role="img"
-              aria-label={label}
-            >
+>
+              <span className="visually-hidden">{label}</span>
               <span className={styles.calNum} aria-hidden="true">{day}</span>
             </span>
           );

@@ -65,7 +65,7 @@ export function Layout() {
   return (
     <>
       <main style={showNav ? { paddingBottom: NAV_CLEARANCE } : undefined}>
-        <div key={pathname} className={styles.page} data-slide={slide}>
+        <div key={tab >= 0 ? `tab-${String(tab)}` : pathname} className={styles.page} data-slide={slide}>
           <Outlet />
         </div>
       </main>
